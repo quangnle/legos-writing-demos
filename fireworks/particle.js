@@ -20,8 +20,8 @@ class Particle {
     }
     
     update() {
-        this.vx += this.ax;
-        this.vy += this.ay;
+        this.vx += this.ax * this.radius;
+        this.vy += this.ay * this.radius;
         this.x += this.vx;
         this.y += this.vy;
         this.ax = 0;
