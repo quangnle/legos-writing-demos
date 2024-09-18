@@ -20,10 +20,12 @@
     <script>
         let sigma = 0.5;
         let mu = 0.0;
+
         function sigmaChange() {
             sigma = document.getElementById("inpSigma").value * 1;
             document.getElementById("sigmaValue").innerHTML = sigma;
         }
+        
         function muChange() {
             mu = document.getElementById("inpMu").value * 1;
             document.getElementById("muValue").innerHTML = mu;

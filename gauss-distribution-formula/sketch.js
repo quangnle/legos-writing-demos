@@ -70,14 +70,3 @@ function draw() {
 function gaussian(x, mean, sigma) {
     return Math.exp(-0.5 * ((x - mean) / sigma) ** 2) / (sigma * Math.sqrt(2 * Math.PI));
 }
-
-/*
-
-var f2 = function(x,y) {
-	return Math.sqrt(x**2 + y**2);
-}
-var expr = math.parse("f(x,y)").compile(math);
-console.log(expr.eval({x:4, y:3, f: f2}));
-var expr2 = math.parse("f(x,mu,sigma)").compile(math);
-console.log(expr2.eval({x:4, mu:0, sigma:2, f:f}));
-*/
