@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Inverse Square Root</title>
+</head>
+<body>
+    <h1>Fast Inverse Square Root</h1>
+    <div><input type="number" id="x"/><button onclick="showResult()">Calculate Inversed Square Root</button></div>
+    <div id="result"></div>
+
+    <script>
+        function fastInverseSqrt(x) {
+            const threeHalfs = 1.5;
+
+            let i = new Float32Array(1);
+            let y = new Float32Array(1);
+
+            y[0] = x;
+            
+            i = new Int32Array(y.buffer); // Reinterprets the bits as an integer
+            i[0] = 0x5f3759df - (i[0] >> 1); // Magic number and bit shift
+
+            y = new Float32Array(i.buffer); // Reinterpret the bits back to float
+            y[0] = y[0] * (threeHalfs - (x * 0.5 * y[0] * y[0])); // First iteration of Newton's method
+            y[0] = y[0] * (threeHalfs - (x * 0.5 * y[0] * y[0])); 
+            
+            return y[0];
+        }
+
+        function showResult() {
+            let x = document.getElementById("x").value * 1.0;
+            let error = 1/Math.sqrt(x) - fastInverseSqrt(x);
+            document.getElementById("result").innerHTML = "Inv-sqrt(" + x + ") = " + 1/Math.sqrt(x) + "; approx. = " + fastInverseSqrt(x) +  "; error= " + error.toFixed(12);
+        }
+    </script>    
+</body>
+</html>
