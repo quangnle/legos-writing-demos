@@ -56,8 +56,8 @@ function drawGaussian(mu, sigma, scaleX = 1, scaleY = 1) {
     text("μ=" + mu, map(mu, startX, endX, 0, width), height / 2 + 15);
     // draw text at sigma
     fill("#000");
-    text("σ=" + (mu+sigma).toFixed(2), map(mu + sigma, startX, endX, 0, width), height / 2 + 15);
-    text("-σ=" + (mu-sigma).toFixed(2), map(mu - sigma, startX, endX, 0, width), height / 2 + 15);
+    text("μ+σ=" + (mu+sigma).toFixed(2), map(mu + sigma, startX, endX, 0, width), height / 2 + 15);
+    text("μ-σ=" + (mu-sigma).toFixed(2), map(mu - sigma, startX, endX, 0, width), height / 2 + 15);
 
 }
 

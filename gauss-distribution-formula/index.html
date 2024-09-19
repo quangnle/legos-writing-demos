@@ -10,7 +10,7 @@
 </head>
 <body>
     <h1>Gauss Distribution Formula</h1>
-    <p>Formula: \(\displaystyle f(x) = \dfrac{1}{\sigma \sqrt{2 \pi}} \mathrm{exp}\left(-\frac{1}{2} \left( \frac{(x-\mu)}{ \sigma} \right)^2 \right) \), where:</p>
+    <p>Formula: \(\displaystyle f(x) = \dfrac{1}{\sigma \sqrt{2 \pi}} \mathrm{exp}\left(-\frac{1}{2} \frac{(x-\mu)^2}{ \sigma^2} \right) \), where:</p>
     <ul>
         <li>\(f(x)\) is the probability density function</li> 
         <li>\(\sigma\) is the standard deviation <input id="inpSigma" type="range" min="0.5" max="1.0" value="0.5" step="0.01" onchange="sigmaChange()"> <span id="sigmaValue">0.5</span></li> 
@@ -25,7 +25,7 @@
             sigma = document.getElementById("inpSigma").value * 1;
             document.getElementById("sigmaValue").innerHTML = sigma;
         }
-        
+
         function muChange() {
             mu = document.getElementById("inpMu").value * 1;
             document.getElementById("muValue").innerHTML = mu;
