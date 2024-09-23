@@ -1,5 +1,5 @@
 const samples = [];
-const sampleSize = 100;
+const sampleSize = 300;
 let clusters = [];
 
 function setup() {
@@ -16,6 +16,7 @@ function setup() {
 
 function createClusters(samples, k) {
     let clusters = [];
+    // Initialize clusters with the first k samples
     for (let i = 0; i < k; i++) {
         let cluster = {
             centroid: samples[i],
@@ -25,9 +26,10 @@ function createClusters(samples, k) {
     }
 
     let changed = true;
+    // Repeat until no change
     while (changed) {
         changed = false;
-
+        // Assign each sample to the nearest cluster
         for (let sample of samples) {
             let bestDist = Infinity;
             let bestCluster = null;
@@ -39,6 +41,7 @@ function createClusters(samples, k) {
                 }
             }
 
+            // If the sample is not in the best cluster, move it
             if (!bestCluster.points.includes(sample)) {
                 changed = true;
                 for (let cluster of clusters) {
@@ -51,11 +54,14 @@ function createClusters(samples, k) {
             }
         }
 
+        // Update the centroid of each cluster
         for (let cluster of clusters) {
             let sum = createVector(0, 0);
             for (let point of cluster.points) {
                 sum.add(point);
             }
+            
+            // If the cluster has points, update the centroid
             if (cluster.points.length > 0) {
                 sum.div(cluster.points.length);
                 cluster.centroid = sum;
