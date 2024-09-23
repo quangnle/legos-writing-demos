@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Mean sample in P5JS</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.2/lib/p5.js"></script>
+    <script src="sketch.js"></script>
+</head>
+<body>
+    <h1>K-Mean sample in P5JS</h1>
+    <label for="slider">Number of Clusters:</label>
+    <input type="range" id="slider" name="slider" min="1" max="10" value="1" oninput="valueOutput.innerText=value">
+    <span id="valueOutput">1</span>
+    <button onclick="clusterIt()">Cluster</button>
+    <span><i>Click inside the canvas to add more points!</i></span>
+</body>
+</html>
