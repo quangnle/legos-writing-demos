@@ -3,7 +3,7 @@ const sampleSize = 300;
 let clusters = [];
 
 function setup() {
-    createCanvas(800, 600);
+    createCanvas(700, 600);
     for (let i = 0; i < sampleSize; i++) {
         let x = random(width);
         let y = random(height);
@@ -60,7 +60,7 @@ function createClusters(samples, k) {
             for (let point of cluster.points) {
                 sum.add(point);
             }
-            
+
             // If the cluster has points, update the centroid
             if (cluster.points.length > 0) {
                 sum.div(cluster.points.length);
