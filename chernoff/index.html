@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        input.probabilityInput {
+            width: 4em; /* Enough for 3 digits */
+        } 
+
+        input[type="number"] {
+            width: 6em; /* Enough for 5 digits */
+        }
+
+        input[type="range"] {
+            width: 100px;
+        }
+
+        li {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h3>Chernoff Bounds Simulator</h3>
+    <div>
+        <ul>
+            <li>Tossing a coin N times, \(N =\)<input id="inpSimulations" class="probabilityInput" type="range" min="100" max="5000" value="100" onchange="nchange()"/> <span id="vSimulations">100</span>, 
+                Probability of heads = <input id="inpP" type="number" value="50" min="0" max="100" onchange="pchange()" /> %</li>            
+            <li>What is the probability of getting heads more than \(X\) times: \(X \ge \) <input id="inpBound" type="number" value="0" onchange="boundchange()" /></li>
+            <li>\( \mathbb E(X) \) = <span id="vExpect">50</span>, \( \delta \) = <span id="vDelta">0</span> </li>
+            <li>Formula \( \displaystyle P(X \gt (1+\delta)\mathbb E(X)) \le \exp \left( - \frac {\delta^2 \mathbb E(X)} {2 + \delta} \right) = \) <span id="vProb">0.0</span></li>            
+        </ul>        
+        <button onclick="simulate()">Simulate</button>
+        <p id="result"></p>
+    </div>       
+    <script>
+        function updateExpect() {
+            let simulations = document.getElementById("inpSimulations").value * 1;
+            let p = document.getElementById("inpP").value * 1;
+            let expect = simulations * p / 100;
+            document.getElementById("vExpect").innerHTML = expect.toFixed(2);
+        }
+
+        function updateDelta() {
+            updateExpect();
+            const expect = document.getElementById("vExpect").innerHTML * 1;
+            const X = document.getElementById("inpBound").value * 1;
+            const delta = (X - expect) / expect;
+            document.getElementById("vDelta").innerHTML = delta.toFixed(2);
+        }   
+
+        function updateBound() {
+            let expect = document.getElementById("vExpect").innerHTML * 1;
+            let delta = document.getElementById("vDelta").innerHTML * 1;
+            let bound = Math.exp(-(delta**2 * expect) / (2 + delta));
+            document.getElementById("vProb").innerHTML = `${bound.toFixed(9)} = ${(bound*100).toFixed(5)}%`;
+        }
+
+        function updateAll() {
+            updateExpect();
+            updateDelta();
+            updateBound();
+        }
+
+        function pchange() {
+            let p = document.getElementById("inpP").value * 1;
+            updateAll();
+        }
+
+        function boundchange() {            
+            updateExpect();
+            let expect = document.getElementById("vExpect").innerHTML * 1;
+            let n = document.getElementById("inpSimulations").value * 1;
+            let bound = document.getElementById("inpBound").value * 1; 
+            
+            if (bound < expect) {
+                document.getElementById("inpBound").value = expect;
+                bound = 0;
+            }
+
+            if (bound > n) {
+                document.getElementById("inpBound").value = n;
+                bound = n;
+            }
+
+            updateAll();
+        }
+
+        function nchange() {
+            let simulations = document.getElementById("inpSimulations").value;
+            document.getElementById("vSimulations").innerHTML = simulations;
+            updateAll();
+        }
+
+        function simulate() {         
+            document.getElementById("result").innerHTML = "";   
+            const simulations = document.getElementById("inpSimulations").value * 1;            
+            const x = document.getElementById("inpBound").value * 1;
+            const p = document.getElementById("inpP").value * 1 / 100;
+            
+            let count = 0;
+            for (let c=0; c < 1000; c++){
+                let nHeads = 0;          
+                for (let i = 0; i < simulations; i++) {
+                    if (Math.random() < p) {
+                        nHeads++;
+                    }
+                }
+                if (nHeads >= x) {
+                    count++;
+                }
+
+                if (c > 0 && c % 100 === 0) {
+                    prob = count;
+                    document.getElementById("result").innerHTML += `Simulating ${c} times, with ${simulations} simulations each time, number of heads > ${x} = ${count} times (${prob}%) <br/>`;
+                    count = 0;
+                }
+            }            
+        }
+    </script>
+</body>
+</html>
