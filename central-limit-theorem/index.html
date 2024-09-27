@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central Limit Theorem Demo</title>
+    
+</head>
+<body>
+    <h1>Central Limit Theorem Demo</h1>
+
+    <h3>Distribution of the faces</h3>
+    <div id="dice-container">
+        <div class="dice">
+            <img src="images/dice 1.jpg" alt="Dice 1">
+            <input type="range" min="1" max="10" value="5">
+        </div>
+        <div class="dice">
+            <img src="images/dice 2.jpg" alt="Dice 2">
+            <input type="range" min="1" max="10" value="5">
+        </div>
+        <div class="dice">
+            <img src="images/dice 3.jpg" alt="Dice 3">
+            <input type="range" min="1" max="10" value="5">
+        </div>
+        <div class="dice">
+            <img src="images/dice 4.jpg" alt="Dice 4">
+            <input type="range" min="1" max="10" value="5">
+        </div>
+        <div class="dice">
+            <img src="images/dice 5.jpg" alt="Dice 5">
+            <input type="range" min="1" max="10" value="5">
+        </div>
+        <div class="dice">
+            <img src="images/dice 6.jpg" alt="Dice 6">
+            <input type="range" min="1" max="10" value="5">
+        </div>
+        <div class="dice">
+            <span>Number of dices to simulate: </span><input id="inpNDices" type="range" min="1" max="20" value="1" onchange="ndiceschanges()"> <span id="spNDices">1</span>
+            <button onclick="start()">Start Simulate!</button>
+        </div>
+    </div>
+
+    <style>
+        #dice-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .dice {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .dice img {
+            width: 60px;
+            height: 60px;
+        }
+        .dice input {
+            margin-top: 10px;
+            width: 60px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script>
+        let simCount = 0;
+        const maxSimCount = 1000;
+        let started = false;
+        let sumValues = [];
+
+        function start() {
+            if (!started) {                
+                // change the text of the button to "Stop Simulate!"
+                document.querySelector("#dice-container button").innerText = "Stop Simulate!";
+                const nDices = document.getElementById("inpNDices").value;
+
+                // reset the simCount
+                simCount = 0;
+                // reset the sumValues array
+                sumValues = [];
+                for (let i = nDices; i <= nDices*6; i++) {
+                    sumValues.push(0);
+                }
+            } else {                
+                // change the text of the button to "Start Simulate!"
+                document.querySelector("#dice-container button").innerText = "Start Simulate!";
+            }
+            started = !started;
+        }
+
+        function throwADice() {
+            let r = random();
+            let face = 0;
+            let probs = [];
+            for (let i = 0; i < 6; i++) {
+                probs.push(document.querySelectorAll(".dice input")[i].value * 1);
+            }
+            let sum = probs.reduce((a, b) => a + b, 0);
+            for (let i = 0; i < 6; i++) {
+                probs[i] /= sum;
+            }
+            while (r > 0) {
+                r -= probs[face];
+                face++;
+            }
+            return face;
+        }
+
+        function ndiceschanges() {
+            document.getElementById("spNDices").innerText = document.getElementById("inpNDices").value;
+        }
+
+        function setup() {
+            createCanvas(800, 600);
+            background(200);
+        }
+
+        function draw() {
+            if (started && simCount < maxSimCount) {
+                let nDices = document.getElementById("inpNDices").value;
+                
+                // calculate the probabilities of each face of the dice
+                let probs = [];
+                for (let i = 0; i < 6; i++) {
+                    probs.push(document.querySelectorAll(".dice input")[i].value * 1);
+                }
+                let sum = probs.reduce((a, b) => a + b, 0);
+                for (let i = 0; i < 6; i++) {
+                    probs[i] /= sum;
+                }
+
+                // simulate the rolling of the dice nDices times
+                let sumOfFaces = 0;
+                for (let i = 0; i < nDices; i++) {
+                    let r = random();
+                    let face = 0;
+                    while (r > 0) {
+                        r -= probs[face];
+                        face++;
+                    }
+                    sumOfFaces += face;
+                }
+
+                // draw the distribution of the sum of the faces with a histogram
+                let x = map(sumOfFaces, 0, 6 * nDices, 0, width);
+                let y = height - 50;
+                let w = width / (6 * nDices);
+                fill(0);
+                rect(x, y, w, -10);
+
+                simCount++;
+            }                    
+        }
+    </script>
+</body>
+</html>

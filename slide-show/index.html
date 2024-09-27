@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide Show</title>
+    <style>
+        body {
+            font-family: Helvetica, sans-serif;
+        }
+        .slide-container {
+            max-width: 600px;
+            margin: auto;
+            text-align: center;
+            position: relative;
+        }
+        .slide {
+            display: none;
+            opacity: 0;
+        }
+        .active {
+            display: block;
+            opacity: 1;
+        }
+        .nav-button {
+            cursor: pointer;
+            position: absolute;
+            top: 0%;
+            width: auto;
+            padding: 16px;
+            margin-top: -22px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            transition: 0.6s ease;
+            border-radius: 0 3px 3px 0;
+            user-select: none;
+        }
+        .nav-button.left {
+            left: 0;
+            border-radius: 3px 0 0 3px;
+            background-color: darkgreen;
+        }
+        .nav-button.right {
+            right: 0;
+            border-radius: 3px 0 0 3px;
+            background-color: darkgreen;
+        }
+        .nav-button:hover {
+            background-color: green;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>   
+
+<div class="slide-container">
+    <div class="slide active">
+        <h2>Question 1</h2>
+        <ul>
+            <li>Answer 1</li>
+            <li>Answer 2</li>
+            <li>Answer 3</li>
+            <li>Answer 1</li>
+            <li>Answer 2</li>
+            <li>Answer 3</li>
+            <li>Answer 1</li>
+            <li>Answer 2</li>
+            <li>Answer 3</li>
+            <li>Answer 1</li>
+            <li>Answer 2</li>
+            <li>Answer 3</li>
+        </ul>
+    </div>
+    <div class="slide">
+        <h2>Question 2</h2>
+        <p>Answer 2</p>
+    </div>
+    <div class="slide">
+        <h2>Question 3</h2>
+        <p>Answer 3</p>
+    </div>
+    <a class="nav-button left" onclick="changeSlide(-1)">&#10094;</a>
+    <a class="nav-button right" onclick="changeSlide(1)">&#10095;</a>
+</div>
+
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+
+    function changeSlide(direction) {
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (currentSlide + direction + slides.length) % slides.length;
+        slides[currentSlide].classList.add('active');
+    }
+</script>
+
+</body>
+</html>
