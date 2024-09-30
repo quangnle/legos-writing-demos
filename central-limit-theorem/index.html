@@ -62,48 +62,35 @@
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="chart.js"></script>
     <script>
         let simCount = 0;
         const maxSimCount = 1000;
         let started = false;
-        let sumValues = [];
+        let standardChart, sampleChart;
 
         function start() {
             if (!started) {                
                 // change the text of the button to "Stop Simulate!"
                 document.querySelector("#dice-container button").innerText = "Stop Simulate!";
-                const nDices = document.getElementById("inpNDices").value;
+                const nDices = document.getElementById("inpNDices").value*1;
 
-                // reset the simCount
-                simCount = 0;
-                // reset the sumValues array
-                sumValues = [];
-                for (let i = nDices; i <= nDices*6; i++) {
-                    sumValues.push(0);
+                const probs = [];
+                for (let i = 0; i < 6; i++) {
+                    probs.push(document.querySelectorAll(".dice input")[i].value * 1);
                 }
+                let sum = probs.reduce((a, b) => a + b, 0);
+                for (let i = 0; i < 6; i++) {
+                    probs[i] /= sum;
+                }
+                
+                standardChart = new Chart(1, probs, maxSimCount, 0, 0, width, height / 2);
+                sampleChart = new Chart(nDices, probs, maxSimCount, 0, height / 2, width, height / 2);
             } else {                
                 // change the text of the button to "Start Simulate!"
                 document.querySelector("#dice-container button").innerText = "Start Simulate!";
             }
             started = !started;
-        }
-
-        function throwADice() {
-            let r = random();
-            let face = 0;
-            let probs = [];
-            for (let i = 0; i < 6; i++) {
-                probs.push(document.querySelectorAll(".dice input")[i].value * 1);
-            }
-            let sum = probs.reduce((a, b) => a + b, 0);
-            for (let i = 0; i < 6; i++) {
-                probs[i] /= sum;
-            }
-            while (r > 0) {
-                r -= probs[face];
-                face++;
-            }
-            return face;
         }
 
         function ndiceschanges() {
@@ -112,42 +99,17 @@
 
         function setup() {
             createCanvas(800, 600);
-            background(200);
+            
         }
 
         function draw() {
-            if (started && simCount < maxSimCount) {
-                let nDices = document.getElementById("inpNDices").value;
-                
-                // calculate the probabilities of each face of the dice
-                let probs = [];
-                for (let i = 0; i < 6; i++) {
-                    probs.push(document.querySelectorAll(".dice input")[i].value * 1);
-                }
-                let sum = probs.reduce((a, b) => a + b, 0);
-                for (let i = 0; i < 6; i++) {
-                    probs[i] /= sum;
-                }
-
-                // simulate the rolling of the dice nDices times
-                let sumOfFaces = 0;
-                for (let i = 0; i < nDices; i++) {
-                    let r = random();
-                    let face = 0;
-                    while (r > 0) {
-                        r -= probs[face];
-                        face++;
-                    }
-                    sumOfFaces += face;
-                }
-
-                // draw the distribution of the sum of the faces with a histogram
-                let x = map(sumOfFaces, 0, 6 * nDices, 0, width);
-                let y = height - 50;
-                let w = width / (6 * nDices);
-                fill(0);
-                rect(x, y, w, -10);
-
+            
+            if (started) {
+                background(255);
+                standardChart.throwDices();
+                standardChart.draw();
+                sampleChart.throwDices();
+                sampleChart.draw();
                 simCount++;
             }                    
         }
