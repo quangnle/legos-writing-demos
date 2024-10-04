@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>p5.js Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+<body>
+    <h1>Treasure Find</h1>
+    <p>Click to move the point M</p>
+    <script>
+        class Point {
+            constructor(x, y, name, color) {
+                this.x = x;
+                this.y = y;
+                this.name = name;
+                this.color = color;
+            }
+
+            draw() {
+                fill(this.color);
+                ellipse(this.x, this.y, 15, 15);
+                
+                fill(0);                
+                // center text mode
+                textAlign(CENTER, CENTER);
+                text(this.name, this.x, this.y);
+            }
+        }
+
+        let pM, pD, pG, p1, p2, pK;
+
+        function setup() {
+            createCanvas(700, 500);
+            pD = new Point(150, 200, "D", "red");
+            pG = new Point(450, 200, "G", "red");       
+            pM = new Point(300, 300, "M", "white");
+        }
+
+        function findPoint(p1, p2, direction, name, color) {                        
+            let d = dist(p1.x, p1.y, p2.x, p2.y);
+            let v = createVector(p2.x - p1.x, p2.y - p1.y).normalize();
+            if (direction == "LEFT") {
+                v.rotate(-HALF_PI);
+                return new Point(p1.x + v.x * d, p1.y + v.y * d, name, color);
+            } else {
+                v.rotate(HALF_PI);
+                return new Point(p1.x + v.x * d, p1.y + v.y * d, name, color);
+            }
+        }
+
+        function draw() {
+            background(220); 
+
+            p1 = findPoint(pD, pM, "RIGHT", "1", "green");
+            p2 = findPoint(pG, pM, "LEFT", "2", "green");
+            pK = new Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "K", "yellow");
+
+            line(pM.x, pM.y, pD.x, pD.y);
+            line(pM.x, pM.y, pG.x, pG.y);
+            line(pD.x, pD.y, p1.x, p1.y);
+            line(pG.x, pG.y, p2.x, p2.y);
+            line(p1.x, p1.y, p2.x, p2.y);
+
+            pM.draw();
+            pD.draw();
+            pG.draw();
+            pK.draw();
+            p1.draw();
+            p2.draw();
+        }
+
+        function mousePressed() {
+            pM.x = mouseX;
+            pM.y = mouseY;
+        }
+    </script>
+</body>
+</html>
