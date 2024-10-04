@@ -30,6 +30,7 @@
         }
 
         let pM, pD, pG, p1, p2, pK;
+        let isDragging = false;
 
         function setup() {
             createCanvas(700, 500);
@@ -57,6 +58,11 @@
             p2 = findPoint(pG, pM, "LEFT", "2", "green");
             pK = new Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, "K", "yellow");
 
+            if (isDragging) {
+                pM.x = mouseX;
+                pM.y = mouseY;
+            }
+
             line(pM.x, pM.y, pD.x, pD.y);
             line(pM.x, pM.y, pG.x, pG.y);
             line(pD.x, pD.y, p1.x, p1.y);
@@ -68,13 +74,19 @@
             pG.draw();
             pK.draw();
             p1.draw();
-            p2.draw();
+            p2.draw();            
         }
 
         function mousePressed() {
-            pM.x = mouseX;
-            pM.y = mouseY;
+            // if mouse is pressed on the point M
+            if (dist(mouseX, mouseY, pM.x, pM.y) < 10) {
+                isDragging = true;
+            }
         }
+
+        function mouseReleased() {
+            isDragging = false;
+        }   
     </script>
 </body>
 </html>
