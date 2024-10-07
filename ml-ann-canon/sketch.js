@@ -125,19 +125,20 @@ function draw() {
     fill("green");
     ellipse(projectile.x, projectile.y, 10, 10);
 
-    // update simulated projectile position with origin at (0, height)
+    // update accurate projectile position with origin at (0, height)
     let sAngleRad = sAngle * Math.PI / 180;
     projectile2.x = sForce * cos(sAngleRad) * sTime;
     projectile2.y = height - (sForce * sin(sAngleRad) * sTime - (0.5 * g * sTime ** 2));        
-    // draw simulated projectile
+    // draw accurate projectile
     fill("blue");
     ellipse(projectile2.x, projectile2.y, 10, 10);
 
     // ===============================================================
 
-    // draw target
+    // draw target a circle size changing with system time
     fill("red");
-    ellipse(target.x, target.y, 10, 10);
+    ellipse(target.x, target.y, 10 + 3 * sin(millis() / 100), 10 + 3 * sin(millis() / 100));
+    
 
     // legendary text
     fill(0);
