@@ -112,11 +112,6 @@ function setup() {
     document.getElementById("train").addEventListener("click", () => {
         trainNN();
     });
-
-    document.getElementById("predict").addEventListener("click", () => {
-        console.log(`Target: ${target.x}, ${target.y}`);
-        predict(); // Example target (x, y)
-    });  
 }
 
 function draw() {
