@@ -60,7 +60,7 @@
         }
         </script>
         
-        <canvas id="ogl-canvas" style="border: none" width="800px" height="300px"></canvas>
+        <canvas id="ogl-canvas" style="border: none"></canvas>
         
         <script>
         (function loadscene() {    
@@ -112,8 +112,8 @@
             gl.enable( gl.DEPTH_TEST );
             gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
 
-            // window.onresize = resize;
-            // resize();
+            window.onresize = resize;
+            resize();
             requestAnimationFrame(render);
         }
 
