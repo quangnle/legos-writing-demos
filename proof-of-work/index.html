@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proof of work demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: small;
+        }
+    </style>
+</head>
+<body>
+    <h1>Proof of work demo</h1>
+    <div>
+        From <input type="text" id="from" value="Alice">
+        To <input type="text" id="to" value="Bob">
+        Value <input type="number" id="value" value="100">
+        <button onclick="createTx()">Create transaction</button>
+    </div>
+    <div>
+        <h2>Transactions</h2>
+        <ul id="transactions"></ul>
+    </div>
+    <div>
+        <h2>Mining</h2>
+        <button onclick="createANewBlock()">Create a new block</button>
+        <ul id="mining-blocks" style="display: flex; flex-wrap: nowrap; list-style-type: none; padding: 0; overflow-x: auto;"></ul>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+    <script>
+        const transactions = [];
+        const accounts = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Helen', 'Ivy', 'Jack'];
+
+        generateTx();
+
+        function generateTx(){
+            // fill in random values for from, to, value
+            let frAcc = accounts[Math.floor(Math.random() * accounts.length)];            
+            let toAcc = accounts[Math.floor(Math.random() * accounts.length)];
+
+            // make sure from and to are different
+            while(frAcc == toAcc){
+                toAcc = accounts[Math.floor(Math.random() * accounts.length)];
+            }
+            document.getElementById('from').value = frAcc;
+            document.getElementById('to').value = toAcc;
+
+            // fill in random value
+            let val = Math.floor(Math.random() * 100);
+            document.getElementById('value').value = val;
+        }
+        
+        function createTx() {
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const value = document.getElementById('value').value;
+            const tx = { id: (transactions.length + 1), from, to, value, verified: false };
+            transactions.push(tx);
+            renderTransactions();
+
+            generateTx();
+        }
+
+        function renderTransactions() {
+            const txs = document.getElementById('transactions');
+            txs.innerHTML = '';
+            transactions.forEach(tx => {
+                const li = document.createElement('li');
+                li.id = `tx-${tx.id}`;
+                li.innerHTML = `${tx.id}: ${tx.from} ===> ${tx.to} : ${tx.value} ${tx.verified ? '<span style="color:green;">&#10004;</span>' : '<span style="color:red;">&#10008;</span>'}`;
+                txs.appendChild(li);
+            });
+        }
+
+        const blocks = [];
+        async function generateABlock(){
+            let blockId = blocks.length;
+            // random select 3 transactions that are not yet verified
+            let txs = transactions.filter(tx => !tx.verified);
+            let selectedTxs = [];
+            let maxTxs = Math.min(3, txs.length);
+            for(let i = 0; i < maxTxs; i++){
+                let idx = Math.floor(Math.random() * txs.length);
+                selectedTxs.push(txs[idx]);
+                txs.splice(idx, 1);
+            }            
+            let block = { id: blockId, transactions: selectedTxs, prevHash: 0, hash: 0, nonce: 0 };
+            if (blockId > 0) {
+                block.prevHash = blocks[blockId - 1].hash;
+            }
+            // hash all the block's content
+            let content = getBlockContent(block);
+            block.hash = await sha256(content + block.nonce);
+
+            return block;          
+        }
+
+        async function createANewBlock(){
+            let unverifiedTxs = transactions.filter(tx => !tx.verified);
+            if (unverifiedTxs.length == 0) return;
+
+            if (blocks.length > 0 && !blocks[blocks.length - 1].hash.startsWith('0000') && unverifiedTxs.length > 0) {
+                //remove the last block if it's not mined yet
+                blocks.pop();
+            }
+
+            let block = await generateABlock();
+            blocks.push(block);
+            renderBlocks();
+        }
+
+        function getBlockContent(block){
+            return block.id + block.transactions.map(tx => tx.id + tx.from + tx.to + tx.value).join('') + block.prevHash;
+        }
+
+        function generateBlockContent(block){
+            const li = document.createElement('li');
+            li.id = `block-${block.id}`;
+            li.style.border = '1px solid';
+            li.style.backgroundColor = 'pink';
+            li.style.margin = '5px';
+            li.style.padding = '5px';
+            let blockTemplate = `
+            <div>
+                <h3> <b>Block</b> ${block.id} </h3>
+                <div> <b>Block Hash</b>: ${block.hash}</div>
+                <div> <b>Previous Hash</b>: ${block.prevHash}</div>
+                <div> <b>Transactions:</b> 
+                    <ul>
+                    ${block.transactions.map(tx => `<li>${tx.id}: ${tx.from} -> ${tx.to} : ${tx.value}</li>`).join('')}
+                    </ul>
+                </div>
+                <div> <b>Nonce</b>: ${block.nonce}</div>
+                <div> <button onclick="mineABlock(${block.id})">Mine</button> </div>
+            </div>`;
+            
+            li.innerHTML = blockTemplate;                            
+            return li;
+        }
+
+        async function renderBlocks() {
+            const ul = document.getElementById('mining-blocks');
+            ul.innerHTML = '';
+            blocks.forEach(block => {
+                const li = generateBlockContent(block);
+                let verified = false;
+                verifyABlock(block).then(result => {
+                    verified = result;
+                    if(verified){
+                        li.style.backgroundColor = 'lightgreen';            
+                    }
+                });
+                ul.appendChild(li);
+            });
+        } 
+
+        async function mineABlock(id) {
+            const block = blocks.find(b => b.id === id);
+            if (block.id > 0) {
+                block.prevHash = blocks[block.id - 1].hash;
+            }
+            const difficulty = 4;
+            const prefix = '0'.repeat(difficulty);
+            let hash = '';
+            let nonce = 0;
+            let content = getBlockContent(block);
+            while (!hash.startsWith(prefix)) {
+                nonce++;
+                hash = await sha256(content + nonce);
+                //console.log(nonce, hash);
+            }
+            block.nonce = nonce;
+            block.hash = hash;
+            block.transactions.forEach(tx => tx.verified = true);
+
+            // update block's nonce and hash
+            const li = document.getElementById(`block-${block.id}`);
+            li.innerHTML = generateBlockContent(block).innerHTML;    
+            // update background color
+            li.style.backgroundColor = 'lightgreen';
+            
+            // update transactions
+            renderTransactions();
+        }
+
+        async function verifyABlock(block) {
+            const difficulty = 4;
+            const prefix = '0'.repeat(difficulty);
+            let content = getBlockContent(block);
+            let hash = await sha256(content + block.nonce);
+            return hash.startsWith(prefix);
+        }
+
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+    </script>
+</body>
+</html>
