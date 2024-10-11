@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polynomial Over The Finite Field</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        button {
+            margin: 5px;
+            padding: 5px;
+            width: 150px;
+        }
+
+        div {
+            margin: 5px;            
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            float: left;
+        }
+
+        input[type=text] {
+            width: 500px;
+            float: left;
+        }
+        input[type=number] {
+            width: 200px;
+            float: left;
+        }
+
+        .inp {
+            display: flex;
+            flex-direction: row;
+            float: left;
+            margin: 0px;            
+        }
+
+        .display {
+            margin: 0px;
+            padding: 0px;
+            float: left;
+            text-align: left;            
+        }
+    </style>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML" async></script>
+</head>
+<body>
+    <div>
+        <!-- first polynomial coefficients -->     
+        <div class="inp">\(P(x) = \)<input type="text" id="first-polynomial" onchange="pChanged()" placeholder="Coefficients separated by a space. Ex: 1 2 0 -1 ..." /></div>
+        <p id="first-polynomial-display" class="display">\(P(x)=0\)</p>
+    </div>
+    <div>
+        <!-- second polynomial coefficients -->
+        <div class="inp">\(Q(x) = \) <input type="text" id="second-polynomial" onchange="qChanged()" placeholder="Coefficients separated by a space. Ex: 1 2 0 -1 ..." /></div>
+        <p id="second-polynomial-display" class="display">\(Q(x)=0\)</p>
+    </div>
+    <div>
+        <!-- prime number for Fp -->            
+        <div class="inp">\( \mathbb F_p = \) <input type="number" id="prime-number" placeholder="Prime order of the field" /> </div>
+    </div>
+    <div>
+        <!-- button to multiply the polynomials -->
+        <button onclick="multiplyPolynomials()">Multiply</button>
+        <!-- button to divide the polynomials -->
+        <button onclick="dividePolynomials()">Divide</button>
+    </div>
+    
+    <!-- result of the division -->
+    <div id="result"></div>
+    <script src="poly.js"></script>
+    <script>
+        function pChanged(){
+            const p = document.getElementById('first-polynomial').value.split(' ').map(Number);
+            document.getElementById('first-polynomial-display').innerHTML = `$$ P(x) = ${polynomialString(p)}$$`;
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+        }
+
+        function qChanged(){
+            const q = document.getElementById('second-polynomial').value.split(' ').map(Number);
+            document.getElementById('second-polynomial-display').innerHTML = `$$ Q(x) = ${polynomialString(q)}$$`;
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+        }
+
+        function dividePolynomials() {
+            const p = document.getElementById('first-polynomial').value.split(' ').map(Number);
+            const q = document.getElementById('second-polynomial').value.split(' ').map(Number);
+            const mod = Number(document.getElementById('prime-number').value);
+
+            const [quotient, remainder] = fdiv(p, q, mod);
+            document.getElementById('result').innerText = `Quotient: ${polynomialString(quotient)}; Remainder: ${polynomialString(remainder)}`;
+        }
+
+        function multiplyPolynomials() {
+            const p = document.getElementById('first-polynomial').value.split(' ').map(Number);
+            const q = document.getElementById('second-polynomial').value.split(' ').map(Number);
+            const mod = Number(document.getElementById('prime-number').value);
+
+            const result = fmul(p, q, mod);
+            document.getElementById('result').innerText = `Result: ${polynomialString(result)}`;            
+        }
+    </script>
+</body>
+</html>
