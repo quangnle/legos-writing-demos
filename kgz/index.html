@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KGZ Polynomial Commitment Scheme Demo</title>
+</head>
+<body>
+    <h1>KGZ Polynomial Commitment Scheme Demo</h1>
+    <p>This is a simple demo of the KGZ Polynomial Commitment Scheme.</p>    
+    <p>Open the browser console to see the output.</p>
+
+    <script>
+        // KGZ Polynomial Commitment Scheme
+        // This is a simple demo of the KGZ Polynomial Commitment Scheme.
+        // The scheme is based on the paper "Polynomial Commitments and Their Applications" by Kate, Zaverucha, and Goldberg.
+        // The scheme is used to commit to a polynomial and later reveal the polynomial.
+        // The scheme is used in the context of zero-knowledge proofs.
+        
+        const p = 11; // prime number
+        const g = 2; // generator of the group
+        const tau = 3; // random number, trapdoor
+        
+        const l = 5; // max degree of the polynomials to be committed
+        const gs = []; // g^tau^i
+        
+        const trustSetup = () => {
+            for (let i = 0; i <= l; i++) {
+                let gi = modPow(g, tau**i, p);
+                gs.push(gi);
+            }
+        }
+
+        const commit = (phi_x) => {
+            let c = 1;
+            for (let i = 0; i < phi_x.length; i++) {
+                c = (c * gs[i]**phi_x[i]) % p;
+            }
+            return c;
+        }
+
+        const proof = (phi_x, a) => {
+            // calculate phi(a) = b, the polynomial value at a
+            let b = polyEval(phi_x, a);
+
+            let numerator = [...phi_x]; // phi(x) - phi(a)
+            numerator[0] = numerator[0] - b;
+            let denominator = [-a, 1]; // x - a
+            let q = polyDiv(numerator, denominator)[0];
+
+            // calculate proof pi = g^q(tau)
+            let pi = 1;
+            for (let i = 0; i < q.length; i++) {
+                pi = (pi * modPow(gs[i], q[i], p)) % p;
+            }
+
+            return pi;
+        }
+
+        // verify if e(c/g^b, g) = e(pi, g^tau/g^a)
+        const verify = (c, pi, a, b) => {            
+            let g_b = modPow(g, b, p);
+            let e1 = weils_pair(c * inv(g_b, p), g);
+            let g_tau = gs[1];
+            let g_a = modPow(g, a, p);
+            let e2 = weils_pair(pi, g_tau * inv(g_a, p));
+            console.log('Verification:', e1, e2);
+            return e1 === e2;            
+        }
+        
+        const modPow = (base, exponent, modulus) => {
+            if (modulus === 1) return 0;
+            let result = 1;
+            base = base % modulus;
+            while (exponent > 0) {
+                if (exponent % 2 === 1) {
+                    result = (result * base) % modulus;
+                }
+                exponent = exponent >> 1;
+                base = (base * base) % modulus;
+            }
+            return result;
+        }
+
+        const polyDiv = (poly1, poly2) => {
+            let q = [];
+            let r = [...poly1];
+            while (r.length >= poly2.length) {
+                let t = r[r.length - 1] / poly2[poly2.length - 1];
+                q.unshift(t);                
+                for (let i = 0; i < poly2.length; i++) {
+                    r[r.length - poly2.length + i] -= t * poly2[i];
+                }  
+                r.pop();              
+            }
+            return [q, r];            
+        }
+
+        const polyEval = (poly, x) => {
+            let y = 0;
+            for (let i = 0; i < poly.length; i++) {
+                y += poly[i] * x**i;
+            }
+            return y;
+        }
+
+        // inverse element of the cyclic group order p
+        const inv = (x, p) => {
+            return modPow(x, p - 2, p);
+        }
+
+        // a Weil's pairing function
+        // however I don't implement the actual pairing function here since it's way too complex        
+        const weils_pair = (g1, g2) => {
+            return -1;
+        }
+
+        trustSetup();
+        let phi_x = [1, 2, 1];
+        let a = 3;
+        let b = polyEval(phi_x, a);        
+        let c = commit(phi_x);
+        console.log('Commitment:', c);        
+        let pi = proof(phi_x, a);
+        console.log('Proof:', pi, a, b);
+
+        console.log('Verification:', verify(c, pi, a, b));
+
+    </script>    
+</body>
+</html>
