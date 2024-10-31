@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom Filter Demo</title>
+</head>
+<body>
+    <h1>Bloom Filter Demo</h1>
+    <p>This is a simple demo of the Bloom Filter. Hash functions in used: <b>murmur</b>, <b>fnv1s</b>.</p>
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="input" placeholder="Enter a value">
+        <button id="add" onclick="addItem()">Add</button>
+        <button id="check" onclick="checkItem()">Check</button>
+    </div>
+    <div>
+        <ul>
+            <li><span><b>Hash 1: </b><span id="hash1"></span></span></li>
+            <li><span><b>Hash 2: </b><span id="hash2"></span></span></li>
+            <li><span><b>Bloom Filter: </b> <span id="filter"></span></span></li>
+        </ul>
+    </div>
+    <div>
+        <p>List of items</p>
+        <ul id="items">
+        </ul>
+    </div>
+    <script src="murmur.js"></script>
+    <script src="fnv1s.js"></script>
+    <script>
+        const hash1 = new murmur();
+        const hash2 = new fnv1s();        
+        const items = [];
+
+        // array of 32 zeroes
+        let filter = new Array(32).fill(0);
+
+        function generateFilterTable(element, idx1, idx2) {            
+            element.innerHTML = ''; // remove all children
+            const table = document.createElement('table');
+            table.style.border = '1px solid black';
+
+            // indices
+            const tr1 = document.createElement('tr');
+            const th1= document.createElement('th');
+            th1.style.width = '12px';
+            th1.style.textAlign = 'center';
+            th1.appendChild(document.createTextNode('Index'));
+            tr1.appendChild(th1);
+            for (let i = 0; i < 32; i++) {
+                const td = document.createElement('td');
+                td.style.width = '12px';
+                td.style.textAlign = 'center';
+                if (i === idx1 || i === idx2) {
+                    td.style.backgroundColor = 'yellow';
+                }
+                td.appendChild(document.createTextNode(i));
+                tr1.appendChild(td);
+            }
+            table.appendChild(tr1);            
+
+            // values
+            const tr2 = document.createElement('tr');
+            const th2 = document.createElement('th');
+            th2.style.width = '12px';
+            th2.style.textAlign = 'center';
+            th2.appendChild(document.createTextNode('Bits'));
+            tr2.appendChild(th2);
+
+            for (let i = 0; i < 32; i++) {
+                const td = document.createElement('td');
+                td.style.width = '12px';
+                td.style.textAlign = 'center';
+                if (i === idx1 || i === idx2) {
+                    td.style.backgroundColor = 'yellow';
+                }
+                td.appendChild(document.createTextNode(filter[i]));
+                tr2.appendChild(td);
+            }
+            table.appendChild(tr2);
+            element.appendChild(table);
+        }
+
+        function updateFilter(item) {   
+            const filterElement = document.getElementById('filter');
+            if (!item) {
+                generateFilterTable(filterElement, -1, -1);
+                return;
+            }
+
+            const hash1Value = hash1.hash(item);
+            const hash2Value = hash2.hash(item);
+            const hash1Index = hash1Value % 32;
+            const hash2Index = hash2Value % 32;
+
+            filter[hash1Index] = 1;
+            filter[hash2Index] = 1;
+
+            const hash1Element = document.getElementById('hash1');
+            const hash2Element = document.getElementById('hash2');
+            hash1Element.innerHTML = `H1('${item}') = ${hash1Value} %32 = ${hash1Index}`;
+            hash2Element.innerHTML = `H2('${item}') = ${hash2Value} %32 = ${hash2Index}`;            
+
+            generateFilterTable(filterElement, hash1Index, hash2Index);
+        }
+
+        function checkItem() {
+            const input = document.getElementById('input');
+            const item = input.value;
+            if (!item) {
+                return;
+            }
+
+            const filterElement = document.getElementById('filter');
+
+            const hash1Value = hash1.hash(item);
+            const hash2Value = hash2.hash(item);
+            const hash1Index = hash1Value % 32;
+            const hash2Index = hash2Value % 32;
+
+            const hash1Element = document.getElementById('hash1');
+            const hash2Element = document.getElementById('hash2');
+            hash1Element.innerHTML = `H1('${item}') = ${hash1Value} %32 = ${hash1Index}`;
+            hash2Element.innerHTML = `H2('${item}') = ${hash2Value} %32 = ${hash2Index}`;            
+
+            generateFilterTable(filterElement, hash1Index, hash2Index);
+
+            if (filter[hash1Index] === 0 || filter[hash2Index] === 0) {
+                alert(`Item '${item}' is not in the list`);
+                return;
+            } else {
+                alert(`Item '${item}' is possibly in the list`);
+            }
+        }
+
+        function addItemIntoList(item) {
+            items.push(item);
+            
+            const list = document.getElementById('items');
+            list.innerHTML = ''; // remove all children
+
+            // add all items
+            for (let i = 0; i < items.length; i++) {
+                const li = document.createElement('li');
+                li.appendChild(document.createTextNode(items[i]));
+                list.appendChild(li);
+            }
+        }
+
+        function addItem() {
+            const input = document.getElementById('input');
+
+            // update filter
+            updateFilter(input.value);
+            // add item into list
+            addItemIntoList(input.value);            
+            // reset input
+            input.value = '';
+        }
+
+        updateFilter();
+
+    </script>
+</body>
+</html>
