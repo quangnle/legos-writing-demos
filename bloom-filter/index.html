@@ -12,6 +12,7 @@
         <input type="text" id="input" placeholder="Enter a value">
         <button id="add" onclick="addItem()">Add</button>
         <button id="check" onclick="checkItem()">Check</button>
+        <span id="msg"></span>
     </div>
     <div>
         <ul>
@@ -52,7 +53,11 @@
                 td.style.width = '12px';
                 td.style.textAlign = 'center';
                 if (i === idx1 || i === idx2) {
-                    td.style.backgroundColor = 'yellow';
+                    if (filter[i] === 0) {
+                        td.style.backgroundColor = 'red';
+                    } else {
+                        td.style.backgroundColor = 'green';
+                    }
                 }
                 td.appendChild(document.createTextNode(i));
                 tr1.appendChild(td);
@@ -72,7 +77,11 @@
                 td.style.width = '12px';
                 td.style.textAlign = 'center';
                 if (i === idx1 || i === idx2) {
-                    td.style.backgroundColor = 'yellow';
+                    if (filter[i] === 0) {
+                        td.style.backgroundColor = 'red';
+                    } else {
+                        td.style.backgroundColor = 'green';
+                    }
                 }
                 td.appendChild(document.createTextNode(filter[i]));
                 tr2.appendChild(td);
@@ -81,26 +90,37 @@
             element.appendChild(table);
         }
 
-        function updateFilter(item) {   
+        function updateFilter(idx1, idx2) {
+            filter[idx1] = 1;
+            filter[idx2] = 1;
+        }
+
+        function calculateIndices(item) {
+            const hash1Value = hash1.hash(item);
+            const hash2Value = hash2.hash(item);
+            const hash1Index = hash1Value % 32;
+            const hash2Index = hash2Value % 32;
+            return [hash1Value, hash1Index, hash2Value, hash2Index];
+        }
+
+        function displayHashes(item, hash1Value, hash1Index, hash2Value, hash2Index) {
+            const hash1Element = document.getElementById('hash1');
+            const hash2Element = document.getElementById('hash2');
+            hash1Element.innerHTML = `H1('${item}') = ${hash1Value} %32 = ${hash1Index}`;
+            hash2Element.innerHTML = `H2('${item}') = ${hash2Value} %32 = ${hash2Index}`;
+        }
+
+        function displayFilter(item) {   
             const filterElement = document.getElementById('filter');
             if (!item) {
                 generateFilterTable(filterElement, -1, -1);
                 return;
             }
 
-            const hash1Value = hash1.hash(item);
-            const hash2Value = hash2.hash(item);
-            const hash1Index = hash1Value % 32;
-            const hash2Index = hash2Value % 32;
+            const [hash1Value, hash1Index, hash2Value, hash2Index] = calculateIndices(item);
+            updateFilter(hash1Index, hash2Index);
 
-            filter[hash1Index] = 1;
-            filter[hash2Index] = 1;
-
-            const hash1Element = document.getElementById('hash1');
-            const hash2Element = document.getElementById('hash2');
-            hash1Element.innerHTML = `H1('${item}') = ${hash1Value} %32 = ${hash1Index}`;
-            hash2Element.innerHTML = `H2('${item}') = ${hash2Value} %32 = ${hash2Index}`;            
-
+            displayHashes(item, hash1Value, hash1Index, hash2Value, hash2Index);
             generateFilterTable(filterElement, hash1Index, hash2Index);
         }
 
@@ -113,23 +133,15 @@
 
             const filterElement = document.getElementById('filter');
 
-            const hash1Value = hash1.hash(item);
-            const hash2Value = hash2.hash(item);
-            const hash1Index = hash1Value % 32;
-            const hash2Index = hash2Value % 32;
-
-            const hash1Element = document.getElementById('hash1');
-            const hash2Element = document.getElementById('hash2');
-            hash1Element.innerHTML = `H1('${item}') = ${hash1Value} %32 = ${hash1Index}`;
-            hash2Element.innerHTML = `H2('${item}') = ${hash2Value} %32 = ${hash2Index}`;            
-
+            const [hash1Value, hash1Index, hash2Value, hash2Index] = calculateIndices(item);
+            displayHashes(item, hash1Value, hash1Index, hash2Value, hash2Index);
             generateFilterTable(filterElement, hash1Index, hash2Index);
 
+            const msg = document.getElementById('msg');
             if (filter[hash1Index] === 0 || filter[hash2Index] === 0) {
-                alert(`Item '${item}' is not in the list`);
-                return;
+                msg.innerHTML = `Item '${item}' is not in the list.`;
             } else {
-                alert(`Item '${item}' is possibly in the list`);
+                msg.innerHTML = `Item '${item}' is probably in the list.`;
             }
         }
 
@@ -149,11 +161,17 @@
 
         function addItem() {
             const input = document.getElementById('input');
+            if (!input.value) {
+                return;
+            }
 
             // update filter
-            updateFilter(input.value);
+            displayFilter(input.value);
             // add item into list
-            addItemIntoList(input.value);            
+            addItemIntoList(input.value);                        
+            // display message
+            const msg = document.getElementById('msg');
+            msg.innerHTML = ` Item '${input.value}' is added into the list.`;
             // reset input
             input.value = '';
         }
