@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elliptic Curve Addition Demo</title>
+</head>
+<body>
+    <h1>Elliptic Curve Addition Demo</h1>
+    <p>Elliptic curve equation: \(y^2 = x^3 - x + 3\)</p>    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.js"></script>    
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="elliptic-curve.js"></script>
+    <script>
+        const ec = new EllipticCurve(800, 800, 800, 800, -1, 3);
+        
+        function setup() {
+            createCanvas(800, 800);
+        }
+
+        function draw() {
+            background(255);
+            ec.draw();
+        }
+
+        function mousePressed() {
+            ec.onMousePressed(mouseX, mouseY);
+        }
+
+        function mouseDragged() {
+            ec.onMouseDragged(mouseX, mouseY);
+        }
+
+        function mouseReleased() {
+            ec.onMouseReleased(mouseX, mouseY);
+        }
+
+    </script>
+</body>
+</html>
