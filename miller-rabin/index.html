@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miller-Rabin Primality Test Demo</title>
+</head>
+<body>
+    <h1>Miller-Rabin Primality Test Demo</h1>
+    <div><input type="number" id="inp"></div>
+    <div>
+        <p id="result"></p>
+    </div>
+
+    <button onclick="test()">Check Prime</button>
+    <script>
+        function test() {
+            const n = parseInt(document.getElementById('inp').value);
+            const k = 10;
+            const result = isPrime(n, k);
+            document.getElementById('result').innerText = result ? 'Prime' : 'Composite';            
+        }
+
+        function isPrime(n, k) {
+            if (n < 2) return false;
+            if (n == 2 || n == 3) return true;
+
+            const [s, d] = factorize(n - 1);
+
+            for (let i = 0; i < k; i++) {
+                const a = Math.floor(Math.random() * (n - 2)) + 1;
+                if (!rabinMiller(n, s, d, a)) return false;
+            }
+            
+            return true;
+        }
+
+        function rabinMiller(n, s, d, a) {
+            // first condition check a^d mod n = 1
+            if (modPow(a, d, n) == 1) return true;
+
+            // second condition check a^(2^i * d) mod n = n - 1
+            for (let i = 0; i < s; i++) {
+                if (modPow(a, (2**i) * d, n) == n - 1) return true;                
+            }           
+
+            // if both conditions fail, n is composite
+            return false;
+        }
+
+        // factorize n to the format of 2^s * d
+        function factorize(n) {
+            let s = 0;
+            let d = n;
+
+            while (d % 2 == 0) {
+                s++;
+                d = d >> 1;
+            }
+
+            return [s, d];
+        }
+
+        function modPow(x, y, p) {
+            let result = 1;
+            x = x % p;
+
+            while (y > 0) {
+                if (y % 2 == 1) result = (result * x) % p;
+                y = Math.floor(y / 2);
+                x = (x * x) % p;
+            }
+
+            return result;
+        }
+
+    //     let total = 0;
+    //     for (let i = 0; i < 10000000; i++) {
+    //         if (isPrime(i, 10)) {
+    //             console.log(i);
+    //             total++;
+    //         }
+    //     }
+    //     console.log(`Total prime numbers: ${total}`); // 664579
+    // </script>
+</body>
+</html>
