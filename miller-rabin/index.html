@@ -29,13 +29,13 @@
 
             for (let i = 0; i < k; i++) {
                 const a = Math.floor(Math.random() * (n - 2)) + 1;
-                if (!rabinMiller(n, s, d, a)) return false;
+                if (!millerRabin(n, s, d, a)) return false;
             }
             
             return true;
         }
 
-        function rabinMiller(n, s, d, a) {
+        function millerRabin(n, s, d, a) {
             // first condition check a^d mod n = 1
             if (modPow(a, d, n) == 1) return true;
 
