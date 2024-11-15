@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKS Primality Test Demo</title>
+</head>
+<body>
+    <h1>AKS Primality Test Demo</h1>    
+    <p>This is a demo I wrote to visualize the AKS algorithm. Of course it is not optimized, especially the polynomial calculations. Therefore, the speed is not as fast as other methods.</p>
+    <p>But it is a good way to understand the algorithm.</p>
+    <div><input type="text" id="n"> <button onclick="checkPrime()">Check Prime</button><span id="result"></span></div>
+    <script src="utils.js"></script>
+    <script src="aks.js"></script>
+    <script>
+        function checkPrime() {
+            const n = parseInt(document.getElementById('n').value);
+            const result = AKSTest(n);
+            document.getElementById('result').innerText = result ? 'PRIME' : 'COMPOSITE';
+        }
+    </script>
+</body>
+</html>
