@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide Show</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.min.js"></script>
+</head>
+<body>   
+
+<div class="slide-container">
+    <div class="slide active">
+        <h2>Expression Evaluator</h2>
+        <p style="margin: 0px;"><h5 style="margin: 0px;"><i style="margin: 0px;">Allowed operations: +-*/, ^(power), gcd, lcm, sin, cos, ...</i></h5></p>
+        <p style="margin: 0px;"><input type="text" id="inpExpr" style="width: 400px; margin: 0px;" onkeydown="if(event.key === 'Enter') evalClicked();"><button onclick="evalClicked()">=</button></p>
+        <p id="pResult">0</p>
+    </div>
+    <div class="slide">
+        <h2>Discrete Math Evaluator - Modulo</h2>
+        <p>a^b%m: <input style="width: 8em;" type="text" id="modA" placeholder="a"> ^ <input type="text" style="width: 8em;" id="modB" placeholder="b"> % <input type="text" style="width: 8em;" id="modM" placeholder="m"><button onclick="powModResult()">=</button><span id="modResult" >0</span></p>
+        <p>Inverse of <input type="text" id="inverseA"> in the modulo of <input type="text" id="inverseM"><button onclick="invResult()">=</button><span id="invResult">0</span></p>
+    </div>
+    <a class="nav-button left" onclick="changeSlide(-1)">&#10094;</a>
+    <a class="nav-button right" onclick="changeSlide(1)">&#10095;</a>
+</div>
+
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+
+    function changeSlide(direction) {
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (currentSlide + direction + slides.length) % slides.length;
+        slides[currentSlide].classList.add('active');
+    }
+    
+    function evalClicked() {        
+        const expr = document.getElementById('inpExpr').value;
+        var result = math.evaluate(expr);
+        if (result === undefined) {
+            result = '0';
+        }
+        document.getElementById('pResult').innerText = result;       
+    }
+
+    function inverse(a, m) {
+        let t = 0,
+        r = m,
+        newt = 1,
+        newr = a;
+        while (newr != 0) {
+            const q = Math.floor(r / newr);
+            [t, newt] = [newt, t - q * newt];
+            [r, newr] = [newr, r - q * newr];
+        }
+
+        if (r > 1) return undefined;
+        if (t < 0) t += m;
+        return t;
+    }
+
+    function invResult() {
+        const a = parseInt(document.getElementById('inverseA').value);
+        const b = parseInt(document.getElementById('inverseM').value);
+        const result = inverse(a, b);
+        document.getElementById('invResult').innerText = result;
+    }
+
+    function modPow(a, b, m) {
+        let result = 1;
+        a = a % m;
+        while (b > 0) {
+            if (b % 2 == 1) result = (result * a) % m;
+            a = (a * a) % m;
+            b = Math.floor(b / 2);
+        }
+        return result;
+    }
+
+    function powModResult() {
+        const a = parseInt(document.getElementById('modA').value);
+        const b = parseInt(document.getElementById('modB').value);
+        const m = parseInt(document.getElementById('modM').value);
+        const result = modPow(a, b, m);
+        document.getElementById('modResult').innerText = result;
+    }
+</script>
+
+</body>
+</html>
