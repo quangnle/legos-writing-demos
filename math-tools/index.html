@@ -21,6 +21,20 @@
         <p>a^b%m: <input style="width: 8em;" type="text" id="modA" placeholder="a"> ^ <input type="text" style="width: 8em;" id="modB" placeholder="b"> % <input type="text" style="width: 8em;" id="modM" placeholder="m"><button onclick="powModResult()">=</button><span id="modResult" >0</span></p>
         <p>Inverse of <input type="text" id="inverseA"> in the modulo of <input type="text" id="inverseM"><button onclick="invResult()">=</button><span id="invResult">0</span></p>
     </div>
+    <div class="slide">
+        <h2>Polynomial Evaluator</h2>
+        <p>
+            <input type="text" id="poly1" placeholder="2 0 3 ==> 2 + 3x^2"> 
+            <button onclick="polyAddClicked()">+</button>
+            <button onclick="polySubClicked()">-</button>
+            <button onclick="polyMulClicked()">*</button>
+            <button onclick="polyDivClicked()">/</button>
+            <input type="text" id="poly2" placeholder="1 2 3 4==> 1 + 2x + 3x^2 + 4x^3">
+        </p>
+        <p>
+            <span id="result"></span>
+        </p>
+    </div>
     <a class="nav-button left" onclick="changeSlide(-1)">&#10094;</a>
     <a class="nav-button right" onclick="changeSlide(1)">&#10095;</a>
 </div>
@@ -84,6 +98,99 @@
         const m = parseInt(document.getElementById('modM').value);
         const result = modPow(a, b, m);
         document.getElementById('modResult').innerText = result;
+    }
+
+    function polyAddClicked(){
+        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
+        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const result = polynomialAdd(p1, p2);
+        document.getElementById('result').innerText = result.join(' ');
+    }
+
+    function polySubClicked(){
+        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
+        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const result = polynomialSubtract(p1, p2);
+        document.getElementById('result').innerText = result.join(' ');
+    }
+
+    function polyMulClicked(){
+        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
+        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const result = polynomialMultiply(p1, p2);
+        document.getElementById('result').innerText = result.join(' ');
+    }
+
+    function polyDivClicked(){
+        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
+        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const { quotient, remainder } = polynomialDivide(p1, p2);
+        document.getElementById('result').innerText = `Quotient: ${quotient.join(' ')} Remainder: ${remainder.join(' ')}`;
+    }
+
+    function polynomialAdd(p1, p2) {
+        let length = Math.max(p1.length, p2.length);
+        let result = Array(length).fill(0);
+
+        for (let i = 0; i < length; i++) {
+            if (i < p1.length) result[i] += p1[i];
+            if (i < p2.length) result[i] += p2[i];
+        }
+
+        return result;
+    }
+
+    function polynomialSubtract(p1, p2) {
+        let length = Math.max(p1.length, p2.length);
+        let result = Array(length).fill(0);
+
+        for (let i = 0; i < length; i++) {
+            if (i < p1.length) result[i] += p1[i];
+            if (i < p2.length) result[i] -= p2[i];
+        }
+
+        return result;
+    }
+
+    function polynomialMultiply(p, q) {
+        // Initialize the product as an array of zeros
+        let product = Array(p.length + q.length - 1).fill(0);
+
+        // Multiply the polynomials
+        for (let i = 0; i < p.length; i++) {
+            for (let j = 0; j < q.length; j++) {
+                product[i + j] += p[i] * q[j];
+            }
+        }
+
+        return product;
+    }
+
+    function polynomialDivide(p1, p2) {
+        let quotient = [];
+        let remainder = p1.slice();
+
+        while (remainder.length >= p2.length) {
+            let leadCoeff = remainder[remainder.length - 1] / p2[p2.length - 1];
+            let degreeDiff = remainder.length - p2.length;
+            let term = Array(degreeDiff).fill(0).concat(leadCoeff);
+
+            quotient = polynomialAdd(quotient, term);
+            remainder = polynomialSubtract(remainder, polynomialMultiply(term, p2));
+            remainder.pop();
+        }
+
+        // Remove leading zeros from the quotient
+        while (quotient.length > 1 && quotient[quotient.length - 1] === 0) {
+            quotient.pop();
+        }
+
+        // Remove leading zeros from the remainder
+        while (remainder.length > 1 && remainder[remainder.length - 1] === 0) {
+            remainder.pop();
+        }
+
+        return { quotient, remainder };
     }
 </script>
 
