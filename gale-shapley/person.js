@@ -14,10 +14,9 @@ class Person{
         return target;
     }
 
-    receive(propose){
+    accept(propose){
         // check if the person is free
         if (this.partner == null){
-            this.partner = propose;
             return true;
         }
 
@@ -31,28 +30,31 @@ class Person{
         return false;        
     }
 
-    gotRejected(){
-        // remove the propose from the preferences
-        const index = this.preferences.indexOf(this.partner);
-        this.preferences.splice(index, 1);
-
-        // if the person is rejected then the person is free
-        this.partner = null;
+    reject(){
+        // free the partner
+        if (this.partner != null){
+            this.partner.partner = null;
+        }        
     }
 
     draw() {
-        fill(0);
-        
         // if the person is male then the ellipse is blue else pink
         if (this.gender === 'male') {
-            fill(0, 0, 255); // blue color
+            fill(0, 100, 255); // blue color
         } else {
             fill(255, 192, 203); // pink color
         }
 
-        rect(this.x - 50, this.y - 25, 100, 50);
+        const size = this.toString().length * 7;
+        rect(this.x - size/2, this.y - 15, size, 30);
+
         fill(0);
+        stroke(0);
         textAlign(CENTER, CENTER);
-        text(this.name, this.x, this.y);
+        text(this.toString(), this.x, this.y);
+    }
+
+    toString(){
+        return `${this.name} (${this.preferences.map(p => p.name)})`;
     }
 }

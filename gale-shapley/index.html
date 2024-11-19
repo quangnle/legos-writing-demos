@@ -6,6 +6,24 @@
     <title>Gale - Shapley Algorithm Demo</title>
 </head>
 <body>
-    
+    <h1>Gale - Shapley Algorithm Demo</h1>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="person.js"></script>
+    <script src="processor.js"></script>
+    <script src="sketch.js"></script>    
+    <script>
+        const processor = new Processor();
+        function next() {
+            processor.proposeOnce();
+            document.getElementById('content').value = processor.content;
+        }
+    </script>
+    <div id="canvas-container"></div>
+    <div>
+        <button onclick="next()">Propose Next Round</button>
+    </div>
+    <div>
+        <textarea cols="80" rows="12" id="content"></textarea>
+    </div>
 </body>
 </html>
