@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merkle Tree Demo</title>
+</head>
+<body>
+    <h1>Merkle Tree Demo</h1>
+    <p>Number of leaves <input type="number" id="nLeaves" value="16" min="8" max="16" onchange="leavesChanged()"></p>
+    <p>Click on a leaf to see Merkle Path</p>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="murmur.js"></script>
+    <script src="merkle-tree.js"></script>
+    <script src="treenode.js"></script>    
+    <script src="sketch.js"></script>
+    <script>
+        function generateLeaves(nLeaves) {
+            let leaves = [];
+            for (let i = 0; i < nLeaves; i++) {
+                // from 'a' to 'z'
+                const content = String.fromCharCode(97 + i);
+                leaves.push(content);
+            }
+            return leaves;
+        }
+
+        function leavesChanged() {
+            let nLeaves = document.getElementById("nLeaves").value;
+            const leaves = generateLeaves(nLeaves);
+            tree = new MerkleTree(leaves);
+        }
+    </script>
+</body>
+</html>
