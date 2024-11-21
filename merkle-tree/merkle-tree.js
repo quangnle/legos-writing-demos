@@ -26,7 +26,7 @@ class MerkleTree {
     }
 
     draw (x, y) {
-        this.root.draw(400, 50);        
+        this.root.draw(x, y);        
     }
 
     getMerkePath (leafNode) {
