@@ -45,6 +45,15 @@ class MerkleTree {
         return path;
     }
 
+    verify(hashValue, path) {
+        let current = hashValue;
+        for (let i = 0; i < path.length; i++) {
+            current = this.f.hash(current + path[i].hashValue + '');
+        }
+
+        return current == this.root.hashValue;        
+    }
+
     getSelectedNode () {
         for (let i = 0; i < this.leaves.length; i++) {
             if (this.leaves[i].selected) {
