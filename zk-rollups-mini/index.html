@@ -4,8 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo of a mini zk-Rollups</title>
+    <link rel="stylesheet" href="treeview.css">
+    <link rel="stylesheet" href="main.css">
+    
+    <script src="murmur.js"></script>
+    <script src="treenode.js"></script>
+    <script src="merkle-tree.js"></script>
+    <script>
+        const HashFunction = new Murmur();
+    </script>
 </head>
 <body>
+    <h1>Demo of a mini zk-Rollups</h1>
+    <div class="container">
+        <div class="column left">
+            <div style="border: 1px solid #ccc; padding: 5px;">
+                <h4>User A</h4>
+                <p>
+                    <div>Layer 1's Amount</div>
+                    <div>Layer 2's Amount</div>
+                </p>
+                <button onclick="deposit('A')">Deposit L1</button>
+                <button onclick="makeTx('A')">Make Tx</button>
+                <button onclick="claim('A')">Claim</button>
+            </div>
+            <div style="border: 1px solid #ccc; padding: 5px;">
+                <h4>User B</h4>
+                <button onclick="deposit('B')">Deposit L1</button>
+                <button onclick="makeTx('B')">Make Tx</button>
+                <button onclick="claim('B')">Claim</button>
+            </div>
+            <div style="border: 1px solid #ccc; padding: 5px;">
+                <h4>User C</h4>
+                <button onclick="deposit('C')">Deposit L1</button>
+                <button onclick="makeTx('C')">Make Tx</button>
+                <button onclick="claim('C')">Claim</button>
+            </div>
+        </div>
+        <div class="column center">
+            <p>
+                <h4>Actions</h4>
+            </p>
+        </div>
+        <div class="column right">    
+            <div id="tree"></div>
+        </div>
+    </div>
     
+    <script>
+        function buildTreeView()
+        {
+            const tree = new MerkleTree(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'], HashFunction);
+            const treeView = document.getElementById('tree');
+            treeView.innerHTML = tree.toHTMLString();
+
+            const toggler = document.getElementsByClassName("caret");
+            for (let i = 0; i < toggler.length; i++) {
+                toggler[i].addEventListener("click", function() {
+                    this.parentElement.querySelector(".nested").classList.toggle("active");
+                    this.classList.toggle("caret-down");
+                });
+            }
+        }
+        buildTreeView();
+    </script>
 </body>
 </html>

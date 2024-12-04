@@ -100,32 +100,48 @@
         document.getElementById('modResult').innerText = result;
     }
 
+    function polyStr(poly){
+        let str = '';
+        for (let i = 0; i < poly.length; i++) {
+            if (i==0) {
+                str += poly[i];
+            } else {
+                if (poly[i] > 0) {
+                    str += ` + ${poly[i]}x^${i}`;
+                } else if (poly[i] < 0) {
+                    str += ` - ${-poly[i]}x^${i}`;
+                } 
+            }
+        }
+        return str;
+    }
+
     function polyAddClicked(){
-        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
-        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
+        const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
         const result = polynomialAdd(p1, p2);
-        document.getElementById('result').innerText = result.join(' ');
+        document.getElementById('result').innerText = `(${polyStr(p1)}) + (${polyStr(p2)}) = ${polyStr(result)}`;
     }
 
     function polySubClicked(){
-        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
-        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
+        const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
         const result = polynomialSubtract(p1, p2);
-        document.getElementById('result').innerText = result.join(' ');
+        document.getElementById('result').innerText = `(${polyStr(p1)}) - (${polyStr(p2)}) = ${polyStr(result)}`;
     }
 
     function polyMulClicked(){
-        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
-        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
+        const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
         const result = polynomialMultiply(p1, p2);
-        document.getElementById('result').innerText = result.join(' ');
+        document.getElementById('result').innerText = `(${polyStr(p1)}) * (${polyStr(p2)} = ${polyStr(result)})`;
     }
 
     function polyDivClicked(){
-        const p1 = document.getElementById('poly1').value.split(' ').map(x => parseInt(x));
-        const p2 = document.getElementById('poly2').value.split(' ').map(x => parseInt(x));
+        const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
+        const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseInt(x));
         const { quotient, remainder } = polynomialDivide(p1, p2);
-        document.getElementById('result').innerText = `Quotient: ${quotient.join(' ')} Remainder: ${remainder.join(' ')}`;
+        document.getElementById('result').innerText = `(${polyStr(p1)}) / (${polyStr(p2)} = Quotient: ${polyStr(quotient)} Remainder: ${polyStr(remainder)}`;
     }
 
     function polynomialAdd(p1, p2) {

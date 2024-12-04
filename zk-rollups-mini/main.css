@@ -1,0 +1,31 @@
+body {
+    font-family: Arial, sans-serif;
+    font-size: small;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: flex;
+    width: 800px;
+    height: 100vh;
+}
+.column {
+    border: 1px solid #ccc;
+    overflow-y: auto;        
+}
+
+.left {
+    width: 20%;
+    background-color: #f0f8ff; /* Light blue */
+}
+
+.center {
+    width: 35%;
+    background-color: #faebd7; /* Light beige */
+}
+
+.right {
+    width: 45%;
+    background-color: #ffe4e1; /* Light pink */
+}
