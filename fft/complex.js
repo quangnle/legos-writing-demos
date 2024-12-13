@@ -31,7 +31,20 @@ class ComplexNumber {
     conj() {
         return new ComplexNumber(this.re, -this.im);
     }
+
+    intDetect(n) {
+        // convert a real number to the nearest integer if the it is within 10e-6 of the integer
+        if (Math.abs(n - Math.round(n)) < 10e-6) {
+            n = Math.round(n);
+        }
+        return n;
+    }
+
     toString() {
-        return `${this.re} + ${this.im}i`;
+        let re = Math.abs(this.re) >= 10e-6 ? this.re : 0.0;   
+        re = this.intDetect(re);     
+        let im = Math.abs(this.im) >= 10e-6 ? this.im : 0.0;
+        im = this.intDetect(im);
+        return `${re} + ${im}i`;
     }
 }

@@ -21,16 +21,16 @@ function fft(p){
 
     // combine the results of the subproblems
     const y = Array(n);
-    let wj = new ComplexNumber(1, 0);
+    let wi = new ComplexNumber(1, 0);
     for (let i = 0; i < n / 2; i++) {
         // combine the results of the subproblems
-        // y[j] = y_even[j] + w^j * y_odd[j]
-        y[i] = y_even[i].add(wj.mul(y_odd[i]));
-        // y[j + n/2] = y_even[j] - w^j * y_odd[j]
-        y[i + n / 2] = y_even[i].sub(wj.mul(y_odd[i]));
-
-        // update the nth root of unity w^j
-        wj = wj.mul(w);      
+        // y[i] = y_even[i] + w^i * y_odd[i]
+        y[i] = y_even[i].add(wi.mul(y_odd[i]));
+        // y[i + n/2] = y_even[i] - w^i * y_odd[i]
+        y[i + n / 2] = y_even[i].sub(wi.mul(y_odd[i]));
+ 
+        // update the nth root of unity w^i
+        wi = wi.mul(w);      
     }    
     
     return y;
@@ -39,7 +39,6 @@ function fft(p){
 // inverse FFT
 function ifft(y){
     const n = y.length;
-    const w = new ComplexNumber(Math.cos(2 * Math.PI / n), Math.sin(2 * Math.PI / n));
     const y_ = y.map(c => c.conj());
     const p_ = fft(y_).map(c => c.div(n));
     return p_;
@@ -54,7 +53,7 @@ function polyMul(p1, p2){
     return p;
 }
 
-const p1 = [1, 1, 3, 5, 9];
-const p2 = [1, 2, 3, 4];
-let p = polyMul(p1, p2);
-console.log(p);
+// const p1 = [1, 1, 3, 5, 9];
+// const p2 = [1, 2, 3, 4];
+// let p = polyMul(p1, p2);
+// console.log(p); 

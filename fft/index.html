@@ -6,7 +6,36 @@
     <title>Fast Fourier Transform Demo</title>
 </head>
 <body>
+    <h1>Fast Fourier Transform Demo</h1>
+    <div>p1 <input id="p1" type="text"></div>
+    <div>p2 <input id="p2" type="text"></div>
+    <button onclick="multiply()">Multiply</button>
+    <div>
+        <p>Result</p>
+        <div id="result"></div>
+    </div>
     <script src="complex.js"></script>
     <script src="fft.js"></script>
+    <script>
+        function multiply() {
+            const p1 = document.getElementById('p1').value;
+            const p2 = document.getElementById('p2').value;
+            const p1Arr = p1.split(' ').map(Number);
+            const p2Arr = p2.split(' ').map(Number);            
+            const p = polyMul(p1Arr, p2Arr);
+            
+            const n = 2**Math.ceil(Math.log2(p1.length + p2.length));
+            const y1 = p1Arr.concat(Array(n - p1.length).fill(0)).map(c => new ComplexNumber(c, 0))
+            const p1Fft = fft(y1);
+            const y2 = p2Arr.concat(Array(n - p2.length).fill(0)).map(c => new ComplexNumber(c, 0))
+            const p2Fft = fft(y2);
+            
+            document.getElementById('result').innerText = `Result: \n${p.join('\n')}`;
+            document.getElementById('result').innerText += '\n\n';
+            document.getElementById('result').innerText += `Polynomial 1's FFT: \n${p1Fft.join('\n')}`;
+            document.getElementById('result').innerText += '\n\n';
+            document.getElementById('result').innerText += `Polynomial 2's FFT: \n${p2Fft.join('\n')}`;
+        }
+    </script>
 </body>
 </html>
