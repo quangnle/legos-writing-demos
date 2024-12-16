@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lagrange Interpolation Demo</title>
+</head>
+<body>
+    <h1>Lagrange Interpolation Demo</h1>
+    <div>
+        <p>Points</p>
+    </div>
+    <div><textarea id="points" placeholder="x1 y1 \n x2 y2 \n..."></textarea></div>
+    <button onclick="interpolate()">Interpolate</button>
+    <div>
+        <p>Result</p>
+        <div id="result"></div>
+    </div>  
+    <script src="polynomial.js"></script>  
+    <script>        
+        function ell_i(idx, points){
+            let result = [1];
+            let divisor = 1;
+            for (let i = 0; i < points.length; i++) {
+                if (i != idx) {
+                    result = polyMul(result, [-points[i][0], 1]);
+                    divisor *= points[idx][0] - points[i][0];
+                }
+            }
+            return result.map(c => c / divisor); 
+        }
+
+        function lagrange(points){
+            let result = [0];
+            for (let i = 0; i < points.length; i++) {
+                // result += ell_i(i, points) * points[i][1]
+                result = polyAdd(result, polyMul(ell_i(i, points), [points[i][1]]));
+            }
+            return result;
+        }        
+
+        function polyStr(p){
+            return p.map((c, i) => c + (i > 0 ? `x^${i}` : '')).join(' + ');
+        }
+
+        function interpolate() {
+            const points = document.getElementById('points').value.split('\n').map(p => p.split(' ').map(Number));
+            const result = lagrange(points);
+            document.getElementById('result').innerText = `p(x) = ${polyStr(result)}`;
+        }
+    </script>    
+</body>
+</html>
