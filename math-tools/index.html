@@ -6,6 +6,69 @@
     <title>Slide Show</title>
     <link rel="stylesheet" href="main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script"></script>
+    <script>
+        window.MathJax = {
+  loader: {load: ['input/asciimath']},
+  startup: {
+    pageReady: function () {
+      //
+      // Synchronize menu renderer item with on-screen popup menu
+      //
+      var select = document.getElementById('Renderer');
+      if (select) {
+        var renderer = MathJax.startup.document.menu.settings.renderer;
+        var menu = MathJax.startup.document.menu.menu;
+        var item = (menu.getPool ? menu.getPool() : menu.pool).lookup('renderer');
+        select.value = renderer;
+        if (renderer !== 'CHTML') item.setValue(renderer);
+        item.registerCallback(function () {
+          var value = item.getValue();
+          if (value !== select.value) select.value = value;
+        });
+        window.setMode = function (renderer) {
+          if (item.getValue() !== renderer) item.setValue(renderer);
+        }
+        //
+        //  Set up processing of input content
+        //
+        var input = document.getElementById('MathInput');
+        var output = document.getElementById('MathPreview');
+        var button = document.getElementById('renderHTML');
+        output.innerHTML = input.value.trim();
+        window.typesetInput = function () {
+          button.disabled = true;
+          output.innerHTML = input.value.trim();
+          MathJax.texReset();
+          MathJax.typesetClear();
+          MathJax.typesetPromise([output]).catch(function (err) {
+            output.innerHTML = '';
+            output.appendChild(document.createTextNode(err.message));
+            console.error(err);
+          }).then(function () {
+            button.disabled = false;
+          });
+        }
+        input.oninput = typesetInput;
+      }
+
+      return MathJax.startup.defaultPageReady();
+    }
+  },
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    processEscapes: true
+  }
+};
+
+//
+//  Load MathJax
+//
+var script = document.createElement('script');
+script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+script.setAttribute('id', 'MathJax-script');
+document.head.appendChild(script)
+    </script>
 </head>
 <body>   
 
@@ -18,8 +81,8 @@
     </div>
     <div class="slide">
         <h2>Discrete Math Evaluator - Modulo</h2>
-        <p>a^b%m: <input style="width: 8em;" type="text" id="modA" placeholder="a"> ^ <input type="text" style="width: 8em;" id="modB" placeholder="b"> % <input type="text" style="width: 8em;" id="modM" placeholder="m"><button onclick="powModResult()">=</button><span id="modResult" >0</span></p>
-        <p>Inverse of <input type="text" id="inverseA"> in the modulo of <input type="text" id="inverseM"><button onclick="invResult()">=</button><span id="invResult">0</span></p>
+        <p>\(a^b \mod m: \)<input style="width: 8em;" type="text" id="modA" placeholder="a"> ^ <input type="text" style="width: 8em;" id="modB" placeholder="b"> % <input type="text" style="width: 8em;" id="modM" placeholder="m"><button onclick="powModResult()">=</button><span id="modResult" >0</span></p>
+        <p>Inverse of \(a^{-1}\) <input type="text" id="inverseA"> in the modulo of \(m\) <input type="text" id="inverseM"><button onclick="invResult()">=</button><span id="invResult">0</span></p>
     </div>
     <div class="slide">
         <h2>Polynomial Evaluator</h2>
@@ -32,7 +95,8 @@
             <input type="text" id="poly2" placeholder="1 2 3 4==> 1 + 2x + 3x^2 + 4x^3">
         </p>
         <p>
-            <span id="result"></span>
+            <div id="MathPreview" class="preview"><span id="result"></span></div>
+            
         </p>
     </div>
     <a class="nav-button left" onclick="changeSlide(-1)">&#10094;</a>
@@ -116,32 +180,57 @@
         return str;
     }
 
+    function displayRuntimeTex(output, tex) {
+        output.innerHTML = tex;
+        MathJax.texReset();
+        MathJax.typesetClear();
+        MathJax.typesetPromise([output]).catch(function (err) {
+            output.innerHTML = '';
+            output.appendChild(document.createTextNode(err.message));
+            console.error(err);
+        }).then(function () {
+            //button.disabled = false;
+        });
+    }
+
     function polyAddClicked(){
         const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const result = polynomialAdd(p1, p2);
-        document.getElementById('result').innerText = `(${polyStr(p1)}) + (${polyStr(p2)}) = ${polyStr(result)}`;
+
+        // display the result in Latex format
+        const tex = `$(${polyStr(p1)}) + (${polyStr(p2)}) = ${polyStr(result)}$`;
+        const output = document.getElementById('result');        
+        displayRuntimeTex(output, tex);
     }
 
     function polySubClicked(){
         const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const result = polynomialSubtract(p1, p2);
-        document.getElementById('result').innerText = `(${polyStr(p1)}) - (${polyStr(p2)}) = ${polyStr(result)}`;
+        // display the result in Latex format
+        const tex = `$(${polyStr(p1)}) - (${polyStr(p2)}) = ${polyStr(result)}$`;
+        const output = document.getElementById('result'); 
+        displayRuntimeTex(output, tex);        
     }
 
     function polyMulClicked(){
         const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const result = polynomialMultiply(p1, p2);
-        document.getElementById('result').innerText = `(${polyStr(p1)}) * (${polyStr(p2)} = ${polyStr(result)})`;
+        const tex = `$(${polyStr(p1)}) * (${polyStr(p2)}) = ${polyStr(result)}$`;
+        const output = document.getElementById('result');
+        displayRuntimeTex(output, tex);
     }
 
     function polyDivClicked(){
         const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const { quotient, remainder } = polynomialDivide(p1, p2);
-        document.getElementById('result').innerText = `(${polyStr(p1)}) / (${polyStr(p2)} = Quotient: ${polyStr(quotient)} Remainder: ${polyStr(remainder)}`;
+        //document.getElementById('result').innerText = `(${polyStr(p1)}) / (${polyStr(p2)} = Quotient: ${polyStr(quotient)} Remainder: ${polyStr(remainder)}`;
+        const tex = `$(${polyStr(p1)}) / (${polyStr(p2)}) = ${polyStr(quotient)} \\quad [${polyStr(remainder)}]$`;
+        const output = document.getElementById('result');
+        displayRuntimeTex(output, tex);
     }
 
     function polynomialAdd(p1, p2) {
@@ -208,7 +297,7 @@
 
         return { quotient, remainder };
     }
-</script>
 
+</script>
 </body>
 </html>
