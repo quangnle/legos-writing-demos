@@ -7,6 +7,19 @@
     <script src="index.js"></script>
 </head>
 <body>
-    
+    <h1>Demo of Polish Notation</h1>    
+    <p>Enter an expression in infix notation:</p> <input type="text" id="infix" style="width: 50ch;">
+    <button onclick="process()">Process</button>    
+    <p>Postfix: <span id="postfix"></span></p>
+    <p>Result: <span id="result"></span></p>
+    <script>
+        function process() {
+            const infix = document.getElementById('infix').value;
+            const postfix = infix2Postfix(tokenize(infix));
+            const result = evalPostfix(postfix);
+            document.getElementById('postfix').innerText = postfix;
+            document.getElementById('result').innerText = result;
+        }
+    </script>
 </body>
 </html>

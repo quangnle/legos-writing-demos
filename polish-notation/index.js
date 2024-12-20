@@ -1,5 +1,8 @@
 function tokenize(expression) {
-    return expression.split(/([+\-*/()^])/).filter(token => token.trim() !== '');
+    // split the expression by operators and operands
+    // filter out empty strings
+    const tokens = expression.split(/([+\-*/()^])/).filter(token => token.trim() !== '');
+    return tokens.map(token => token.trim());
 }
 
 function infix2Postfix(tokens) {
@@ -47,4 +50,39 @@ function infix2Postfix(tokens) {
     return postfix;
 }
 
-console.log(infix2Postfix(tokenize('3 + 4 * 2 / ( 1 - 5 ) * 2 ^ 3 + 3')));
+function evalPostfix(postfix) {
+    const s = [];
+    for (let i = 0; i < postfix.length; i++) {
+        const token = postfix[i];
+        if ('+-*/^'.indexOf(token) !== -1) {
+            const b = s.pop() * 1; // convert to number
+            const a = s.pop() * 1;
+            switch (token) {
+                case '+':
+                    s.push(a + b);
+                    break;
+                case '-':
+                    s.push(a - b);
+                    break;
+                case '*':
+                    s.push(a * b);
+                    break;
+                case '/':
+                    s.push(a / b);
+                    break;
+                case '^':
+                    s.push(a ** b);
+                    break;
+            }            
+        } else {
+            s.push(token);
+        }
+    }
+    return s.pop();
+}
+
+// const expression = '32 + 14 * 4 / ( 1 - 5 ) * 2 ^ 3 + 213';
+// const tokens = tokenize(expression);
+// const postfix = infix2Postfix(tokens);
+// console.log(postfix);
+// console.log(evalPostfix(postfix)); 
