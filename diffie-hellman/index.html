@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diffie-Hellman Key Exchange</title>
+</head>
+<body>
+    <h1>Diffie-Hellman Key Exchange</h1>
+    <p>1 - Diffie-Hellman on prime field</p>
+    <table border="1px" cellpadding="0px" cellspacing="1px">
+        <tr>
+            <th>Alice</th>
+            <th>Bob</th>            
+        </tr>
+        <tr>
+            <td colspan="2"><b>Public share</b></td>            
+        </tr>
+        <tr>            
+            <td>\(\mathbb F_p, p=\)<input type="number" id="Fp" value="43"></td>
+            <td>\(g=\)<input type="number" id="generator" value="7"></td>
+        </tr>
+        <tr>
+            <td colspan="2"><b>Secret</b></td>            
+        </tr>
+        <tr>
+            <td>Secret \(a=\)<input type="number" id="sa" placeholder="1"></td>
+            <td>Secret \(b=\)<input type="number" id="sb" placeholder="2"></td>
+        </tr>
+        <tr>
+            <td colspan="2"><button onclick="proceed()">Proceed</button></td>
+        </tr>     
+        <tr>
+            <td>\(x=g^a \mod p=\) <span id="ga"></span></td>
+            <td>\(y=g^b \ mod p=\) <span id="gb"></span></td>
+        </tr>
+        <tr>
+            <td colspan="2"><b>Shared secret</b></td>
+        </tr>
+        <tr>
+            <td colspan="2">\(k=g^{ab} \mod p = \) <span id="k"></span></td>
+        </tr>        
+    </table>
+
+    <p>2 - Diffie-Hellman on elliptic curve</p>
+    <table border="1px" cellpadding="0px" cellspacing="1px">
+        <tr>
+            <th>Alice</th>
+            <th>Bob</th>            
+        </tr>
+        <tr>
+            <td colspan="2"><b>Public share</b></td>            
+        </tr>
+        <tr>            
+            <td>Elliptic curve\(y^2 = x^3+x+7\) and \(\mathbb F_p, p=83\)</td>
+            <td>Generator \(G(0, 16)\)</td>
+        </tr>
+        <tr>
+            <td colspan="2"><b>Secret</b></td>            
+        </tr>
+        <tr>
+            <td>Secret \(a=\)<input type="number" id="sA" placeholder="1"></td>
+            <td>Secret \(b=\)<input type="number" id="sB" placeholder="2"></td>
+        </tr>
+        <tr>
+            <td colspan="2"><button onclick="proceed_ec()">Proceed</button></td>
+        </tr>     
+        <tr>
+            <td>\(A=aG=\) <span id="gA"></span></td>
+            <td>\(B=bG=\) <span id="gB"></span></td>
+        </tr>
+        <tr>
+            <td colspan="2"><b>Shared secret</b></td>
+        </tr>
+        <tr>
+            <td colspan="2">\(K= abG = \) <span id="K"></span></td>
+        </tr>        
+    </table>
+    <script>
+        function modPow(base, exponent, modulus) {
+            if (modulus === 1) return 0;
+            var result = 1;
+            base = base % modulus;
+            while (exponent > 0) {
+                if (exponent % 2 === 1) {
+                    result = (result * base) % modulus;
+                }
+                exponent = exponent >> 1;
+                base = (base * base) % modulus;
+            }
+            return result;
+        }
+
+        function proceed() {
+            var Fp = document.getElementById("Fp").value * 1;
+            var generator = document.getElementById("generator").value * 1;
+            var sa = document.getElementById("sa").value * 1;
+            var sb = document.getElementById("sb").value * 1;
+            var ga = modPow(generator, sa, Fp);
+            var gb = modPow(generator, sb, Fp);
+            var k = modPow(gb, sa, Fp);
+            document.getElementById("ga").innerHTML = ga;
+            document.getElementById("gb").innerHTML = gb;
+            document.getElementById("k").innerHTML = k;
+        }
+
+        function proceed_ec(){
+            const ec = new DiscreteEC(83, 1, 7);
+            const generator = [0, 16];
+            var sa = document.getElementById("sA").value * 1;
+            var sb = document.getElementById("sB").value * 1;
+            var ga = ec.multiply(generator, sa);
+            var gb = ec.multiply(generator, sb);
+            var k = ec.multiply(gb, sa);            
+            document.getElementById("gA").innerHTML = `(${ga[0]}, ${ga[1]})`;
+            document.getElementById("gB").innerHTML = `(${gb[0]}, ${gb[1]})`;
+            document.getElementById("K").innerHTML = `(${k[0]}, ${k[1]})`;
+        }
+    </script>
+    <script src="discrete-ec.js"></script>    
+    <script src="index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script"></script>
+</body>
+</html>
