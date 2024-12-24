@@ -51,7 +51,6 @@
                 solution.reverse();
                 let tex = solution.map(ruleToTex).join('\\\\');
                 tex = `\\begin{align*} ${tex} \\end{align*}`;
-                //output.innerHTML = `\(`;                
                 displayRuntimeTex(output, tex);
             }   
             

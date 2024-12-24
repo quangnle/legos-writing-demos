@@ -33,7 +33,7 @@
             <input type="text" id="poly2" placeholder="1 2 3 4==> 1 + 2x + 3x^2 + 4x^3">
         </p>
         <p>
-            <div id="MathPreview" class="preview"><span id="result"></span></div>
+            <div><span id="result"></span></div>
         </p>
     </div>
     <a class="nav-button left" onclick="changeSlide(-1)">&#10094;</a>
@@ -118,7 +118,7 @@
     }
 
     function displayRuntimeTex(output, tex) {
-        output.innerHTML = tex;
+        output.innerHTML = `\\(${tex}\\)`;
         MathJax.texReset();
         MathJax.typesetClear();
         MathJax.typesetPromise([output]).catch(function (err) {
@@ -136,7 +136,7 @@
         const result = polynomialAdd(p1, p2);
 
         // display the result in Latex format
-        const tex = `$(${polyStr(p1)}) + (${polyStr(p2)}) = ${polyStr(result)}$`;
+        const tex = `(${polyStr(p1)}) + (${polyStr(p2)}) = ${polyStr(result)}`;
         const output = document.getElementById('result');        
         displayRuntimeTex(output, tex);
     }
@@ -146,7 +146,7 @@
         const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const result = polynomialSubtract(p1, p2);
         // display the result in Latex format
-        const tex = `$(${polyStr(p1)}) - (${polyStr(p2)}) = ${polyStr(result)}$`;
+        const tex = `(${polyStr(p1)}) - (${polyStr(p2)}) = ${polyStr(result)}`;
         const output = document.getElementById('result'); 
         displayRuntimeTex(output, tex);        
     }
@@ -155,7 +155,7 @@
         const p1 = document.getElementById('poly1').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const result = polynomialMultiply(p1, p2);
-        const tex = `$(${polyStr(p1)}) * (${polyStr(p2)}) = ${polyStr(result)}$`;
+        const tex = `(${polyStr(p1)}) * (${polyStr(p2)}) = ${polyStr(result)}`;
         const output = document.getElementById('result');
         displayRuntimeTex(output, tex);
     }
@@ -165,7 +165,7 @@
         const p2 = document.getElementById('poly2').value.trim().split(' ').map(x => x===''? 0: parseFloat(x));
         const { quotient, remainder } = polynomialDivide(p1, p2);
         //document.getElementById('result').innerText = `(${polyStr(p1)}) / (${polyStr(p2)} = Quotient: ${polyStr(quotient)} Remainder: ${polyStr(remainder)}`;
-        const tex = `$(${polyStr(p1)}) / (${polyStr(p2)}) = ${polyStr(quotient)} \\quad [${polyStr(remainder)}]$`;
+        const tex = `(${polyStr(p1)}) / (${polyStr(p2)}) = ${polyStr(quotient)} \\quad [${polyStr(remainder)}]`;
         const output = document.getElementById('result');
         displayRuntimeTex(output, tex);
     }
