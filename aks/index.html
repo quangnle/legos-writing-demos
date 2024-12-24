@@ -14,6 +14,7 @@
     <script src="aks.js"></script>
     <script>
         function checkPrime() {
+            document.getElementById('result').innerText = "";
             const n = parseInt(document.getElementById('n').value);
             const result = AKSTest(n);
             document.getElementById('result').innerText = result ? 'PRIME' : 'COMPOSITE';

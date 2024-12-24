@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo of Forward Chaining algorithm</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script"></script>
+</head>
+<body>
+    <h1>Demo of Forward Chaining algorithm</h1>
+    <div>
+        Input facts: <input type="text" id="input">
+        <br>
+        Input target: <input type="text" id="target">
+        <br>
+        <button onclick="solve()">Solve</button>
+    </div>    
+    <div>
+        <h2>Output</h2>
+        <div id="output"></div>
+    </div>
+    <script src="index.js"></script> 
+    <script>
+        function displayRuntimeTex(output, tex) {
+            output.innerHTML = tex;
+            MathJax.texReset();
+            MathJax.typesetClear();
+            MathJax.typesetPromise([output]).catch(function (err) {
+                output.innerHTML = '';
+                output.appendChild(document.createTextNode(err.message));
+                console.error(err);
+            }).then(function () {
+                //button.disabled = false;
+            });
+        }        
+
+        function ruleToTex(rule) {
+            return rule.premises.join(',') + ' \\Rightarrow ' + rule.conclusion + '  \\quad \\text{ since }' + rule.comment;
+        }
+
+        function solve() {
+            const input = document.getElementById('input').value;
+            const target = document.getElementById('target').value;
+            const output = document.getElementById('output');
+
+            const facts = input.split(',').map(f => f.trim());
+            const solution = kb.solve(facts, target);
+            if (solution) {
+                //reverse the solution
+                solution.reverse();
+                let tex = solution.map(ruleToTex).join('\\\\');
+                tex = `\\begin{align*} ${tex} \\end{align*}`;
+                //output.innerHTML = `\(`;                
+                displayRuntimeTex(output, tex);
+            }   
+            
+        }
+    </script>
+               
+</body>
+</html>
