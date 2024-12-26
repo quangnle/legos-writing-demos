@@ -99,20 +99,3 @@ class GeneticAlgorithm {
         this.population[1] = children[1];
     }
 }
-
-const ga = new GeneticAlgorithm(100, 100, 0.05);
-const target = ga.generateRandomChromosome(100);
-
-let generation = 0;
-while (generation < 1000000) {
-    generation++;
-    ga.evolve(target);
-    const best = ga.population.reduce((acc, individual) => individual.fitnessScore > acc.fitnessScore ? individual : acc);
-    if (generation % 100 === 0) {
-        console.log(`Generation: ${generation}, Best: ${best.fitnessScore}`);
-    }
-    if (best.fitnessScore === target.length) {
-        console.log(`Generation: ${generation}, Target: ${target}, Best: ${best.chromosome}`);
-        break;
-    }
-}

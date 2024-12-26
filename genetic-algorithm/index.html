@@ -3,9 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genetic Algorithm</title>
+    <title>Genetic Algorithm Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: smaller;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            background-color: #333;
+            color: #fff;
+            margin: 0;
+            padding: 10px;
+            text-align: center;
+        }
+        div {
+            margin: 10px;
+        }
+        button {
+            background-color: #333;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        input[type="number"] {
+            padding: 5px;
+            width: 120px;
+        }
+        textarea {
+            padding: 5px;    
+            width:  500px;        
+            height: 100px;
+        }   
+        span {
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
+    <h1>Genetic Algorithm Demo</h1>
+    <div>Target <button onclick="randomize()">Generate a random target</button></div>
+    <div><textarea id="target" placeholder="100001010101010011110000"></textarea></div>
+    <div>Population Size <input type="number" id="populationSize" value="100"></div>
+    <div>Mutation Rate <input type="number" id="mutationRate" value="0.01"></div>
+    <div>Max generations <input type="number" id="generations" value="10000"></div>
+    <div><button onclick="start()">Evolution</button>   </div>
+    <div>Generation <span id="generation"></span></div>
+    <div>Best Fitness <span id="bestFitness"></span></div>
+    <div>Best Chromosome</div>
+    <div><textarea id="bestChromosome"></textarea></div>
     <script src="index.js"></script>    
+    <script>
+        function randomize() {
+            const target = document.getElementById('target');
+            const length = Math.floor(Math.random() * 300) + 30;
+            target.value = Array.from({ length }, () => Math.random() > 0.5 ? '1' : '0').join('');
+        }
+        async function start() {
+            const target = document.getElementById('target').value;
+            const populationSize = document.getElementById('populationSize').value * 1;
+            const mutationRate = document.getElementById('mutationRate').value * 1;
+            const generations = document.getElementById('generations').value * 1;
+
+            const ga = new GeneticAlgorithm(populationSize, target.length, mutationRate);
+
+            let generation = 0;
+            while (generation < generations) {
+                ga.evolve(target);
+                generation++;
+
+                // find the best individual in the population 
+                const best = ga.population.reduce((acc, individual) => individual.fitnessScore > acc.fitnessScore ? individual : acc);
+                // display the best individual
+                document.getElementById('bestFitness').innerText = `${best.fitnessScore}/${target.length}`;
+                document.getElementById('bestChromosome').innerText = best.chromosome;
+                document.getElementById('generation').innerText = generation;            
+                await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI to update
+
+                if (best.fitnessScore === target.length) {
+                    break;
+                }
+            }
+        }
+    </script>
 </body>
 </html>
