@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Star Algorithm - Find shortest path</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: small;
+        }
+        h2 {
+            text-align: center;
+        }
+        #board1, #board2, #board3 {
+            display: flex;
+            flex-wrap: wrap;
+            width: 200px;
+            margin: 0 auto;
+        }
+        #board1 textarea, #board2 textarea, #board3 textarea {
+            width: 100%;
+            height: 70px;
+            resize: none;      
+        }
+    </style>
+</head>
+<body>
+    <h2 style="text-align: left;">A* Algorithm - Find shortest path</h2>
+    <div id="sketch-holder"></div>
+    <div style="display: flex; ">
+        <div>            
+            <div id="board1">
+                <h4>Manhattan</h4>
+                <input type="checkbox" id="toggleMahattanDisplay" checked onchange="toggleMahattanDisplay()" />
+                <p><textarea id="mahattanInfo"></textarea></p>
+            </div>
+        </div>
+        <div>
+            <div id="board2">
+                <h4>Euclidean</h4>
+                <input type="checkbox" id="toggleEuclideanDisplay" checked onchange="toggleEuclideanDisplay()" />
+                <p><textarea id="euclideanInfo"></textarea></p>
+            </div>
+        </div>
+        <div>
+            <div id="board3">
+                <h4>Non Heuristic</h4>
+                <input type="checkbox" id="toggleNonHeuristicDisplay" checked onchange="toggleNonHeuristicDisplay()" />
+                <p><textarea id="nonHeuristicInfo" readonly></textarea></p>
+            </div>
+        </div>
+    </div>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="sketch.js"></script>
+    <script src="astar.js"></script>    
+    <script>
+        let showMahattan = true;
+        let showEuclidean = true;
+        let showNonHeuristic = true;
+
+        function toggleMahattanDisplay() {
+            showMahattan = !showMahattan;
+        }
+
+        function toggleEuclideanDisplay() {
+            showEuclidean = !showEuclidean;
+        }
+
+        function toggleNonHeuristicDisplay() {
+            showNonHeuristic = !showNonHeuristic;
+        }
+
+    </script>
+</body>
+</html>
