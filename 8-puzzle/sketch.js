@@ -47,7 +47,7 @@ function draw() {
 
     fill(0);
     textAlign(LEFT, CENTER);
-    text('Setup the START and TARGET states by clicking on the blocks to move', 10, 10);
+    text('Setup the START and TARGET states by clicking on their blocks to move', 10, 10);
 
     text('START', 10, 30);
     startNode.draw(0, 40);
