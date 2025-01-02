@@ -1,13 +1,7 @@
 let path = [];
 
 let astar = new AStar((node, end) => {
-    let h = 0;
-    for (let i = 0; i < node.arr.length; i++) {
-        if (node.arr[i] !== end.arr[i]) {
-            h++;
-        }
-    }
-    return h;
+    return node.arr.reduce((h, value, index) => value !== end.arr[index] ? h + 1 : h, 0);
 });
 
 let startNode = new ClickableNode(new Node([1, 2, 3, 4, 5, 6, 7, 8, 0]));
