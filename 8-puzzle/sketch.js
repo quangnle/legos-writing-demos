@@ -32,6 +32,9 @@ function drawBlock(x, y, size, node) {
             fill(0);
             textAlign(CENTER, CENTER);
             text(value, x + col * size + size / 2, y + row * size + size / 2);
+        } else {
+            fill(200);
+            rect(x + col * size, y + row * size, size, size);
         }
     }
 }
