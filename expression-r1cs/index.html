@@ -4,9 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Convert an Expression to Rank 1 Constraint System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        textarea {
+            width: 700px;
+            height: 200px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+    </style>
 </head>
 <body>
-    <h1>Convert an Expression to Rank 1 Constraint System</h1>
+    <h1>Expression to Rank 1 Constraint System</h1>
     <div><input type="text" id="exp" placeholder="z=x^3+y+5"><button onclick="convert()">Convert</button></div>
     <div><textarea id="result" readonly></textarea></div>
     <script src="index.js"></script>    
