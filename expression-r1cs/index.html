@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert an Expression to Rank 1 Constraint System</title>
+</head>
+<body>
+    <h1>Convert an Expression to Rank 1 Constraint System</h1>
+    <div><input type="text" id="exp" placeholder="z=x^3+y+5"><button onclick="convert()">Convert</button></div>
+    <div><textarea id="result" readonly></textarea></div>
+    <script src="index.js"></script>    
+    <script>
+        function convert() {
+            const exp = document.getElementById("exp").value;
+            const result = document.getElementById("result");
+
+            let r1cs = exp2r1cs(exp);
+            result.value = 'Rank 1 Constraint System:\n';
+            r1cs.equations.forEach(r => result.value += r + '\n');
+            result.value += '-----------------------------------\n';
+
+            let lro = exp2LROmatrices(exp);
+            let m = lro.L.length;
+            for (let i=0; i < m; i++) {
+                result.value += `Equation ${i}: ${r1cs.equations[i]}, Variables List: ${Array.from(r1cs.variables).join(', ')}\n`;
+                result.value += `L[${i}]: ${lro.L[i].join(' ')}\n`;
+                result.value += `R[${i}]: ${lro.R[i].join(' ')}\n`;
+                result.value += `O[${i}]: ${lro.O[i].join(' ')}\n`;
+                result.value += '-----------------------------------\n';
+            }
+        }
+    </script>
+</body>
+</html>
