@@ -71,7 +71,7 @@ function interPolyMatrix(arr) {
     return result;
 }
 
-function computePoly(m, witness, prime) {
+function computePoly(m, witness) {
     const result = new Array(m[0].length).fill(0);
     for (let i = 0; i < result.length; i++) {
         for (let j = 0; j < m.length; j++) {
@@ -90,39 +90,38 @@ function generateT(nPoints) {
     return p;
 }
 
-// z = 3x^2y + 5xy - x - 2y + 3
-// R1CS:
-// v1 = 3xx
-// v2 = v1y
-// -v2 + x + 2y - 3 + z = 5xy
+// // z = 3x^2y + 5xy - x - 2y + 3
+// // R1CS:
+// // v1 = 3xx
+// // v2 = v1y
+// // -v2 + x + 2y - 3 + z = 5xy
 
-// witness {1,z,x,y,v1,v2}
-const witness = [1, 3, 35, 9, 27, 30];
-const prime = 47;
+// // witness {1,z,x,y,v1,v2}
+// const witness = [1, 3, 35, 9, 27, 30];
 
-const lps = interPolyMatrix(leftArr);
-// console.log('Left Polynomials:');
-// lps.forEach((p, i) => {
-//     console.log(`lp${i}(x)= ${p}`);
-// });
-const lp = computePoly(lps, witness, prime);
-console.log(`lp(x)= ${lp}`);
+// const lps = interPolyMatrix(leftArr);
+// // console.log('Left Polynomials:');
+// // lps.forEach((p, i) => {
+// //     console.log(`lp${i}(x)= ${p}`);
+// // });
+// const lp = computePoly(lps, witness);
+// console.log(`lp(x)= ${lp}`);
 
-const rps = interPolyMatrix(rightArr);
-const rp = computePoly(rps, witness,prime);
-console.log(`rp(x)= ${rp}`);
+// const rps = interPolyMatrix(rightArr);
+// const rp = computePoly(rps, witness);
+// console.log(`rp(x)= ${rp}`);
 
-const ops = interPolyMatrix(outArr);
-const op = computePoly(ops, witness, prime);
-console.log(`op(x)= ${op}`);
+// const ops = interPolyMatrix(outArr);
+// const op = computePoly(ops, witness);
+// console.log(`op(x)= ${op}`);
 
-const lr = field.polyMul(lp, rp);
-const lro = field.polyMinus(lr, op);
-console.log(`lro(x)= ${lro}`);
+// const lr = field.polyMul(lp, rp);
+// const lro = field.polyMinus(lr, op);
+// console.log(`lro(x)= ${lro}`);
 
-const t = generateT(leftArr.length);
-console.log(`t(x)= ${t}`);
+// const t = generateT(leftArr.length);
+// console.log(`t(x)= ${t}`);
 
-const h = field.polyDiv(lro, t);
-console.log(`h(x)= ${h.quotient}`);
-console.log(`remainder = ${h.remainder}`);
+// const h = field.polyDiv(lro, t);
+// console.log(`h(x)= ${h.quotient}`);
+// console.log(`remainder = ${h.remainder}`);

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rank-1 Constraint System (R1CS) & Quadratic Arithmetic Program QAP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            background-color: #333;
+            color: #fff;
+            font-size: 18px;
+            text-align: left;
+            padding: 10px 0;
+            margin: 0;
+        }
+        div {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+        }
+        input {
+            padding: 10px;
+            font-size: 12px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px;
+            font-size: 12px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #444;
+        }
+        span {
+            font-size: 12px;
+        }        
+        .three-cols {
+            display: flex;
+            padding: 5px;
+        }
+        .col1 {
+            margin-right: 5px;
+        }
+        .col2 {
+            margin-right: 5px;
+        }
+        .col3 {
+            margin-right: 5px;
+        }
+        textarea {
+            font-size: 12px;
+            width: 750px;
+            height: 150px;
+            resize: none;
+        }
+        .three-cols textarea {
+            font-size: 12px;
+            width: 230px;
+            height: 150px;
+            resize: none;
+        }     
+
+    </style>
+</head>
+<body>
+    <h1>Rank-1 Constraint System (R1CS) & Quadratic Arithmetic Program QAP</h1>
+    <div><input type="text" id="exp" placeholder="z=3*x^2+x+3"><button onclick="generateLRO()">Generate R1CS</button></div>
+    <div>
+        <textarea id="lro"></textarea>
+    </div>
+    <div class="three-cols">
+        <div class="col1"><textarea readonly id="lMatrix"></textarea></div>
+        <div class="col2"><textarea readonly id="rMatrix"></textarea></div>
+        <div class="col3"><textarea readonly id="oMatrix"></textarea></div>
+    </div>
+    <div>
+        <div><span id="witnessLabels">Witness vector</span></div>        
+        <div>
+            <input type="text" id="witness" placeholder="3,4,5,6 --- must be in correct order!">
+            <button onclick="generateQAP()">Generate QAP (prime order p = 47)</button>
+        </div>
+    </div>
+    <div class="three-cols">
+        <div class="col1"><textarea readonly id="lPoly"></textarea></div>
+        <div class="col2"><textarea readonly id="rPoly"></textarea></div>
+        <div class="col3"><textarea readonly id="oPoly"></textarea></div>
+    </div>
+    <div>
+        <textarea readonly id="hx"></textarea>
+    </div>
+    <script src="exp-r1cs.js"></script>    
+    <script src="discrete-polynomial.js"></script>
+    <script src="discrete-qap.js"></script>    
+    <script>
+        function generateLRO() {
+            const exp = document.getElementById('exp').value;
+            const lro = exp2LROmatrices(exp);
+            document.getElementById('lro').value = lro.equations.join('\n');
+            document.getElementById('witnessLabels').innerText = `Witness vector [${lro.variables.join(',')}]`;
+            document.getElementById('lMatrix').value = `Left polynomials with witness [${lro.variables.join(',')}]:\n${lro.L.join('\n')}`;
+            document.getElementById('rMatrix').value = `Right polynomials with witness [${lro.variables.join(',')}]:\n${lro.R.join('\n')}`;
+            document.getElementById('oMatrix').value = `Output polynomials with witness [${lro.variables.join(',')}]:\n${lro.O.join('\n')}`;
+        }
+        function generateQAP() {
+            //z=3*x^2+2*y+3
+            //1,1,1,3,2,4,7,10
+
+            const witness = document.getElementById('witness').value.split(',').map(Number);
+            const exp = document.getElementById('exp').value;
+            const lro = exp2LROmatrices(exp);
+            const prime = 47;
+            
+            const lps = interPolyMatrix(lro.L);            
+            const lp = computePoly(lps, witness, prime);
+
+            document.getElementById('lPoly').value = `Left interpolated polynomials:\n${lps.map((p,i) => `l${i}(x)= ${p}`).join('\n')}`;
+            document.getElementById('lPoly').value += `\n--------\n`;
+            document.getElementById('lPoly').value += `l(x)= ${lp}`;
+
+            const rps = interPolyMatrix(lro.R);
+            const rp = computePoly(rps, witness, prime);
+            document.getElementById('rPoly').value = `Right interpolated polynomials:\n${rps.map((p,i) => `r${i}(x)= ${p}`).join('\n')}`;
+            document.getElementById('rPoly').value += `\n--------\n`;
+            document.getElementById('rPoly').value += `r(x)= ${rp}`;
+
+            const ops = interPolyMatrix(lro.O);
+            const op = computePoly(ops, witness, prime);
+            document.getElementById('oPoly').value = `Output interpolated polynomials:\n${ops.map((p,i) => `o${i}(x)= ${p}`).join('\n')}`;
+            document.getElementById('oPoly').value += `\n--------\n`;
+            document.getElementById('oPoly').value += `o(x)= ${op}`;
+
+            const lr = field.polyMul(lp, rp);
+            document.getElementById('hx').value = `l(x)r(x) = ${lr}`;
+
+            const t = generateT(leftArr.length);
+            document.getElementById('hx').value += `\n--------\n`;
+            document.getElementById('hx').value += `t(x)= ${t}`;     
+
+            const b = field.polyMinus(lr, op);
+            document.getElementById('hx').value += `\n--------\n`;
+            document.getElementById('hx').value += `b(x)= ${b}`;
+
+            const h = field.polyDiv(b, t);
+            document.getElementById('hx').value += `\n--------\n`;
+            document.getElementById('hx').value += `h(x)= ${h.quotient}\n`;
+            document.getElementById('hx').value += `remainder = ${h.remainder}`;
+        }
+    </script>
+</body>
+</html>
