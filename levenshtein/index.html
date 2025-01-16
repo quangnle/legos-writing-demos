@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levenshtein Distance Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            background-color: #333;
+            color: #fff;
+            font-size: 18px;
+            text-align: left;
+            padding: 10px 0;
+            margin: 0;
+        }
+        div {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+        }
+        input {
+            padding: 10px;
+            font-size: 12px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px;
+            font-size: 12px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #444;
+        }
+        textarea {
+            padding: 10px;
+            font-size: 12px;
+            width: 300px;
+            height: 100px;
+            margin-right: 10px;
+        }
+        label {
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .result {
+            padding: 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Levenshtein Distance Demo</h1>
+    <div>
+        <label for="dictionary">Dictionary</label>
+        <textarea type="text" id="dictionary">levenshtein, distance, algorithm, demo, example, test, code, php, javascript, python, c, c-sharp, java, erlang, assembly, html, xml, json, css, scss, sass, less, sql, mysql, postgresql, sqlite, oracle, mongodb, redis, memcached, elasticsearch, solr, lucene, rabbitmq, kafka, activemq, zeromq, mqtt, amqp, stomp, smtp, pop3, imap, http, https, tcp, udp, ip, ipv4, ipv6, dns, dhcp, ftp, sftp, ssh, telnet, rdp, vnc, icmp, arp, nat, pat, lan, wan</textarea>
+    </div>
+    <div>
+        <label for="threshold">Threshold</label>
+        <input type="range" id="threshold" min="0" max="5" value="3" oninput="document.getElementById('thresholdValue').innerText = this.value">
+        <span id="thresholdValue">3</span>
+    </div>
+    <div>
+        <input type="text" id="query">        
+        <button onclick="suggest()">Suggest</button>
+    </div>
+    <div class="result" id="result"></div>
+    <script src="index.js"></script>
+    <script>
+        function suggest() {
+            const dictionary = document.getElementById('dictionary').value;
+            const query = document.getElementById('query').value;
+            const result = document.getElementById('result');
+
+            const words = dictionary.split(',');
+            const threshold = parseInt(document.getElementById('threshold').value);
+            
+            let suggestion = [];
+            for (let i = 0; i < words.length; i++) {
+                const distance = levenshteinDistance(words[i].trim(), query.trim());
+                if (distance < threshold) {
+                    suggestion.push({ word: words[i], distance: distance });
+                }
+            }
+
+            suggestion.sort((a, b) => a.distance - b.distance);
+            result.innerHTML = 'Result: ' + suggestion.length + ' suggestion(s) found';
+            const ul = document.createElement('ul');
+            for (let i = 0; i < suggestion.length; i++) {
+                const li = document.createElement('li');
+                li.innerHTML = suggestion[i].word + ' ( distance = ' + suggestion[i].distance + ' )';
+                ul.appendChild(li);
+            }            
+            result.appendChild(ul);
+        }
+    </script>
+</body>
+</html>
+
