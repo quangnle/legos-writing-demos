@@ -95,9 +95,30 @@ class CombinedSinePanel {
         this.waves = [];
     }
 
-    draw() {
+    drawEpiCycles() {        
+        let x = 0;
+        let y = 0;
+        this.waves.forEach(wave => {
+            let prevx = x;
+            let prevy = y;
+            x += wave.amplitude * cos(2 * PI * wave.frequency * this.t / 360 + wave.phase);
+            y += wave.amplitude * sin(2 * PI * wave.frequency * this.t / 360 + wave.phase);
+
+            stroke(wave.color);
+            noFill();
+            ellipse(prevx, prevy, wave.amplitude * 2);
+            
+            ellipse(x, y, 3);
+            line(prevx, prevy, x, y);
+        });
+        line(x, y, 50, y);
+    }
+
+    draw() {        
         push();        
         translate(this.x, this.y);
+        
+        
         rect(0, 0, 500, 200);
         line(0, 100, 500, 100);
 
@@ -114,6 +135,12 @@ class CombinedSinePanel {
         for (let i = 0; i <this.values.length - 1; i++) {
             line(this.values.length - i, this.values[i] + 100, this.values.length - i-1, this.values[i + 1] + 100);
         }
+
+        push();
+        translate(-50, 100);
+        this.drawEpiCycles();
+        pop();
+
         pop();
 
         this.t += 1;
