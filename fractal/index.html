@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Demo</title>
+</head>
+<body>
+    <textarea id="display" rows="40" cols="80"></textarea>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="mandelbrot.js"></script>
+    <script src="sketch.js"></script>
+    <script>
+        const nRows = 40;
+        const nCols = 80;
+        const maxIterations = 200;
+        let stDisplay = "";
+        
+        for (let i = 0; i < nRows; i++) {
+            for (let j = 0; j < nCols; j++) {
+                const x = -2.5 + 3.5 * j / nCols;
+                const y = -1.5 + 3 * i / nRows;
+                const n = mandelbrot(x, y, maxIterations);
+                stDisplay += n < maxIterations ? " " : "*";
+            }
+            stDisplay += "\n";
+        }
+        console.log(stDisplay);
+        document.getElementById("display").value = stDisplay;
+    </script>
+</body>
+</html>
