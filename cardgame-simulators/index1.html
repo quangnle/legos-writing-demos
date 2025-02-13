@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Statistics Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }        
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Poker Statistics Simulator</h1>
+    </header>
+    <div>
+        <div>
+            Number of players <input type="number" id="nPlayers" value="5" min="1" max="8">
+            Number of matches <input type="number" id="nMatches" value="10000" min="1000" max="1000000">
+            <button onclick="startSimulate()">Simulate</button>
+        </div>
+        <div id="canvas-container">
+        </div>
+        <div>
+            <textarea id="stats" cols=90 rows=12></textarea>
+        </div>
+    </div>
+    <script src="card-deck.js"></script>
+    <script src="poker.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="sketch1.js"></script>
+    <script>
+        let result_stats = {
+                "royal flush": 0,
+                "straight flush": 0,
+                "four of a kind": 0,
+                "full house": 0,
+                "flush": 0,
+                "straight": 0,
+                "three of a kind": 0,
+                "two pair": 0,
+                "one pair": 0,
+                "high card": 0
+        };
+
+        function startAMatch(nHands) {
+            let deck = new CardDeck();
+            deck.shuffle();
+            
+            const {hands, communityCards} = dealPokerHands(deck, nHands);
+
+            const handResults = hands.map(hand => {                
+                return evaluatePokerHand(hand, communityCards);
+            });
+
+            handResults.forEach((result, i) => {
+                result_stats[result.rank]++;                
+            });
+        }
+
+        function startSimulate(){
+            const nPlayers = parseInt(document.getElementById("nPlayers").value);
+            const nMatches = parseInt(document.getElementById("nMatches").value);
+
+            result_stats = {
+                "royal flush": 0,
+                "straight flush": 0,
+                "four of a kind": 0,
+                "full house": 0,
+                "flush": 0,
+                "straight": 0,
+                "three of a kind": 0,
+                "two pair": 0,
+                "one pair": 0,
+                "high card": 0
+            };
+
+            for (let i = 0; i < nMatches; i++) {
+                startAMatch(nPlayers);
+            }
+            
+            let stats = "";
+            for (let i=0; i < Object.keys(result_stats).length; i++) {
+                const key = Object.keys(result_stats)[i];
+                const value = result_stats[key];
+                const percentage = (value / (nMatches*nPlayers) * 100).toFixed(3);
+                stats += `${key.toUpperCase()}: ${value.toLocaleString()}/${(nMatches * nPlayers).toLocaleString()} (${percentage}%)\n`;
+            }
+            document.getElementById("stats").value = stats;
+        }
+    </script>
+</body>
+</html>
