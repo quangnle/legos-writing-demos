@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Demo for An Interactive Zero Knowledge Proof Scheme</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+        table {            
+            border:#333 solid 1px;
+            width: 700px;            
+        }
+        th {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Simple Demo for An Interactive Zero Knowledge Proof Scheme</h1>
+    </header>
+    <table>
+        <tr>
+            <th>Prover</th>
+            <th>Verifier</th>
+        </tr>
+        <tr>
+            <td colspan="2">
+                g= <input type="number" id="inpG" style="width: 50px;">, p= <input type="number" id="inpP" style="width: 50px;"> (must be prime)
+            </td>            
+        </tr>
+        <tr>
+            <td>
+                Secret w = <input type="number" id="inpW" style="width: 50px;"> <button onclick="calculateY()">Calculate y</button>
+                <br>
+                y = g^w mod p = <span id="y"></span>
+                <br><br>
+                Random x = <input type="number" id="inpX" style="width: 50px;"> <button onclick="calculateT()">Calculate t</button>
+                <br>                                
+                t = g^x mod p = <span id="t"></span>
+            </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>
+                Random c = <input type="number" id="inpC" style="width: 50px;"> <button onclick="challenge()">Challenge</button>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                r = x - c * w = <span id="r"></span>
+            </td>
+            <td>
+                <button onclick="verify()">Verify</button>
+                <br><br>
+                g^r mod p= <span id="gr"></span>
+                <br>
+                y^c mod p= <span id="yc"></span>
+                <br>
+                v = g^r.y^c mod p = <span id="v"></span>
+            </td>
+        </tr>
+    </table>
+    <script>        
+        function modPow(base, exponent, modulus) {
+            if (modulus === 1) return 0;
+            let result = 1;
+            base = base % modulus;
+            while (exponent > 0) {
+                if (exponent % 2 === 1) {
+                    result = (result * base) % modulus;
+                }
+                exponent = exponent >> 1;
+                base = (base * base) % modulus;
+            }
+            return result;
+        }
+
+        function calculateY() {
+            let g = parseInt(document.getElementById('inpG').value);
+            let p = parseInt(document.getElementById('inpP').value);
+            let w = parseInt(document.getElementById('inpW').value);
+            let y = modPow(g, w, p);
+            document.getElementById('y').innerText = y;
+        }
+
+        function calculateT() {
+            let g = parseInt(document.getElementById('inpG').value);
+            let p = parseInt(document.getElementById('inpP').value);
+            let x = parseInt(document.getElementById('inpX').value);
+            let t = modPow(g, x, p);
+            document.getElementById('t').innerText = t;
+        }
+
+        function challenge() {
+            let p = parseInt(document.getElementById('inpP').value);
+            let w = parseInt(document.getElementById('inpW').value);
+            let x = parseInt(document.getElementById('inpX').value);
+            let c = parseInt(document.getElementById('inpC').value);
+            let r = x - c*w;
+            st = '';
+            st += r;
+            if (r < 0) {
+                r = ((p-2)*(-r)) % (p-1);
+                st += ' = ' + r;
+            }
+            document.getElementById('r').innerText = st;
+        }
+
+        function verify() {
+            let g = parseInt(document.getElementById('inpG').value);
+            let p = parseInt(document.getElementById('inpP').value);
+            let w = parseInt(document.getElementById('inpW').value);
+            let y = parseInt(document.getElementById('y').innerText);
+            let t = parseInt(document.getElementById('t').innerText);
+            let x = parseInt(document.getElementById('inpX').value);
+            let c = parseInt(document.getElementById('inpC').value);
+            
+            
+            let r = x - c*w;
+            if (r < 0) {
+                r = ((p-2)*(-r)) % (p-1);
+            }
+
+            document.getElementById('gr').innerText = modPow(g, r, p);
+            document.getElementById('yc').innerText = modPow(y, c, p);
+
+            let v = (modPow(g, r, p) * modPow(y, c, p)) % p;
+            document.getElementById('v').innerText = v; 
+
+            if (v === t) {
+                alert('The proof is verified!');
+            } else {
+                alert('The proof is not verified!');
+            }
+        }
+    </script>
+</body>
+</html>
