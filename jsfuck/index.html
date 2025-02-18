@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Javascript With Brackets Only!!!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Javascript With Brackets Only!!!</h1>
+    </header>
+    <div>
+        <label for="input">Your JS Code:</label> <br>        
+        <textarea id="input" rows="6" cols="80"></textarea>
+        <br>
+        <button onclick="encode()">Encode</button>
+        <br><br>
+    </div>
+    <div>
+        <label for="output">Encoded Code:</label> <br>
+        <textarea id="output" rows="10" cols="80"></textarea> 
+    </div>
+    <div>
+        <br>
+        <span style="color: red;">Disclaimer: This demo is for research and testing only. You will be responsible for any exploitation!!!</span>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jsfuck/jsfuck.min.js"></script>
+    <script>
+        function encode() {
+            var code = document.getElementById('input').value;
+            var jsfuck = JSFuck.encode(code);
+            document.getElementById('output').value = jsfuck;
+        }        
+    </script>
+</body>
+</html>
