@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Jack Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Black Jack Simulator</h1>
+    </header>
+    <div>
+        Number of players: <input type="number" id="numPlayers" value="5" min="1" max="10"> 
+        Number of matches: <input type="number" id="numMatches" value="10000" min="1000" max="1000000">
+        Stop at: <input type="number" id="stopAt" value="18" min="16" max="20">
+        <button onclick="simulate()">Simulate</button>
+    </div>
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="sketch2.js"></script>
+    <script src="card-deck.js"></script>
+    <script src="blackjack.js"></script>
+    <script>
+        let stats = null;
+        function simulate(){
+            stats = {};
+            let numPlayers = parseInt(document.getElementById('numPlayers').value);
+            let numMatches = parseInt(document.getElementById('numMatches').value);
+            let stopAt = parseInt(document.getElementById('stopAt').value);
+
+            for (let i = 0; i < numMatches; i++){
+                let {hands, scores} = simulateOneMatch(numPlayers, 16, stopAt);
+                for (let j = 0; j < hands.length; j++) {
+                    let startScore = evaluateBlackJackHand([hands[j][0], hands[j][1]]);
+                    let endScore = scores[j];
+
+                    let keyWin = `${startScore}-win`;
+                    let keyLose = `${startScore}-bust`;
+                    if (endScore === 0) {
+                        stats[keyLose] = (stats[keyLose] || 0) + 1;
+                    } else {
+                        stats[keyWin] = (stats[keyWin] || 0) + 1;
+                        stats[`${startScore}-5C`] = stats[`${startScore}-5C`] || 0;
+                        if (endScore === 50) {
+                            stats[`${startScore}-5C`] ++;
+                        }
+                    }
+                }
+            }            
+        }
+        let one = new Card('♥', 'A');
+        let two = new Card('♥', '3');
+        let three = new Card('♥', '5');
+        let four = new Card('♥', '7');
+        let five = new Card('♥', '3');
+        let ev1 = evaluateBlackJackHand([one, two, three, four, five]);
+        let ev2 = evaluateBlackJackHand([one, two, three, four]);
+        let ev3 = evaluateBlackJackHand([one, two, three]);
+        let ev4 = evaluateBlackJackHand([one, two]);
+        console.log(ev1, ev2, ev3, ev4);
+    </script>    
+</body>
+</html>

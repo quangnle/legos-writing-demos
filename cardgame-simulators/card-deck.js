@@ -3,12 +3,16 @@ class Card {
         this.suit = suit;
         this.value = value;
     }
+
+    toString() {
+        return this.value + this.suit;
+    }
 }
 
 class CardDeck {
     constructor() {
         this.cards = [];
-        this.suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+        this.suits = ['♥', '♦', '♣', '♠'];
         this.values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
         // initialize deck
