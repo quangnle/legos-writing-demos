@@ -18,9 +18,9 @@ function drawAValue(x, y, value, totalMatches) {
     let winHeight = map(nWins, 0, totalMatches, 0, MaxHeight);
 
     fill(255, 0, 0);
-    rect(x, y, 30, -colHeight * 5);
+    rect(x, y, 30, -colHeight * 7);
     fill(0, 255, 0);
-    rect(x, y, 30, -winHeight * 5);
+    rect(x, y, 30, -winHeight * 7);
 
     let label = "";
     if (value <= 21) {
@@ -40,13 +40,13 @@ function drawAValue(x, y, value, totalMatches) {
     fill(0);
     textSize(9);
     textAlign(CENTER);
-    text(percentage.toFixed(1) + "%", x + 15, height - colHeight * 5 - 45);
+    text(percentage.toFixed(1) + "%", x + 15, height - colHeight * 7 - 45);
 
     fill(0,255,0);    
-    text(percentageWins.toFixed(1) + "%", x + 15, height - colHeight * 5 - 35);
+    text(percentageWins.toFixed(1) + "%", x + 15, height - colHeight * 7 - 35);
 
     fill(0,0,255);
-    text(percentage5C.toFixed(2) + "%", x + 15, height - colHeight * 5 - 25);
+    text(percentage5C.toFixed(2) + "%", x + 15, height - colHeight * 7 - 25);
 }
 
 function draw() {
