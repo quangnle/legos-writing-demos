@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo for SHA256 function</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Demo for SHA256 function</h1>
+    </header>
+    <div>
+        <label for="input">Input String</label> <br>
+        <textarea type="text" id="input" cols="70" rows="10"></textarea> 
+        <br>        
+        <button onclick="hash()">Hash</button>
+        <br>
+        <br>
+    </div>
+    <div>        
+        <label for="output">Hash Value</label> 
+        <br>
+        <input type="text" id="output" value="" size="70">
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        function hash() {
+            var input = document.getElementById('input').value;
+            var hash = CryptoJS.SHA256(input);
+            document.getElementById('output').value = hash;
+        }
+    </script>
+</body>
+</html>
