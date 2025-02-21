@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birthday Paradox Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Birthday Paradox Test</h1>
+    </header>
+    <div>
+        <label for="nStudent">Number of students:</label>
+        <input type="number" id="nStudent" min="1" max="100" value="23">
+        <button onclick="generate()">Generate</button>
+    </div>
+    <div>
+        <p>Number of experiments: <span id="nTests">0</span> </p>
+        <p>Number of duplicates: <span id="nDuplicates">0</span> --- Rate: <span id="rate">0%</span></p>
+        
+    </div>
+    <div>                
+        <ul id="result">
+        </ul>
+    </div>
+    <script>
+        let nTests = 0;
+        let nDuplicates = 0;
+        let nStudent = 23;
+
+        function generateADate() {            
+            let nDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            let month = Math.floor(Math.random() * 12);
+            let day = Math.floor(Math.random() * nDays[month]) + 1;
+            return `${months[month]}-${day}`;
+        }
+
+        function generate() {
+            if (nStudent != +document.getElementById('nStudent').value) {
+                nTests = 0;
+                nDuplicates = 0;
+                nStudent = +document.getElementById('nStudent').value;
+            }
+            
+            let dates = [];            
+            let duplicates = []
+            for (let i = 0; i < nStudent; i++) {
+                let date = generateADate();                                
+                dates.push(date);                
+                if (dates.indexOf(date) !== i) {
+                    duplicates.push(date);
+                }
+            }
+            let result = document.getElementById('result');
+            result.innerHTML = '';
+            nTests++;
+            let hasDuplicate = false;
+            for (let i = 0; i < dates.length; i++) {                
+                let date = dates[i];
+                let li = document.createElement('li');
+                if (duplicates.includes(date)) {
+                    li.textContent = `Student [${i + 1}] 's birthday: ${date} --- duplicate!!! `;
+                    hasDuplicate = true;
+                } else {
+                    li.textContent = `Student [${i + 1}] 's birthday: ${date}`;
+                }
+                result.appendChild(li);
+            }
+
+            if (hasDuplicate) {
+                nDuplicates++;
+            }
+
+            document.getElementById('nTests').textContent = nTests;
+            document.getElementById('nDuplicates').textContent = nDuplicates;
+            document.getElementById('rate').textContent = `${(nDuplicates / nTests * 100).toFixed(2)}%`;
+        }
+    </script>
+</body>
+</html>
