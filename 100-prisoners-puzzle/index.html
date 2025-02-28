@@ -120,9 +120,9 @@
                     }
                     openingId = arBoxes[openingId].value - 1;
                 }
-            } while (nOpenedBoxes < nBoxes / 2 && curPrisonerId < nBoxes / 2);
+            } while (nOpenedBoxes < nBoxes / 2 && curPrisonerId < nBoxes - 1 );
 
-            const result = curPrisonerId == nBoxes / 2;
+            const result = curPrisonerId == nBoxes - 1;
             return { result: result, boxes: arBoxes};
         }
         
