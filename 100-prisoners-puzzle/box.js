@@ -5,6 +5,10 @@ class Box {
         this.isOpen = false;
     }
 
+    toString() {
+        return `Box(${this.id + 1}, ${this.value})`;
+    }
+
     draw() {
         this.x = this.id % 10 * 40;
         this.y = Math.floor(this.id / 10) * 40;

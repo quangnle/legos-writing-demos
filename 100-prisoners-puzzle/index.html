@@ -47,6 +47,10 @@
         Number of experiments: <span id="nTests">0</span> <br>
     </div>
     <div id="sketch-holder"></div>
+    <div>
+        <button onclick="simulate()">Simulate 100 matches</button> <br>
+        <textarea id="simulateResult" cols="80" rows="30"></textarea>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="sketch.js"></script>
     <script src="box.js"></script>
@@ -56,22 +60,92 @@
         let numOpenedBoxes = 0;
         let nMatches = 0;
         let nWins = 0;
+        let boxes = [];
+        let values = [];
 
         document.getElementById('nPrisoners').addEventListener('change', regenerate);
         document.getElementById('currentPrisoner').innerText = currentPrisonerId + 1;
         document.getElementById('nTests').innerText = numOpenedBoxes;
 
+        function genRandomBoxes(nBoxes) {
+            let arBoxes = [];
+            let arValues = [];
+            // Create values
+            for (let i = 0; i < nBoxes; i++) {
+                arValues.push(i+1);
+            }
+            // Shuffle values
+            for (let i = arValues.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [arValues[i], arValues[j]] = [arValues[j], arValues[i]];
+            }
+            // Create boxes
+            for (let i = 0; i < nBoxes; i++) {
+                let box = new Box(i, arValues[i]);
+                arBoxes.push(box);
+            }
+
+            return arBoxes;
+        }
+
         function generate() {
             nPrisoners = +document.getElementById('nPrisoners').value;
             currentPrisonerId = 0;
             numOpenedBoxes = 0;
-            genRandomBoxes(nPrisoners);
+            boxes = genRandomBoxes(nPrisoners);
         }
 
         function regenerate(){
             generate();
             document.getElementById('currentPrisoner').innerText = currentPrisonerId + 1;
             document.getElementById('nTests').innerText = numOpenedBoxes;
+        }
+
+        function simulateOneMatch(nBoxes) {
+            const arBoxes = genRandomBoxes(nBoxes);
+
+            // Simulate
+            let curPrisonerId = 0;
+            let openingId = curPrisonerId;            
+            let nOpenedBoxes = 0;
+            do {
+                nOpenedBoxes++;
+                if (arBoxes[openingId].value == curPrisonerId + 1) {
+                    curPrisonerId++;
+                    openingId = curPrisonerId;
+                    nOpenedBoxes = 0;
+                } else {
+                    if (nOpenedBoxes == nBoxes / 2) {
+                        break;
+                    }
+                    openingId = arBoxes[openingId].value - 1;
+                }
+            } while (nOpenedBoxes < nBoxes / 2 && curPrisonerId < nBoxes / 2);
+
+            const result = curPrisonerId == nBoxes / 2;
+            return { result: result, boxes: arBoxes};
+        }
+        
+        function simulate() {
+            document.getElementById('simulateResult').value = '';
+            const nMatches = 100;
+            const nBoxes = +document.getElementById('nPrisoners').value;
+            let nWins = 0;
+            let stResult = '';
+            for (let i = 0; i < nMatches; i++) {
+                const match = simulateOneMatch(nBoxes);
+                stResult += `Match ${i+1}: ${match.result ? 'Win' : 'Lose'} \n`;
+                stResult += `Boxes: \n`;
+                match.boxes.forEach(box => {
+                    stResult += `${box.toString()} `;
+                });
+                stResult += '\n==================\n';
+                if (match.result) {
+                    nWins++;
+                }
+            }
+            stResult = `Number of wins: ${nWins}/${nMatches} \n` + stResult;            
+            document.getElementById('simulateResult').value = stResult;
         }
         
     </script>

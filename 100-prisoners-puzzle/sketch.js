@@ -1,30 +1,8 @@
-let boxes = [];
-let values = [];
-
 function setup() {
     let canvas = createCanvas(400, 400);
     canvas.parent('sketch-holder');
     background(200);    
-    genRandomBoxes();
-}
-
-function genRandomBoxes() {
-    boxes = [];
-    values = [];
-    // Create values
-    for (let i = 0; i < nPrisoners; i++) {
-        values.push(i+1);
-    }
-    // Shuffle values
-    for (let i = values.length - 1; i > 0; i--) {
-        let j = floor(random(i + 1));
-        [values[i], values[j]] = [values[j], values[i]];
-    }
-    // Create boxes
-    for (let i = 0; i < nPrisoners; i++) {
-        let box = new Box(i, values[i]);
-        boxes.push(box);
-    }
+    boxes = genRandomBoxes();
 }
 
 function draw() {
@@ -65,7 +43,7 @@ function mousePressed() {
         if (currentPrisonerId == nPrisoners) {
             alert("Congratulations! You've succeeded!");
             regenerate();
-            
+
             nMatches++;
             document.getElementById('nMatches').innerText = nMatches;
             nWins++;
@@ -75,7 +53,7 @@ function mousePressed() {
         }
         alert("Prisoner " + (currentPrisonerId + 1) + " has been released successfully!");
         currentPrisonerId++;        
-        genRandomBoxes();
+        boxes = genRandomBoxes();
         numOpenedBoxes = 0;
     }
 
