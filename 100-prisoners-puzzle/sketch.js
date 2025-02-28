@@ -41,7 +41,7 @@ function mousePressed() {
 
     if (box.value == currentPrisonerId + 1) {
         if (currentPrisonerId == nPrisoners) {
-            alert("Congratulations! You've succeeded!");
+            alert("Congratulations! You won the game.");
             regenerate();
 
             nMatches++;
