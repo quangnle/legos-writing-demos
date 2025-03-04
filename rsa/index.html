@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA Algorithm Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 50px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 22px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            font-size: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .form-group button {
+            padding: 10px 20px;
+            font-size: 12px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #555;
+        }
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RSA Algorithm Demo</h1>
+        <div class="form-group">
+            <label for="p">Enter p (prime number):</label>
+            <input type="text" id="p" placeholder="Enter a prime number (p)">
+        </div>
+        <div class="form-group">
+            <label for="q">Enter q (prime number):</label>
+            <input type="text" id="q" placeholder="Enter another prime number (q)">
+        </div>
+        <div class="form-group">
+            <button onclick="generateKeys()">Generate Keys</button>
+        </div>
+        <div class="form-group">
+            <label for="process">Process:</label>
+            <textarea id="process" rows="5" readonly></textarea>
+        </div>
+        <div class="form-group hidden" id="keyGroup">
+            <label for="keys">Keys:</label>
+            <textarea id="keys" rows="1" readonly></textarea> 
+        </div>
+        <div class="form-group">
+            <label for="message">Enter a message:</label>
+            <input type="text" id="message" placeholder="Enter a message">
+        </div>
+        <div class="form-group">
+            <button onclick="encryptMessage()">Encrypt Message</button>
+        </div>
+        <div class="form-group">
+            <label for="encryptedMessage">Encrypted Message:</label>
+            <textarea id="encryptedMessage" rows="3" readonly></textarea>
+        </div>
+        <div class="form-group">
+            <button onclick="decryptMessage()">Decrypt Message</button>
+        </div>
+        <div class="form-group">
+            <label for="decryptedMessage">Decrypted Message:</label>
+            <textarea id="decryptedMessage" rows="3" readonly></textarea>
+        </div>
+    </div>
+    <script>
+        function generateKeys() {
+            let st = "";
+            const p = +document.getElementById('p').value;
+            const q = +document.getElementById('q').value;
+            const n = p * q;
+            const phi = (p - 1) * (q - 1);
+            st += "n = " + n + "\n";
+            st += "phi(n) = " + phi + "\n";
+            let e = 2;
+            while (e < phi) {
+                if (gcd(e, phi) === 1) {
+                    break;
+                }
+                e++;
+            }
+            let d = 1;
+            while (d < phi) {
+                if ((e * d) % phi === 1) {
+                    break;
+                }
+                d++;
+            }
+            st += "e = " + e + "\n";
+            st += "d = " + d + "\n";
+            document.getElementById('process').value = st;
+            document.getElementById('keys').value = `pk=(${e}, ${n}); sk=(${d}, ${n})`;
+            document.getElementById('keyGroup').classList.remove('hidden');
+        }
+
+        function encryptMessage() {
+            const keys = document.getElementById('keys').value.split(';');
+            const publicKey = keys[0].trim().split('=')[1];
+            const publicKeyParts = publicKey.substring(1, publicKey.length - 1).split(',').map(part => parseInt(part));
+            const e = publicKeyParts[0];
+            const n = publicKeyParts[1];
+            const message = document.getElementById('message').value;
+            const encryptedMessage = message.split('').map(char => {
+                const charCode = char.charCodeAt(0);
+                return modPow(charCode, e, n);
+            });
+            document.getElementById('encryptedMessage').value = encryptedMessage.join(' ');
+        }
+
+        function decryptMessage() {
+            const keys = document.getElementById('keys').value.split(';');
+            const privateKey = keys[1].split('=')[1];;
+            const privateKeyParts = privateKey.substring(1, privateKey.length - 1).split(',').map(part => parseInt(part));
+            const d = privateKeyParts[0];
+            const n = privateKeyParts[1];
+            const encryptedMessage = document.getElementById('encryptedMessage').value.split(' ').map(part => parseInt(part));
+            const decryptedMessage = encryptedMessage.map(part => {
+                const charCode = modPow(part, d, n);
+                return String.fromCharCode(charCode);
+            });
+            document.getElementById('decryptedMessage').value = decryptedMessage.join('');
+        }
+
+        function gcd(a, b) {
+            if (b === 0) {
+                return a;
+            }
+            return gcd(b, a % b);
+        }
+
+        function modPow(base, exponent, modulus) {
+            if (modulus === 1) {
+                return 0;
+            }
+            let result = 1;
+            base = base % modulus;
+            while (exponent > 0) {
+                if (exponent % 2 === 1) {
+                    result = (result * base) % modulus;
+                }
+                exponent = exponent >> 1;
+                base = (base * base) % modulus;
+            }
+            return result;
+        }
+    </script>
+</body>
+</html>
