@@ -21,12 +21,12 @@ function draw() {
     background(240);
 
     // draw axes and labels
-    stroke(150);
+    stroke(0);
     line(width / 2, 0, width / 2, height); // real axis
     line(0, height / 2, width, height / 2); // imaginary axis
 
     // draw grid
-    stroke(200);
+    stroke(200, 100);
     for (let i = 0; i < width; i += 20) {
         line(i, 0, i, height);
     }
