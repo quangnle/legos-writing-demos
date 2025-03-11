@@ -1,11 +1,11 @@
 // Global variables
 let font;
 let particles = [];
-const numParticles = 1000; // Number of particles to sample
+const numParticles = 1500; // Number of particles to sample
 let animationProgress = 0; // Animation progress
-const morphingStrings = ["Creative Coding", "Morphing String Effect", "by Legos - Techwiz", "legos.hashnode.dev", "P5.js Liberary", "Enjoy!!!"];
+const morphingStrings = ["ENTER to begin...", "Creative Coding", "Morphing Effect", "by Legos - Techwiz", "legos.hashnode.dev", "P5.js Library", "Enjoy!!!"];
 let currentStringIndex = 0;
-const fontSize = 50;
+const fontSize = 35;
 
 function preload() {
     // Load a font (you can replace 'Arial' with a custom font if hosted)
@@ -128,6 +128,9 @@ function getTextPoints(str, x, y, fontSize, N) {
     // Collect positions of white pixels (text)
     for (let py = 0; py < pg.height; py++) {
         for (let px = 0; px < pg.width; px++) {
+            // Get pixel index
+            // multiply by 4 because each pixel has 4 values (RGBA)
+            // pg.width is the width of the graphics buffer                        
             let index = (px + py * pg.width) * 4;
             if (pg.pixels[index] > 128) {
                 // Threshold for white pixels
