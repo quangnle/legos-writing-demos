@@ -48,7 +48,7 @@ function draw() {
         }
         // draw the point
         noStroke();
-        ellipse(p.x, p.y, 2, 2);
+        ellipse(p.x, p.y, 4, 4);
     });
 
     // calculate the ratio of points inside the circle to all points

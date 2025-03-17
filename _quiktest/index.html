@@ -6,12 +6,47 @@
     <title>Document</title>
 </head>
 <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"></script>
 
-    <!-- <script src="polynomial.js"></script>
+    <script src="polynomial.js"></script>
     <script src="qap.js"></script> -->
 
     <!-- <script src="discrete-polynomial.js"></script>
     <script src="discrete-qap.js"></script> -->
     <!-- <script src="sudoku-solver.js"></script> -->
+    <script>
+        function zigzag(str, nRows) {
+            const dirs = [[1,0], [-1,1]];
+            let dirIndex= 0;
+            let curPos = [0,0];
+            let ar = [];
+            for (let r = 0; r < nRows; r++) {
+                ar.push([]);
+                for (let c = 0; c < str.length; c++){
+                    ar[r].push('');
+                }
+            }
+            
+            for (let i=0; i < str.length; i++){
+                ar[curPos[0]][curPos[1]] = str[i];
+                curPos[0] += dirs[dirIndex][0]; 
+                curPos[1] += dirs[dirIndex][1];
+                if (curPos[0] == 0 || curPos[0] == nRows - 1) {
+                    dirIndex = (dirIndex + 1)%2;
+                }
+            }
+            
+            let result = "";
+            for (let r = 0; r < nRows; r++) {
+                for (let c = 0; c < str.length; c++){
+                    result += ar[r][c];
+                }
+            }
+            return result;
+        }
+
+        let zz = zigzag("IAMLEGOSLIGHTTHEGREATEST", 5);
+        console.log(zz);
+    </script>
 </body>
 </html>
