@@ -35,8 +35,23 @@
     <div>
         <p>Graph drawing by force-directed placement - by Fruchterman & Reingold - 1991</p>
     </div>
+    <div>
+        Number of Particles: <span id="particleCount">50</span>
+        <input type="range" id="slider" min="5" max="100" value="50" step="1" style="width: 600px;" onchange="updateParticleCount()">
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"></script>
     <script src="particle.js"></script>
     <script src="sketch.js"></script>    
+    <script>
+        function updateParticleCount() {
+            let slider = document.getElementById('slider');
+            let particleCount = document.getElementById('particleCount');
+            particleCount.innerHTML = slider.value;
+            nParticles = +slider.value;
+            particles = [];
+            links = [];
+            setup();
+        }
+    </script>
 </body>
 </html>

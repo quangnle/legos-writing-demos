@@ -1,6 +1,6 @@
 let particles = []; // Mảng chứa các particle
 let links = []; // Mảng chứa các cặp particle có liên kết
-const nParticles = 50; // Số lượng particle
+let nParticles = 50; // Số lượng particle
 const k = 5000; // Hằng số lực đẩy
 const ks = 0.1; // Hằng số lò xo
 const r0 = 30; // Độ dài nghỉ của lò xo
@@ -30,7 +30,7 @@ function setup() {
 }
 
 function draw() {
-    background(255);
+    background(250, 100);
 
     // Tính lực cho từng particle
     for (let i = 0; i < particles.length; i++) {
