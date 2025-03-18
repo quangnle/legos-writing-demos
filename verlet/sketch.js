@@ -43,7 +43,7 @@ function setup() {
                 y: y * gridSize + 50, // Vị trí y ban đầu
                 oldX: x * gridSize + width / 2 - (clothWidth * gridSize) / 2, // Vị trí x trước đó
                 oldY: y * gridSize + 50, // Vị trí y trước đó
-                pinned: (y === 0) && ((x === 0) || (x % 10 == 0) || (x === clothWidth-1)), // Ghim cố định điểm đầu, điểm giữa và điểm cuối hàng đầu tiên    
+                pinned: (y === 0) && ((x % 10 == 0) || (x === clothWidth-1)), // Ghim cố định điểm đầu, điểm giữa và điểm cuối hàng đầu tiên    
                 color: "#009F9F"
             };
             particles.push(p);
