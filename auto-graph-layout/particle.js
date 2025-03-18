@@ -7,6 +7,8 @@ class Particle {
     }
 
     applyForce(force) {
+        // theo Newton II, F=ma => a=F/m
+        force.div(this.mass);
         this.acc.add(force);
     }
 
