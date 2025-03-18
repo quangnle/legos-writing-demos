@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo of cloth simulation using Verlet integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Demo of cloth simulation using Verlet integration</h1>
+    </header>
+    <div>
+        <input type="text" id="st" value="Legos" placeholder="Your string to render"> <button id="start" onclick="updateStringToDraw()">Draw</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"></script>
+    <script src="sketch.js"></script>
+    <script>
+        function updateStringToDraw() {
+            stringToDraw = document.getElementById('st').value;
+            particles = [];
+            constraints = [];
+            textPoints = [];            
+            setup();
+        }
+    </script>
+</body>
+</html>
