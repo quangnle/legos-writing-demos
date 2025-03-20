@@ -110,8 +110,8 @@
             const q = +document.getElementById('q').value;
             const n = p * q;
             const phi = (p - 1) * (q - 1);
-            st += "n = " + n + "\n";
-            st += "phi(n) = " + phi + "\n";
+            st += `n = ${p} * ${q} = ${n} \n`;
+            st += `phi(n) = (${p}-1) * (${q}-1) =  ${phi} \n`;
             let e = 2;
             while (e < phi) {
                 if (gcd(e, phi) === 1) {
@@ -126,10 +126,10 @@
                 }
                 d++;
             }
-            st += "e = " + e + "\n";
-            st += "d = " + d + "\n";
+            st += `Choose e = ${e};     [gcd(${e},${phi}) = 1] \n`;
+            st += `Then d = ${d};      [${d}*${e} = ${d*e} = 1 (mod ${phi})]  \n`;
             document.getElementById('process').value = st;
-            document.getElementById('keys').value = `pk=(${e}, ${n}); sk=(${d}, ${n})`;
+            document.getElementById('keys').value = `Public Key: pk = (${e}, ${n});   SecretKey: sk = (${d}, ${n})`;
             document.getElementById('keyGroup').classList.remove('hidden');
         }
 
