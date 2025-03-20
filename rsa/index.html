@@ -104,28 +104,38 @@
         </div>
     </div>
     <script>
+        let e = -1;
+        let d = -1;
+        let n = -1;
+        let phi = -1;
+
         function generateKeys() {
             let st = "";
             const p = +document.getElementById('p').value;
             const q = +document.getElementById('q').value;
-            const n = p * q;
-            const phi = (p - 1) * (q - 1);
+            n = p * q;
+            phi = (p - 1) * (q - 1);
             st += `n = ${p} * ${q} = ${n} \n`;
             st += `phi(n) = (${p}-1) * (${q}-1) =  ${phi} \n`;
-            let e = 2;
+            
+            // Choose e such that 1 < e < phi(n) and gcd(e, phi(n)) = 1
+            e = 2;
             while (e < phi) {
                 if (gcd(e, phi) === 1) {
                     break;
                 }
                 e++;
             }
-            let d = 1;
+
+            // Choose d such that d * e = 1 (mod phi(n))
+            d = 1;
             while (d < phi) {
                 if ((e * d) % phi === 1) {
                     break;
                 }
                 d++;
             }
+            
             st += `Choose e = ${e};     [gcd(${e},${phi}) = 1] \n`;
             st += `Then d = ${d};      [${d}*${e} = ${d*e} = 1 (mod ${phi})]  \n`;
             document.getElementById('process').value = st;
@@ -134,11 +144,6 @@
         }
 
         function encryptMessage() {
-            const keys = document.getElementById('keys').value.split(';');
-            const publicKey = keys[0].trim().split('=')[1];
-            const publicKeyParts = publicKey.substring(1, publicKey.length - 1).split(',').map(part => parseInt(part));
-            const e = publicKeyParts[0];
-            const n = publicKeyParts[1];
             const message = document.getElementById('message').value;
             const encryptedMessage = message.split('').map(char => {
                 const charCode = char.charCodeAt(0);
@@ -148,11 +153,6 @@
         }
 
         function decryptMessage() {
-            const keys = document.getElementById('keys').value.split(';');
-            const privateKey = keys[1].split('=')[1];;
-            const privateKeyParts = privateKey.substring(1, privateKey.length - 1).split(',').map(part => parseInt(part));
-            const d = privateKeyParts[0];
-            const n = privateKeyParts[1];
             const encryptedMessage = document.getElementById('encryptedMessage').value.split(' ').map(part => parseInt(part));
             const decryptedMessage = encryptedMessage.map(part => {
                 const charCode = modPow(part, d, n);
