@@ -6,7 +6,25 @@
     <title>Merkle Tree Demo</title>
     <style>
         body {
+            font-family: Arial, sans-serif;
             font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 40px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
         }
         input {
             font-size: 12px;
@@ -14,9 +32,13 @@
     </style>
 </head>
 <body>
-    <h1>Merkle Tree Demo</h1>
-    <p>Number of leaves <input type="number" id="nLeaves" value="16" min="8" max="16" onchange="leavesChanged()"></p>
-    <p>Click on a leaf to see Merkle Path</p>
+    <header>
+        <h1>Merkle Tree Demo</h1>
+    </header>
+    <div>
+        <p>Number of leaves <input type="number" id="nLeaves" value="16" min="8" max="16" onchange="leavesChanged()"></p>
+        <p>Click on a leaf to see Merkle Path</p>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="murmur.js"></script>
     <script src="merkle-tree.js"></script>
