@@ -51,7 +51,7 @@ class TreeNode {
         if (this.highlited) {
             fill(255, 255, 0);
         } else if (this.selected) {
-            fill(0, 0, 255);
+            fill(100, 100, 255);
         } else {
             if (this.left == null && this.right == null) {
                 fill(0, 255, 0);
@@ -67,7 +67,7 @@ class TreeNode {
         textSize(9);
         text(this.hashValue.toString(16), x, y);
         if (this.content != null) {
-            text(this.content, x, y + 15);
+            text(this.content, x, y + 16);
         }
     }
 }
