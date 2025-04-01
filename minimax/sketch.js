@@ -4,7 +4,7 @@ const diamondRate = 0.2; // Tỷ lệ viên kim cương trên bàn cờ
 let humanPlayer = { x: 0, y: 0, score: 0 }; // Vị trí của người chơi
 let aiPlayer = { x: boardSize - 1, y: boardSize - 1, score: 0 }; // Vị trí của AI
 let currentState = null; // Trạng thái hiện tại của trò chơi
-let depth = 1; // Độ sâu tìm kiếm của thuật toán Minimax
+let depth = 3; // Độ sâu tìm kiếm của thuật toán Minimax
 
 function setup() {
     // Thiết lập kích thước canvas    
@@ -78,12 +78,20 @@ function draw() {
     // Nếu trạng thái hiện tại là trạng thái kết thúc
     // thì hiển thị thông báo kết thúc trò chơi
     if (currentState.isGameOver()){
-        let winner = currentState.players[0].score > currentState.players[1].score ? "Human" : "AI";
-        fill(0, 255, 0);
-        stroke(0);
-        textSize(12);
-        textAlign(CENTER);
-        text(`Game Over! Winner: ${winner}`, width / 2, height - 10 );
+        if (!currentState.winner) {
+            let winner = currentState.players[0].score > currentState.players[1].score ? "Human" : "AI";
+            fill(0, 255, 0);
+            stroke(0);
+            textSize(12);
+            textAlign(CENTER);
+            text(`Winner: ${winner}`, width / 2, height - 10 );
+        } else {
+            fill(255, 0, 0);
+            stroke(0);
+            textSize(12);
+            textAlign(CENTER);
+            text(`Winner: ${currentState.winner}`, width / 2, height - 10 );
+        }
     }
 }
 
@@ -108,9 +116,13 @@ function movePlayer(dx, dy) {
                 currentState.board.diamonds.splice(i, 1);
             }
         }
+
+        // kiếm tra xem trò chơi đã kết thúc chưa
+        if (currentState.isGameOver()) {
+            currentState.winner = "Human";
+            return;
+        }
         
-        // Chuyển lượt cho AI
-        currentState.currentPlayerIndex = 1;
         // AI sẽ tự động di chuyển
         let aiMove = minimax(currentState, depth); 
         // Nếu AI tìm được nước đi hợp lệ
@@ -127,6 +139,12 @@ function movePlayer(dx, dy) {
                     // Xóa viên kim cương khỏi bàn cờ
                     currentState.board.diamonds.splice(i, 1);
                 }
+            }
+
+            // kiếm tra xem trò chơi đã kết thúc chưa
+            if (currentState.isGameOver()) {
+                currentState.winner = "AI";
+                return;
             }
 
             // Chuyển lượt cho người chơi
@@ -157,15 +175,17 @@ function minimax(state, depth) {
     // nếu độ sâu bằng 0 hoặc trạng thái hiện tại là trạng thái kết thúc thì trả về điểm số
     // và nước đi là null
     if (depth === 0 || state.isGameOver()) {
-        return { score: state.evaluate(), move: null };
+        return { score: state.evaluate(), move: state.clone() };
     }
 
     let bestMove = null;
     let bestScore;
 
-    if (state.currentPlayerIndex === 1) { // AI (Max player)
+    if (state.currentPlayerIndex === 0) { // AI (Max player)
         bestScore = -Infinity;
         const nextStates = state.generateNextStates();
+    
+        // lặp qua tất cả các trạng thái tiếp theo
         for (let nextState of nextStates) {
             const result = minimax(nextState, depth - 1);
             if (result.score > bestScore) {

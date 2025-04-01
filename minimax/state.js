@@ -3,6 +3,7 @@ class State {
         this.board = board; // Bàn cờ
         this.players = players; // Danh sách người chơi, mỗi người chơi là một đối tượng có thuộc tính x, y
         this.currentPlayerIndex = 0; // Chỉ số của người chơi hiện tại
+        this.winner = null; // Người chơi thắng cuộc
     }    
 
     evaluate() {
@@ -20,9 +21,6 @@ class State {
         if (Math.abs(currentPlayer.x - opponentPlayer.x) <= 1 && Math.abs(currentPlayer.y - opponentPlayer.y) <= 1) {
             return -1000000;
         }
-
-        // Điểm số sẽ được tính dựa trên khoảng cách từ người chơi hiện tại đến viên kim cương gần nhất
-        // khoảng cách này là khoảng cách Manhattan và điểm sẽ tính theo công thức (100 - distance)^2        
         
         // Tìm viên kim cương gần nhất với người chơi hiện tại
         let closestDistance = Infinity;
@@ -33,44 +31,52 @@ class State {
             }
         }
 
-        // Trả về điểm số
-        return (100 - closestDistance)**2;
+        // Công thức tính điểm số là
+        // (kích thước bàn cờ * 2 - khoảng cách gần nhất giữa người chơi và viên kim cương)**2 + điểm số của người chơi hiện tại * 100
+        return (this.board.size * 2 - closestDistance) + currentPlayer.score * 100;
     }
 
     generateNextStates() {
-        // tìm tất cả các nước đi có thể của người chơi hiện tại
-        let nextStates = [];
-        let currentPlayer = this.players[this.currentPlayerIndex];
+        // tìm tất cả các nước đi có thể của người chơi ở bước tiếp theo
+        let nextStates = [];        
+        // đổi lượt người chơi
+        let nextPlayerIndex = 1 - this.currentPlayerIndex;
+        // các phương hướng di chuyển
         let directions = [
-            { dx: 0, dy: -1 }, // Lên
-            { dx: 0, dy: 1 }, // Xuống
-            { dx: -1, dy: 0 }, // Trái
-            { dx: 1, dy: 0 } // Phải
+            { dx: -1, dy: 0 }, // trái
+            { dx: 1, dy: 0 }, // phải
+            { dx: 0, dy: -1 }, // lên
+            { dx: 0, dy: 1 } // xuống
         ];
-
+        // lặp qua tất cả các phương hướng di chuyển
         for (let dir of directions) {
-            let newX = currentPlayer.x + dir.dx;
-            let newY = currentPlayer.y + dir.dy;
-
-            // Kiểm tra xem nước đi có hợp lệ không
-            if (newX >= 0 && newX < this.board.size && newY >= 0 && newY < this.board.size) {
-                // Tạo bản sao của bàn cờ và người chơi
-                let newBoard = this.board.clone();
-                let newPlayers = this.players.map(p => ({ x: p.x, y: p.y, score: p.score }));
-
-                // Di chuyển người chơi hiện tại đến vị trí mới
-                newPlayers[this.currentPlayerIndex].x = newX;
-                newPlayers[this.currentPlayerIndex].y = newY;
-
-                // Tạo trạng thái mới
-                let nextState = new State(newBoard, newPlayers);
-
-                // lưu trạng thái mới vào danh sách
-                nextStates.push(nextState);
+            // tạo bản sao của trạng thái hiện tại
+            let newState = this.clone();
+            // di chuyển người chơi hiện tại theo phương hướng di chuyển
+            newState.players[nextPlayerIndex].x += dir.dx;
+            newState.players[nextPlayerIndex].y += dir.dy;
+            // kiểm tra xem người chơi có đi ra ngoài bàn cờ không
+            if (newState.players[nextPlayerIndex].x < 0 || newState.players[nextPlayerIndex].x >= this.board.size ||
+                newState.players[nextPlayerIndex].y < 0 || newState.players[nextPlayerIndex].y >= this.board.size) {
+                continue; // nếu đi ra ngoài bàn cờ thì bỏ qua nước đi này
             }
+            // kiểm tra xem người chơi có ăn được viên kim cương không
+            for (let i = newState.board.diamonds.length - 1; i >= 0; i--) {
+                let diamond = newState.board.diamonds[i];
+                if (diamond.x === newState.players[nextPlayerIndex].x && diamond.y === newState.players[nextPlayerIndex].y) {
+                    // nếu ăn được viên kim cương thì tăng điểm số của người chơi
+                    newState.players[nextPlayerIndex].score++;
+                    // xóa viên kim cương khỏi bàn cờ
+                    newState.board.diamonds.splice(i, 1);
+                }
+            }
+
+            newState.currentPlayerIndex = nextPlayerIndex; // cập nhật chỉ số người chơi hiện tại
+            // thêm trạng thái mới vào danh sách các trạng thái tiếp theo
+            nextStates.push(newState);
         }
 
-        return nextStates;
+        return nextStates; // trả về danh sách các trạng thái tiếp theo
     }
 
     // Hàm kiểm tra xem trạng thái hiện tại có phải là trạng thái kết thúc không
@@ -85,6 +91,13 @@ class State {
         if (this.players[0].x === this.players[1].x && this.players[0].y === this.players[1].y) {
             return true;
         }
+    }
+
+    clone() {
+        // Tạo bản sao của trạng thái hiện tại
+        let newBoard = this.board.clone();
+        let newPlayers = this.players.map(p => ({ x: p.x, y: p.y, score: p.score }));
+        return new State(newBoard, newPlayers);
     }
     
 }
