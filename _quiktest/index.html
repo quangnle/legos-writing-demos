@@ -146,7 +146,7 @@ function movePlayer(player, dx, dy) {
 
 // Bot di chuyển sử dụng minimax với alpha-beta pruning
 function botMove() {
-  let bestMove = minimax(2, true, -Infinity, Infinity); // Độ sâu 2
+  let bestMove = minimax(4, true, -Infinity, Infinity); // Độ sâu 2
   currentPlayer = 2;
   movePlayer(player2, bestMove.dx, bestMove.dy);
 }
@@ -239,17 +239,26 @@ function minimax(depth, isMaximizing, alpha, beta) {
 
 // Hàm đánh giá trạng thái bàn cờ
 function evaluateBoard() {
-  let score = player2.score - player1.score; // Bot tối ưu điểm của mình
-  let distToPlayer1 = abs(player2.x - player1.x) + abs(player2.y - player1.y);
-  let diamondDist = 0;
-  
-  // Tính khoảng cách đến kim cương gần nhất
-  for (let diamond of diamonds) {
-    let d = abs(player2.x - diamond.x) + abs(player2.y - diamond.y);
-    diamondDist += d;
+  // nếu bot có thể ăn được người chơi kia thì tăng 1000000 điểm
+  if (player2.x == player1.x && player2.y == player1.y) {
+    return 1000000;
+  }
+
+  // nếu bot đi 1 trong 4 ô xung quanh người chơi kia thì giảm 1000000 điểm
+  if (abs(player2.x - player1.x) + abs(player2.y - player1.y) <= 1) {
+    return -1000000;
   }
   
-  return score + (diamonds.length > 0 ? -diamondDist / diamonds.length : 0) + (distToPlayer1 < 5 ? 10 : 0);
+  // tìm khoảng cách viên kim cương gần nhất với bot
+  let minDist = Infinity;
+  for (let diamond of diamonds) {
+    let dist = abs(player2.x - diamond.x) + abs(player2.y - diamond.y);
+    minDist = min(minDist, dist);
+  }
+
+  console.log(player2.x, player2.y ,minDist, minDiamond.x, minDiamond.y);
+  // điểm số càng lớn nếu khoảng cách càng gần
+  return 100 - minDist;
 }
     </script>
 

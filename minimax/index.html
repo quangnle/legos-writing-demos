@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo of Minimax Algorithm</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 40px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Minimax Algorithm Demo</h1>
+    </header>
+    <div>
+        <p>Move you bot by pressing UP, DOWN, LEFT, RIGHT keys</p>
+    </div>   
+    <div>
+        <p>Bot's Thinking Depth Level 
+            <select id="depth" onchange="depthChanged()">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </p>
+    </div>   
+    <div id="canvas-holder"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="sketch.js"></script>
+    <script src="board.js"></script>
+    <script src="state.js"></script>
+    <script>
+        function depthChanged() {
+            depth = +document.getElementById('depth').value;
+        }
+    </script>
+</body>
+</html>
