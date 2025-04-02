@@ -130,12 +130,14 @@ function drawRewardGraph() {
     for (let i = 0; i < rewardHistory.length; i++) {
         let x = map(i, 0, maxHistory, graphX, graphX + graphW);
         let y = map(rewardHistory[i], -0.1, 1.1, graphY + graphH, graphY);
+        // giới hạn y trong vùng đồ thị
+        y = constrain(y, graphY, graphY + graphH);
         vertex(x, y);
     }
     endShape();
     fill(255);
     textSize(9);
-    text(`# trials = ${counter} ---  # success / # fail: ${successCounter} / ${failCounter}`, graphX, graphY - 5);
+    text(`# Trials = ${counter};  # SUCCESSES / # FAILS: ${successCounter} / ${failCounter}`, graphX, graphY - 5);
 }
 
 function displayStatus() {
