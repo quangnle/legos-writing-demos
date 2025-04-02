@@ -29,14 +29,14 @@ function setup() {
     createCanvas(600, 400);
     groundY = height - 40;
     resetEpisode();
-    landingZone = {x: width / 2 - 40, w: 80};
+    landingZone = {x: width / 2 - 80, w: 160};
 }
 
 function resetEpisode() {
 
     // Lưu trữ kết quả của lần trước
     if (rewardHistory.length > maxHistory) rewardHistory.shift();
-    rewardHistory.push(successCounter / (failCounter + epsilon)); // Tính tỷ lệ thành công
+    rewardHistory.push(successCounter / counter); // Tính tỷ lệ thành công
 
     console.log(`Episode reward: ${episodeReward}`);
 
@@ -62,7 +62,7 @@ function draw() {
     // Tạo gió ngẫu nhiên
     let windVariation = random(-maxWindVariation, maxWindVariation);
     wind += windVariation;
-    wind = constrain(wind, -0.1, 0.1);
+    wind = constrain(wind, -0.03, 0.03);
 
     if (!landed && !crashed) {
         state = getState();
@@ -81,12 +81,21 @@ function draw() {
 
         previousState = state;
         previousAction = action;
-    } else {
-        if (frameCounter > 180) resetEpisode(); // khởi động lại sau 3 giây nếu hạ cánh thành công hoặc va chạm
+    } else {        
         if (landed) {
+            state = getState();
+            let action = chooseAction(state);
+            let reward = getReward(timer); // tính phần thưởng
+            episodeReward += reward; // cập nhật phần thưởng cho lần tập đáp thành công một số điểm lớn
+            updateQTable(previousState, previousAction, reward, state); // cập nhật Q table
+
+            previousState = state;
+            previousAction = action;
+            
             lander.vy = 0; // dừng tàu lại khi hạ cánh thành công
             lander.vx = 0;
         }
+        if (frameCounter > 180) resetEpisode(); // khởi động lại sau 3 giây nếu hạ cánh thành công hoặc va chạm
         if (crashed) {
             lander.vy = 0; // dừng tàu lại khi va chạm
             lander.vx = 0;
@@ -111,8 +120,8 @@ function drawGround() {
 }
 
 function drawLandingZone() {
-    fill(100, 255, 255);
-    rect(landingZone.x, groundY, landingZone.w, 10);
+    fill(100, 100, 255);
+    rect(landingZone.x, groundY, landingZone.w, 30);
 }
 
 function drawRewardGraph() {
@@ -165,10 +174,18 @@ function getState() {
 }
 
 function chooseAction(state) {
-    if (!qTable[state]) qTable[state] = Array(actions.length).fill(0);
-    if (random() < epsilon) {
+    // Nếu tàu đã hạ cánh thành công hoặc va chạm thì không cần chọn hành động nữa
+    if (landed || crashed) {
+        return null; // Không cần chọn hành động nữa
+    }
+    // Nếu trạng thái chưa có trong Q-table thì khởi tạo nó
+    if (!qTable[state]) qTable[state] = Array(actions.length).fill(0);    
+
+    if (random() < epsilon) { // Thăm dò hành động ngẫu nhiên
+        // Chọn hành động ngẫu nhiên với xác suất epsilon
         return floor(random(actions.length));
     } else {
+        // Chọn hành động tốt nhất từ Q-table
         return qTable[state].indexOf(Math.max(...qTable[state]));
     }
 }
@@ -191,17 +208,18 @@ function getReward(t = 0) {
     const maxDistance = width / 2; // Khoảng cách tối đa từ tâm đến biên
     const epsilon = 0.1; // Hằng số nhỏ tránh chia cho 0
 
-    // Kiểm tra trạng thái khi chạm đất
-    if (lander.y <= groundY) {
-        const inLandingZone = lander.x >= (landingZone.x - landingZone.w / 2) && 
-                              lander.x <= (landingZone.x + landingZone.w / 2);
-        const safeVelocity = Math.abs(lander.vx) < 0.5 && Math.abs(lander.vy) < 1.0;
-        
-        if (inLandingZone && safeVelocity) {
-            return 10000; // Hạ cánh thành công
-        } else {
-            return -10000; // Va chạm hoặc hạ cánh thất bại
-        }
+    // kiểm tra nếu tàu đã hạ cánh thành công
+    if (lander.y + lander.size / 2 >= groundY) {
+        let inZone = lander.x > landingZone.x && lander.x < landingZone.x + landingZone.w;
+        if (inZone && Math.abs(lander.vy) < safeVy && Math.abs(lander.vx) < safeVx) {
+            landed = true; // Đánh dấu là đã hạ cánh thành công
+            return 100000; // Phần thưởng lớn khi hạ cánh thành công trong vùng hạ cánh
+        } 
+    }
+
+    // kiểm tra nếu tàu ra ngoài biên
+    if (lander.x < 0 || lander.x > width || lander.y < 0) {
+        return -50000; // Va chạm với biên
     }
 
     // Khi đang bay
@@ -217,7 +235,7 @@ function getReward(t = 0) {
     reward += -totalVelocity / (Math.sqrt(distanceToGround) + epsilon);
 
     // Phạt thời gian
-    reward += -t / 10; // Tăng hình phạt thời gian
+    reward += -t; // Tăng hình phạt thời gian
 
     return reward;
 }
