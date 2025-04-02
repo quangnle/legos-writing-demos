@@ -129,7 +129,7 @@ function drawRewardGraph() {
     stroke(100, 255, 100);
     for (let i = 0; i < rewardHistory.length; i++) {
         let x = map(i, 0, maxHistory, graphX, graphX + graphW);
-        let y = map(rewardHistory[i], -0.1, 1.1, graphY + graphH, graphY);
+        let y = map(rewardHistory[i], -0.5, 1.5, graphY + graphH, graphY);
         // giới hạn y trong vùng đồ thị
         y = constrain(y, graphY, graphY + graphH);
         vertex(x, y);
@@ -137,7 +137,7 @@ function drawRewardGraph() {
     endShape();
     fill(255);
     textSize(9);
-    text(`# Trials = ${counter};  # SUCCESSES / # FAILS: ${successCounter} / ${failCounter}`, graphX, graphY - 5);
+    text(`# Trials = ${counter};  # Successes / # Fails: ${successCounter} / ${failCounter}`, graphX, graphY - 5);
 }
 
 function displayStatus() {
