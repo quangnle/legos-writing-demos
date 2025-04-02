@@ -157,10 +157,10 @@ function displayStatus() {
 }
 
 function getState() {
-    let x = floor(lander.x / 40);
-    let y = floor(lander.y / 40);
-    let vx = floor(lander.vx * 10);
-    let vy = floor(lander.vy * 10);
+    let x = floor(lander.x / width * 3); // Chia thành 3 phần
+    let y = floor(lander.y / height * 3); // Chia thành 3 phần
+    let vx = floor(lander.vx);
+    let vy = floor(lander.vy);
     return `${x},${y},${vx},${vy}`;
 }
 
