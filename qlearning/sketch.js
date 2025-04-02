@@ -153,8 +153,14 @@ function displayStatus() {
     fill(255);
     textSize(9);
     if (landed) {
-        text("✅ Landed Successfully in Zone!", 10, 20);    
-        
+        // kiểm tra xem tàu có hạ cánh thành công trong vùng hạ cánh không
+        let inZone = lander.x > landingZone.x && lander.x < landingZone.x + landingZone.w;
+        if (inZone && Math.abs(lander.vy) < safeVy && Math.abs(lander.vx) < safeVx) {
+            text("✅ Landed Successfully in Zone!", 10, 20);    
+        }
+        else {
+            text("💥 Crashed due to not landing in safe zone or not in the safe speed!", 10, 20);
+        }
     } else if (crashed) {
         text("💥 Crashed!", 10, 20);
     } else {
