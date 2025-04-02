@@ -135,7 +135,7 @@ function drawRewardGraph() {
     endShape();
     fill(255);
     textSize(9);
-    text(`Reward over time (# trials = ${counter}, rate: ${successCounter} / ${failCounter})`, graphX, graphY - 5);
+    text(`# trials = ${counter} ---  # success / # fail: ${successCounter} / ${failCounter}`, graphX, graphY - 5);
 }
 
 function displayStatus() {
