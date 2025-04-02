@@ -138,9 +138,7 @@ function drawRewardGraph() {
     stroke(100, 255, 100);
     for (let i = 0; i < rewardHistory.length; i++) {
         let x = map(i, 0, maxHistory, graphX, graphX + graphW);
-        let y = map(rewardHistory[i], -0.5, 1.5, graphY + graphH, graphY);
-        // giới hạn y trong vùng đồ thị
-        y = constrain(y, graphY, graphY + graphH);
+        let y = map(rewardHistory[i], -0.1, 1.2, graphY + graphH, graphY);
         vertex(x, y);
     }
     endShape();
