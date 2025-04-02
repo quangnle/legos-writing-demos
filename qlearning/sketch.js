@@ -214,11 +214,13 @@ function getReward(t = 0) {
 
     // kiểm tra nếu tàu đã hạ cánh thành công
     if (lander.y + lander.size / 2 >= groundY) {
+        landed = true; // Đánh dấu là đã hạ cánh
         let inZone = lander.x > landingZone.x && lander.x < landingZone.x + landingZone.w;
         if (inZone && Math.abs(lander.vy) < safeVy && Math.abs(lander.vx) < safeVx) {
-            landed = true; // Đánh dấu là đã hạ cánh thành công
             return 100000; // Phần thưởng lớn khi hạ cánh thành công trong vùng hạ cánh
-        } 
+        } else {
+            return -5000; // Phạt lớn khi hạ cánh không thành công
+        }
     }
 
     // kiểm tra nếu tàu ra ngoài biên
