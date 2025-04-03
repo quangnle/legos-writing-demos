@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-Learning - Simple Robot Path finding</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 40px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }   
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Q-Learning - Simple Robot Path finding</h1>
+    </header>
+    <div class="container">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"></script>
+        <script>
+            // Mô phỏng Q-Learning trên lưới 5x5 sử dụng p5.js
+// Robot học cách tìm đường đến đích, tránh chướng ngại vật qua thử-sai
+
+const cols = 5, rows = 5; // Kích thước lưới 5x5
+const cellSize = 100;     // Kích thước mỗi ô vuông
+let qTable = {};          // Bảng Q-table: lưu giá trị hành động ở mỗi trạng thái
+let robot, goal;          // Vị trí của robot (agent) và đích (goal)
+
+// Tọa độ các ô chướng ngại vật (X)
+let bombs = [[0,2], [1,1], [1,3], [2,3], [3,0], [3,1], [4,3]]; // Các ô bomb được đặt tại các tọa độ này
+
+let actions = ['up', 'down', 'left', 'right']; // Các hành động có thể thực hiện
+
+let episodeReward = 0; // Tổng phần thưởng trong một vòng học
+let episode = 0;        // Số vòng học đã chạy
+
+// Các tham số Q-Learning
+let alpha = 0.1;   // learning rate: tốc độ cập nhật
+let gamma = 0.9;   // discount factor: độ quan tâm đến phần thưởng tương lai
+let epsilon = 0.1; // xác suất chọn hành động ngẫu nhiên (thăm dò)
+let success = 0; // số lần thành công tìm đường đến đích
+let failure = 0; // số lần thất bại (va vào chướng ngại vật)
+
+function setup() {
+    createCanvas(cols * cellSize, rows * cellSize);
+    frameRate(5 ); // Tốc độ cập nhật
+    resetRobot();  // Khởi tạo lại robot
+    goal = [4,4];  // Mục tiêu đặt tại ô (4,4)
+}
+
+function draw() {
+    background(240);
+    drawGrid();       // Vẽ lưới
+    drawBombs();  // Vẽ chướng ngại vật
+    drawRobot();      // Vẽ robot
+    drawGoal();       // Vẽ đích đến
+
+    let state = robot.join(','); // Chuyển trạng thái về dạng chuỗi 'x,y'
+    if (!qTable[state]) qTable[state] = Array(actions.length).fill(0); // Khởi tạo nếu chưa có
+
+    let actionIndex = chooseAction(state); // Chọn hành động theo epsilon-greedy
+    let action = actions[actionIndex];     // Lấy tên hành động từ chỉ số
+    let [nextX, nextY] = getNextPos(robot, action); // Tính toán vị trí tiếp theo
+
+    let reward = getReward(nextX, nextY); // Tính phần thưởng nhận được
+    episodeReward += reward;              // Cộng dồn phần thưởng cho tập hiện tại
+
+    let nextState = [nextX, nextY].join(','); // Trạng thái kế tiếp
+    if (!qTable[nextState]) qTable[nextState] = Array(actions.length).fill(0); // Khởi tạo nếu cần
+
+    // Cập nhật Q-table theo công thức Q-Learning
+    // Q(s, a) = Q(s, a) + α * (r + γ * max(Q(s', a')) - Q(s, a))
+    // Trong đó: s là trạng thái hiện tại, a là hành động, r là phần thưởng, s' là trạng thái tiếp theo
+    // α là learning rate, γ là discount factor
+    // max(Q(s', a')) là giá trị tối đa của Q-table tại trạng thái tiếp theo
+    // Chọn hành động tốt nhất tại trạng thái tiếp theo    
+    qTable[state][actionIndex] += alpha * (reward + gamma * Math.max(...qTable[nextState]) - qTable[state][actionIndex]);
+
+    robot = [nextX, nextY]; // Di chuyển robot sang trạng thái mới
+
+    // Nếu đã đến đích hoặc đụng chướng ngại, bắt đầu tập mới
+    if (reward === 100 || reward === -10) {
+        if (reward === 100) success++; // Đến đích thành công
+        else failure++;                // Đụng chướng ngại vật
+        
+        episode++;
+        resetRobot();
+        episodeReward = 0;
+    }
+
+    displayStats(); // Hiển thị thống kê: số vòng học, điểm
+}
+
+// Đưa robot về vị trí bắt đầu
+function resetRobot() {
+    robot = [0, 0];
+}
+
+// Chọn hành động theo chính sách epsilon-greedy
+function chooseAction(state) {
+    if (random() < epsilon) {
+        return floor(random(actions.length)); // Chọn ngẫu nhiên để khám phá
+    }
+    return qTable[state].indexOf(max(qTable[state])); // Chọn hành động tốt nhất
+}
+
+// Tính vị trí mới sau khi thực hiện hành động
+function getNextPos([x, y], action) {
+    if (action === 'up') y--;
+    if (action === 'down') y++;
+    if (action === 'left') x--;
+    if (action === 'right') x++;
+    // Đảm bảo không ra khỏi lưới
+    x = constrain(x, 0, cols - 1);
+    y = constrain(y, 0, rows - 1);
+    return [x, y];
+}
+
+// Trả về phần thưởng cho trạng thái (x, y)
+function getReward(x, y) {
+    if (bombs.some(b => b[0] === x && b[1] === y)) return -10; // Va vào bomb
+    if (x === goal[0] && y === goal[1]) return 100;                // Đến đích
+    return -1;                                                     // Mỗi bước đi trừ 1
+}
+
+// Vẽ lưới 5x5
+function drawGrid() {
+    stroke(180);
+    textSize(10);
+    textAlign(LEFT, TOP);    
+    for (let x = 0; x < cols; x++) {
+        for (let y = 0; y < rows; y++) {
+            let px = x * cellSize;
+            let py = y * cellSize;
+            noFill();
+            rect(px, py, cellSize, cellSize);
+
+            // Hiển thị giá trị Q tại 4 góc
+            let stateKey = `${x},${y}`;
+            if (qTable[stateKey]) {
+                fill(0);
+                textSize(9);
+                text(`↑${qTable[stateKey][0].toFixed(1)}`, px + cellSize/2 + 2, py + 2); // up
+                text(`↓${qTable[stateKey][1].toFixed(1)}`, px + cellSize/2 + 2, py + cellSize - 12); // down
+                text(`←${qTable[stateKey][2].toFixed(1)}`, px + 2, py + cellSize / 2 - 6); // left
+                text(`→${qTable[stateKey][3].toFixed(1)}`, px + cellSize - 26, py + cellSize / 2 - 6); // right
+            }
+        }
+    }
+}
+
+// Vẽ các ô bomb
+function drawBombs() {
+    fill(100);
+    noStroke();
+    for (let [x, y] of bombs) {
+        textSize(20);
+        textAlign(CENTER, CENTER);
+        text("💣", (x + 0.5) * cellSize, (y + 0.5) * cellSize);
+    }
+}
+
+// Vẽ robot
+function drawRobot() {
+    fill(50, 150, 255);
+    textSize(20);
+    textAlign(CENTER, CENTER);
+    text("🤖", robot[0] * cellSize + cellSize/2, robot[1] * cellSize + cellSize/2);
+}
+
+// Vẽ ô đích
+function drawGoal() {
+    fill(50, 200, 50);
+    textSize(20);
+    textAlign(CENTER, CENTER);
+    text("🏴", (goal[0] + 0.5) * cellSize, (goal[1] + 0.5) * cellSize);
+}
+
+// Hiển thị số vòng học và tổng điểm thưởng của tập hiện tại
+function displayStats() {
+    fill(0);
+    textSize(11);
+    textAlign(LEFT, CENTER);    
+    text(`Episode: ${episode}`, 10, height - 50);
+    text(`Reward: ${episodeReward}`, 10, height - 35);
+    text(`Failure: ${failure}`, 10, height - 20);
+    text(`Success: ${success}`, 10, height - 5);
+    
+}
+        </script>
+    </div>    
+</body>
+</html>
