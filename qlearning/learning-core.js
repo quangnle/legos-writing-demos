@@ -1,10 +1,8 @@
 // Rời rạc hóa trạng thái để dùng làm key cho Q-table
 function getState() {
-    // Rời rạc hóa vị trí (ví dụ: chia thành 10x10 grid)
-    let gridX = 10;
-    let gridY = 10;
-    let xState = constrain(floor(lander.x / (width / gridX)), 0, gridX - 1);
-    let yState = constrain(floor(lander.y / (height / gridY)), 0, gridY - 1);
+    // Rời rạc hóa vị trí (ví dụ: chia thành 6x6 grid)
+    let xState = constrain(floor(lander.x / (width / nWidthParts)), 0, nWidthParts - 1);
+    let yState = constrain(floor(lander.y / (height / nHeightParts)), 0, nHeightParts - 1);
 
     // Rời rạc hóa vận tốc (ví dụ: chia thành các khoảng)
     let vxThreshold = 1.0;

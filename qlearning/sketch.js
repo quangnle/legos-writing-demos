@@ -13,13 +13,15 @@ let landingZone;
 let qTable = {};
 let actions = ["NONE", "UP", "LEFT", "RIGHT"];
 let epsilon = 0.1; // Tỷ lệ khám phá
-let alpha = 0.2;   // Tốc độ học
+let alpha = 0.1;   // Tốc độ học
 let gamma = 0.95;  // Hệ số chiết khấu phần thưởng tương lai
 
 // Biến lưu trữ cho Q-learning update
 let currentState;
 let previousState;
 let previousAction;
+let nWidthParts = 6; // Số phần chia chiều rộng
+let nHeightParts = 6; // Số phần chia chiều cao
 
 // Biến theo dõi và hiển thị
 let frameCounter = 0; // Đếm frame trong 1 episode để reset
@@ -29,10 +31,11 @@ let maxHistory = 150;
 let episodeCounter = 0; // Đổi tên counter thành episodeCounter cho rõ nghĩa
 let successCounter = 0;
 let failCounter = 0;
-let safeVy = 0.5; // Tốc độ rơi an toàn 
-let safeVx = 0.2; // Tốc độ ngang an toàn 
+let safeVy = 2.5; // Tốc độ rơi an toàn 
+let safeVx = 1.5; // Tốc độ ngang an toàn 
 let maxWindVariation = 0.0003;
 let timer = 0; // Đếm frame tổng thể (có thể dùng để phạt thời gian)
+let debugMode = false; // Chế độ debug
 
 function setup() {
     createCanvas(600, 400);
@@ -70,6 +73,9 @@ function draw() {
     drawLandingZone();
     drawRewardGraph();
     displayStatus(); // Hiển thị trạng thái (dùng gameState)
+    if (debugMode) {
+        drawScenePartitions(nWidthParts, nHeightParts); // Vẽ các đường phân chia scene
+    }
 
     // Cập nhật và vẽ lander (luôn vẽ trừ khi bị OOB)
     if (gameState !== STATE_CRASHED_OOB) {
@@ -137,6 +143,12 @@ function draw() {
     }
 }
 
+function keyPressed() {
+    if (key === ' ') { // Nhấn 'D' để bật chế độ debug
+        debugMode = !debugMode; // Chuyển đổi chế độ debug
+    }
+}
+
 // --- Vẽ vời ---
 function drawGround() {
     fill(80, 200, 100);
@@ -146,6 +158,77 @@ function drawGround() {
 function drawLandingZone() {
     fill(100, 100, 255);
     rect(landingZone.x, groundY, landingZone.w, 10); // Làm vùng đáp mỏng hơn chút
+}
+
+function drawScenePartitions(nWidthParts, nHeightParts) {
+    stroke(50, 50, 50, 100); // Màu xám nhạt
+    // vẽ các đường phân chia scene
+    for (let i = 0; i < nWidthParts; i++) {
+        line(i * (width / nWidthParts), 0, i * (width / nWidthParts), height);
+    }
+    for (let j = 0; j < nHeightParts; j++) {
+        line(0, j * (height / nHeightParts), width, j * (height / nHeightParts));
+    }    
+
+    // tính xem tàu vũ trụ đang ở phần nào
+    // tiếp tục tính toán xem vy và vx nằm trong khoảng nào từ -1,0,1 theo cách rời rạc hóa bên trên
+    // vẽ hình chữ nhật cho phần đó với màu tính bằng cách grayscale = abs(vx) + abs(vy)
+    let partWidth = width / nWidthParts;
+    let partHeight = height / nHeightParts;
+    let partX = Math.floor(lander.x / partWidth);
+    let partY = Math.floor(lander.y / partHeight);
+    
+    let vx = lander.vx > safeVx ? 1 : (lander.vx < -safeVx ? -1 : 0); // 1 nếu lớn hơn safeVx, -1 nếu nhỏ hơn -safeVx, 0 nếu nằm trong khoảng [-safeVx, safeVx]
+    let vy = lander.vy > safeVy ? 1 : (lander.vy < -safeVy ? -1 : 0); // 1 nếu lớn hơn safeVy, -1 nếu nhỏ hơn -safeVy, 0 nếu nằm trong khoảng [-safeVy, safeVy]    
+    let unsafeRate  = abs(vx) + abs(vy);    // Tính tỷ lệ không an toàn (0-2)
+    
+    if (unsafeRate === 0) {
+        fill(100, 255, 100, 100); // Màu xám nhạt hơn cho phần không an toàn
+    } else if (unsafeRate === 1) {
+        fill(255, 255, 100, 100); // Màu vàng nhạt cho phần không an toàn
+    }
+    else {
+        fill(255, 100, 100, 100); // Màu đỏ nhạt cho phần không an toàn
+    }
+
+    rect(partX * partWidth, partY * partHeight, partWidth, partHeight); // Vẽ hình chữ nhật cho phần đó
+
+    // vẽ giá trị trong Q-table cho phần đó
+    // nằm ở 4 góc tương ứng với 4 hành động
+    // nếu có giá trị trong Q-table cho phần đó thì vẽ
+    // nếu không có thì vẽ màu xám nhạt
+    let qValues = qTable[`${partX},${partY},${vx},${vy}`]; // Lấy Q-values cho phần đó
+    if (qValues) {
+        // vẽ 4 giá trị Q-table cho 4 hành động tương ứng: lên (0), trái (1), phải (2), không làm gì (3)
+        
+        // tìm max Q-value trong 4 hành động
+        let maxQ = Math.max(...qValues);
+        let maxQIndex = qValues.indexOf(maxQ); // tìm chỉ số hành động có Q-value lớn nhất
+
+        // vị trí để vẽ trên, dưới, trái, phải
+        let topPos = {x: partX * partWidth + partWidth / 2, y: partY * partHeight + partHeight / 4};
+        let leftPos = {x: partX * partWidth + partWidth / 4, y: partY * partHeight + partHeight / 2};
+        let rightPos = {x: partX * partWidth + partWidth * 3 / 4, y: partY * partHeight + partHeight / 2};
+        let downPos = {x: partX * partWidth + partWidth / 2, y: partY * partHeight + partHeight * 3 / 4};
+
+        fill(100, 255, 100, 200); // Màu xanh lá
+        // vẽ một hình tròn nhỏ để biểu thị cho giá trị Q lớn nhất tại vị trí tương ứng
+        if (maxQIndex === 0) { // Hành động "UP"
+            ellipse(topPos.x, topPos.y, 10); // Vẽ hình tròn cho hành động "UP"
+        } else if (maxQIndex === 1) { // Hành động "LEFT"
+            ellipse(leftPos.x, leftPos.y, 10); // Vẽ hình tròn cho hành động "LEFT"
+        } else if (maxQIndex === 2) { // Hành động "RIGHT"
+            ellipse(rightPos.x, rightPos.y, 10); // Vẽ hình tròn cho hành động "RIGHT"
+        } else { // Hành động "NONE"
+            ellipse(downPos.x, downPos.y, 10); // Vẽ hình tròn cho hành động "NONE"
+        }
+              
+    }
+    else {
+        fill(200, 200, 200, 100); // Màu xám nhạt nếu không có giá trị Q
+        rect(partX * partWidth, partY * partHeight, partWidth / 2, partHeight / 2); // Vẽ hình chữ nhật cho phần đó
+    }    
+
 }
 
 function drawRewardGraph() {
