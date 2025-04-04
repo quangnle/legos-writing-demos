@@ -12,8 +12,8 @@ let gameState = STATE_RUNNING;
 let landingZone;
 let qTable = {};
 let actions = ["NONE", "UP", "LEFT", "RIGHT"];
-let epsilon = 0.1; // Tỷ lệ khám phá
-let alpha = 0.1;   // Tốc độ học
+let epsilon = 0.02; // Tỷ lệ khám phá
+let alpha = 0.2;   // Tốc độ học
 let gamma = 0.95;  // Hệ số chiết khấu phần thưởng tương lai
 
 // Biến lưu trữ cho Q-learning update
