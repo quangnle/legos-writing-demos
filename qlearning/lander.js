@@ -104,7 +104,7 @@ class Lander {
         line(this.size / 2, this.size / 2, this.size * 0.8, this.size * 1.2);
 
         // Vẽ lửa đẩy nếu có
-        if (this.controlState !== "NONE") {
+        if (this.controlState !== "NONE" && gameState !== STATE_SUCCESS) {
             fill(255, random(150, 255), 0, 200); // Màu cam/vàng
             noStroke();
             let flameSize = this.size * 0.8 + random(-2, 2);
