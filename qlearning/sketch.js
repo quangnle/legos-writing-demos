@@ -175,16 +175,16 @@ function drawRewardGraph() {
     fill(255);
     textSize(9);
     textAlign(LEFT, BOTTOM); // Canh chỉnh text
-    text(`Episode: ${episodeCounter}`, graphX, graphY - 15);
-    text(`Success Rate (Avg): ${rewardHistory.length > 0 ? (rewardHistory.reduce((a, b) => a + b, 0) / rewardHistory.length).toFixed(2) : 'N/A'}`, graphX, graphY - 5);
-    text(`Success/Fail: ${successCounter}/${failCounter}`, graphX + graphW + 5, graphY + graphH); // Đặt bên phải đồ thị
+    text(`Episode: ${episodeCounter}`, graphX, graphY - 22);
+    text(`Success Rate (Avg): ${rewardHistory.length > 0 ? (rewardHistory.reduce((a, b) => a + b, 0) / rewardHistory.length).toFixed(2) : 'N/A'}`, graphX, graphY - 12);
+    text(`Success/Fail: ${successCounter}/${failCounter}`, graphX, graphY-2); // Đặt bên phải đồ thị
 
 }
 
 function displayStatus() {
     fill(255);
     strokeWeight(0.5);
-    textSize(10); // Tăng kích thước chữ một chút
+    textSize(9); 
     textAlign(LEFT, TOP);
     let statusText = "";
     switch (gameState) {
@@ -202,7 +202,7 @@ function displayStatus() {
             break;
     }
     text(statusText, 10, 10);
-    text(`Velocity: vx=${lander.vx.toFixed(2)}, vy=${lander.vy.toFixed(2)}`, 10, 25);
-    text(`Position: x=${lander.x.toFixed(1)}, y=${lander.y.toFixed(1)}`, 10, 40);
+    text(`Velocity: vx=${lander.vx.toFixed(2)}, vy=${lander.vy.toFixed(2)}`, 10, 31);
+    text(`Position: x=${lander.x.toFixed(1)}, y=${lander.y.toFixed(1)}`, 10, 43);
     text(`Wind: ${wind.toFixed(4)}`, 10, 55);
 }
