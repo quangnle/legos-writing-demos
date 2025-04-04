@@ -29,8 +29,8 @@ let maxHistory = 150;
 let episodeCounter = 0; // Đổi tên counter thành episodeCounter cho rõ nghĩa
 let successCounter = 0;
 let failCounter = 0;
-let safeVy = 3.0;
-let safeVx = 1.6;
+let safeVy = 0.5; // Tốc độ rơi an toàn 
+let safeVx = 0.2; // Tốc độ ngang an toàn 
 let maxWindVariation = 0.0003;
 let timer = 0; // Đếm frame tổng thể (có thể dùng để phạt thời gian)
 
