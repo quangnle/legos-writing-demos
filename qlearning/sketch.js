@@ -2,54 +2,65 @@ let lander;
 let gravity = 0.05;
 let wind = 0;
 let groundY;
-let landed = false;
-let crashed = false;
+// --- Trạng thái Game ---
+const STATE_RUNNING = 'RUNNING';
+const STATE_SUCCESS = 'SUCCESS';
+const STATE_CRASHED_GROUND = 'CRASHED_GROUND'; // Rơi chạm đất (ngoài vùng/quá tốc độ)
+const STATE_CRASHED_OOB = 'CRASHED_OOB'; // Rơi ra ngoài biên
+let gameState = STATE_RUNNING;
+// ---------------------
 let landingZone;
 let qTable = {};
 let actions = ["NONE", "UP", "LEFT", "RIGHT"];
-let epsilon = 0.1;
-let alpha = 0.2; // Tốc độ học, alpha càng lớn thì tốc độ học càng nhanh nhưng dễ bị overfitting
-let gamma = 0.95; // Hệ số giảm giá, gamma càng lớn thì càng chú trọng đến phần thưởng trong tương lai
-let state; // Trạng thái hiện tại của tàu vũ trụ
-let previousState; // Trạng thái trước đó của tàu vũ trụ
-let previousAction; // Hành động trước đó của tàu vũ trụ
-let frameCounter = 0;
-let episodeReward = 0; // Phần thưởng cho một lần tập đáp
+let epsilon = 0.1; // Tỷ lệ khám phá
+let alpha = 0.2;   // Tốc độ học
+let gamma = 0.95;  // Hệ số chiết khấu phần thưởng tương lai
+
+// Biến lưu trữ cho Q-learning update
+let currentState;
+let previousState;
+let previousAction;
+
+// Biến theo dõi và hiển thị
+let frameCounter = 0; // Đếm frame trong 1 episode để reset
+let episodeReward = 0;
 let rewardHistory = [];
-let maxHistory = 150; // Số lượng phần thưởng tối đa được lưu trữ trong lịch sử
-let counter = 0;
+let maxHistory = 150;
+let episodeCounter = 0; // Đổi tên counter thành episodeCounter cho rõ nghĩa
 let successCounter = 0;
 let failCounter = 0;
-let safeVy = 3.8; // Tốc độ rơi tối đa cho phép khi hạ cánh
-let safeVx = 2.2; // Tốc độ dịch trái phải tối đa cho phép khi hạ cánh
-let maxWindVariation = 0.0003; // Biến thiên gió tối đa
-let timer = 0; // Thời gian bay tính bằng giây
+let safeVy = 3.8;
+let safeVx = 2.2;
+let maxWindVariation = 0.0003;
+let timer = 0; // Đếm frame tổng thể (có thể dùng để phạt thời gian)
 
 function setup() {
     createCanvas(600, 400);
     groundY = height - 40;
+    landingZone = { x: width / 2 - 100, w: 200 };
     resetEpisode();
-    landingZone = {x: width / 2 - 80, w: 160};
 }
 
 function resetEpisode() {
-
-    // Lưu trữ kết quả của lần trước
-    if (rewardHistory.length > maxHistory) rewardHistory.shift();
-    rewardHistory.push(successCounter / counter); // Tính tỷ lệ thành công
-
-    console.log(`Episode reward: ${episodeReward}`);
+    // Lưu trữ kết quả của lần trước (nếu có)
+    if (episodeCounter > 0) { // Chỉ lưu khi đã chạy ít nhất 1 episode
+         if (rewardHistory.length > maxHistory) rewardHistory.shift();
+         // Tính tỷ lệ thành công thực tế
+         let successRate = (successCounter + failCounter > 0) ? successCounter / (successCounter + failCounter) : 0;
+         rewardHistory.push(successRate);
+         console.log(`Episode ${episodeCounter} ended. Reward: ${episodeReward.toFixed(2)}. Success Rate: ${successRate.toFixed(2)}`);
+    }
 
     // Khởi tạo lại các biến cho một lần tập mới
     lander = new Lander();
-    landed = false;
-    crashed = false;
+    gameState = STATE_RUNNING; // Reset trạng thái game
     frameCounter = 0;
     previousState = null;
-    previousAction = null;    
+    previousAction = null;
     episodeReward = 0;
-    counter++;
-    timer = 0;
+    episodeCounter++; // Tăng bộ đếm episode
+    timer = 0;        // Reset bộ đếm thời gian/frame của episode
+    wind = 0;         // Reset gió
 }
 
 function draw() {
@@ -58,62 +69,75 @@ function draw() {
     drawGround();
     drawLandingZone();
     drawRewardGraph();
+    displayStatus(); // Hiển thị trạng thái (dùng gameState)
 
-    // Tạo gió ngẫu nhiên
-    let windVariation = random(-maxWindVariation, maxWindVariation);
-    wind += windVariation;
-    wind = constrain(wind, -0.03, 0.03);
+    // Cập nhật và vẽ lander (luôn vẽ trừ khi bị OOB)
+    if (gameState !== STATE_CRASHED_OOB) {
+         lander.draw();
+    } else {
+         // Có thể vẽ biểu tượng nổ ở vị trí cuối cùng nếu muốn
+    }
 
-    if (!landed && !crashed) {
-        state = getState();
-        let action = chooseAction(state);
-        applyAction(action);
+    // Xử lý logic chính của game và AI
+    if (gameState === STATE_RUNNING) {
+        // --- Chu kỳ Q-Learning ---
+        // 1. Lấy trạng thái hiện tại (s)
+        currentState = getState();
 
-        lander.applyGravity(); // áp dụng trọng lực
-        lander.applyWind(wind); // áp dụng gió
-        lander.update(); // cập nhật vị trí
-        lander.checkCollision(); // kiểm tra va chạm
-        lander.checkBounds(); // kiểm tra ra ngoài biên
+        // 2. Chọn hành động (a)
+        let actionIndex = chooseAction(currentState);
+        // Lưu trạng thái và hành động *trước khi* thực hiện để update Q-table sau
+        let stateBeforeAction = currentState;
+        let actionTaken = actionIndex;
 
-        let reward = getReward(timer); // tính phần thưởng
-        episodeReward += reward; // cập nhật phần thưởng cho lần tập đáp này
-        updateQTable(previousState, previousAction, reward, state); // cập nhật Q table
+        // 3. Thực hiện hành động & cập nhật môi trường
+        applyAction(actionIndex);
+        lander.applyGravity();
+        // Tạo và áp dụng gió ngẫu nhiên
+        let windVariation = random(-maxWindVariation, maxWindVariation);
+        wind += windVariation;
+        wind = constrain(wind, -0.03, 0.03);
+        lander.applyWind(wind);
+        lander.update(); // Cập nhật vị trí vật lý
 
-        previousState = state;
-        previousAction = action;
-    } else {        
-        if (landed) {
-            state = getState();
-            let action = chooseAction(state);
-            let reward = getReward(timer); // tính phần thưởng
-            episodeReward += reward; // cập nhật phần thưởng cho lần tập đáp thành công một số điểm lớn
-            updateQTable(previousState, previousAction, reward, state); // cập nhật Q table
+        // 4. Quan sát trạng thái mới (s') và phần thưởng (r)
+        let nextState = getState(); // Trạng thái sau khi hành động và vật lý được áp dụng
+        let terminalStateReached = lander.checkStatus(); // Kiểm tra xem có rơi vào trạng thái kết thúc không
+        let reward = getReward(terminalStateReached); // Tính phần thưởng cho việc chuyển đến trạng thái mới
 
-            previousState = state;
-            previousAction = action;
-            
-            lander.vy = 0; // dừng tàu lại khi hạ cánh thành công
-            lander.vx = 0;
-        }
-        if (frameCounter > 180) resetEpisode(); // khởi động lại sau 3 giây nếu hạ cánh thành công hoặc va chạm
-        if (crashed) {
-            lander.vy = 0; // dừng tàu lại khi va chạm
-            lander.vx = 0;
-            // vẽ ký hiệu nổ khi va chạm
+        // 5. Cập nhật Q-Table
+        updateQTable(stateBeforeAction, actionTaken, reward, nextState, terminalStateReached !== STATE_RUNNING);
+
+        // Cập nhật tổng phần thưởng episode
+        episodeReward += reward;
+
+        // Chuyển sang trạng thái mới (có thể là terminal)
+        gameState = terminalStateReached;
+
+        // Tăng bộ đếm thời gian/frame
+        timer++;
+
+    } else {
+        // --- Xử lý khi Episode kết thúc ---
+        lander.stop(); // Dừng chuyển động của tàu
+
+        // Vẽ hiệu ứng nếu rơi
+        if (gameState === STATE_CRASHED_GROUND || gameState === STATE_CRASHED_OOB) {
             fill(255, 0, 0);
-            textSize(25);
-            text("💥", lander.x - 20, lander.y - 10);
+            textSize(35);
+            textAlign(CENTER, CENTER);
+            text("💥", lander.x, lander.y);
+        }
+
+        // Tăng frameCounter để đếm thời gian trước khi reset
+        frameCounter++;
+        if (frameCounter > 120) { // Reset sau 2 giây (120 frames / 60 fps)
+            resetEpisode();
         }
     }
-
-    frameCounter++;
-    timer ++; // thời gian tính bằng giây
-    if (!crashed) {
-        lander.draw(); // vẽ tàu vũ trụ
-    }
-    displayStatus(); // hiển thị trạng thái
 }
 
+// --- Vẽ vời ---
 function drawGround() {
     fill(80, 200, 100);
     rect(0, groundY, width, height - groundY);
@@ -121,148 +145,64 @@ function drawGround() {
 
 function drawLandingZone() {
     fill(100, 100, 255);
-    rect(landingZone.x, groundY, landingZone.w, 30);
+    rect(landingZone.x, groundY, landingZone.w, 10); // Làm vùng đáp mỏng hơn chút
 }
 
 function drawRewardGraph() {
     let graphX = 10,
-        graphY = 80,
-        graphW = maxHistory,
+        graphY = 100,
+        graphW = maxHistory, // Chiều rộng bằng số lượng lịch sử tối đa
         graphH = 50;
 
-    fill(0);
+    // Vẽ khung
+    noFill();
     stroke(255);
     rect(graphX, graphY, graphW, graphH);
+
+    // Vẽ đường đồ thị tỷ lệ thành công
     noFill();
     beginShape();
-    stroke(100, 255, 100);
+    stroke(100, 255, 100); // Màu xanh lá
     for (let i = 0; i < rewardHistory.length; i++) {
-        let x = map(i, 0, maxHistory, graphX, graphX + graphW);
-        let y = map(rewardHistory[i], -0.1, 1.2, graphY + graphH, graphY);
+        // Map index sang tọa độ x, map tỷ lệ (0-1) sang tọa độ y
+        let x = map(i, 0, rewardHistory.length -1 , graphX, graphX + graphW); // điều chỉnh map để vẽ hết chiều rộng
+        let y = map(rewardHistory[i], 0, 1, graphY + graphH, graphY); // Tỷ lệ từ 0 đến 1
         vertex(x, y);
     }
     endShape();
+
+    // Hiển thị text thông tin
     fill(255);
     textSize(9);
-    text(`# Trials = ${counter};  # Successes / # Fails: ${successCounter} / ${failCounter}`, graphX, graphY - 5);
+    textAlign(LEFT, BOTTOM); // Canh chỉnh text
+    text(`Episode: ${episodeCounter}`, graphX, graphY - 15);
+    text(`Success Rate (Avg): ${rewardHistory.length > 0 ? (rewardHistory.reduce((a, b) => a + b, 0) / rewardHistory.length).toFixed(2) : 'N/A'}`, graphX, graphY - 5);
+    text(`Success/Fail: ${successCounter}/${failCounter}`, graphX + graphW + 5, graphY + graphH); // Đặt bên phải đồ thị
+
 }
 
 function displayStatus() {
     fill(255);
-    textSize(9);
-    if (landed) {
-        // kiểm tra xem tàu có hạ cánh thành công trong vùng hạ cánh không
-        let inZone = lander.x > landingZone.x && lander.x < landingZone.x + landingZone.w;
-        if (inZone && Math.abs(lander.vy) < safeVy && Math.abs(lander.vx) < safeVx) {
-            text("✅ Landed Successfully in Zone!", 10, 20);    
-        }
-        else {
-            text("💥 Crashed due to not landing in safe zone or not in the safe speed!", 10, 20);
-        }
-    } else if (crashed) {
-        text("💥 Crashed!", 10, 20);
-    } else {
-        text("Q-learning pilot active...", 10, 20);
-    }
-
-    text(`Velocity: vy=${lander.vy.toFixed(2)}, vx=${lander.vx.toFixed(2)}`, 10, 40);
-    text(`Wind: ${wind.toFixed(3)}`, 10, 60);
-}
-
-function getState() {
-    let x = floor(lander.x / width * 3); // Chia thành 3 phần
-    let y = floor(lander.y / height * 3); // Chia thành 3 phần
-    let vx = floor(lander.vx);
-    let vy = floor(lander.vy);
-    return `${x},${y},${vx},${vy}`;
-}
-
-function chooseAction(state) {
-    // Nếu tàu đã hạ cánh thành công hoặc va chạm thì không cần chọn hành động nữa
-    if (landed || crashed) {
-        return null; // Không cần chọn hành động nữa
-    }
-    // Nếu trạng thái chưa có trong Q-table thì khởi tạo nó
-    if (!qTable[state]) qTable[state] = Array(actions.length).fill(0);    
-
-    if (random() < epsilon) { // Thăm dò hành động ngẫu nhiên
-        // Chọn hành động ngẫu nhiên với xác suất epsilon
-        return floor(random(actions.length));
-    } else {
-        // Chọn hành động tốt nhất từ Q-table
-        return qTable[state].indexOf(Math.max(...qTable[state]));
-    }
-}
-
-function applyAction(action) {
-    switch (actions[action]) {
-        case "UP":
-            lander.thrustUp();
+    strokeWeight(0.5);
+    textSize(10); // Tăng kích thước chữ một chút
+    textAlign(LEFT, TOP);
+    let statusText = "";
+    switch (gameState) {
+        case STATE_RUNNING:
+            statusText = "🚀 Q-Learning Pilot Active...";
             break;
-        case "LEFT":
-            lander.thrustLeft();
+        case STATE_SUCCESS:
+            statusText = "✅ Landed Successfully!";
             break;
-        case "RIGHT":
-            lander.thrustRight();
+        case STATE_CRASHED_GROUND:
+            statusText = "💥 Crashed on Ground!";
+            break;
+        case STATE_CRASHED_OOB:
+            statusText = "💥 Crashed - Out of Bounds!";
             break;
     }
-}
-
-function getReward(t = 0) {
-    const maxDistance = width / 2; // Khoảng cách tối đa từ tâm đến biên
-    const epsilon = 0.1; // Hằng số nhỏ tránh chia cho 0
-
-    // kiểm tra nếu tàu đã hạ cánh thành công
-    if (lander.y + lander.size / 2 >= groundY) {
-        landed = true; // Đánh dấu là đã hạ cánh
-        let inZone = lander.x > landingZone.x && lander.x < landingZone.x + landingZone.w;
-        if (inZone && Math.abs(lander.vy) < safeVy && Math.abs(lander.vx) < safeVx) {
-            return 100000; // Phần thưởng lớn khi hạ cánh thành công trong vùng hạ cánh
-        } else {
-            return -5000; // Phạt lớn khi hạ cánh không thành công
-        }
-    }
-
-    // kiểm tra nếu tàu ra ngoài biên
-    if (lander.x < 0 || lander.x > width || lander.y < 0) {
-        return -50000; // Va chạm với biên
-    }
-
-    // Khi đang bay
-    let reward = 0;
-
-    // Khoảng cách đến trung tâm vùng hạ cánh
-    let distanceToLandingZone = Math.abs(lander.x - (landingZone.x + landingZone.w / 2));
-    reward += -distanceToLandingZone / maxDistance; // Chuẩn hóa khoảng cách
-
-    // Phạt vận tốc, tăng mạnh khi gần mặt đất
-    let distanceToGround = Math.abs(lander.y - groundY);
-    let totalVelocity = Math.abs(lander.vx) + Math.abs(lander.vy);
-    reward += -totalVelocity / (Math.sqrt(distanceToGround) + epsilon);
-
-    // Phạt thời gian
-    reward += -t; // Tăng hình phạt thời gian
-
-    return reward;
-}
-
-function updateQTable(prevState, action, reward, newState) {
-    if (!prevState || action === null) return; // không cập nhật nếu không có trạng thái trước hoặc hành động
-    // khởi tạo Q-table nếu chưa có
-    if (!qTable[prevState]) qTable[prevState] = Array(actions.length).fill(0); 
-    if (!qTable[newState]) qTable[newState] = Array(actions.length).fill(0); 
-
-    // cập nhật Q-table theo công thức Q-learning
-    let oldValue = qTable[prevState][action]; // giá trị Q cũ
-    let futureValue = Math.max(...qTable[newState]); // giá trị Q tối đa của trạng thái mới
-    // cập nhật giá trị Q theo công thức Q-learning
-    // với công thức là Q(s, a) = Q(s, a) + α * (r + γ * max(Q(s', a')) - Q(s, a))
-    // trong đó:
-    // - Q(s, a): giá trị Q của trạng thái s và hành động a
-    // - r: phần thưởng nhận được sau khi thực hiện hành động a
-    // - γ: hệ số giảm giá (discount factor)
-    // - max(Q(s', a')): giá trị Q tối đa của trạng thái mới s'
-    // - α: hệ số học (learning rate)    
-    qTable[prevState][action] =
-        oldValue + alpha * (reward + gamma * futureValue - oldValue);
+    text(statusText, 10, 10);
+    text(`Velocity: vx=${lander.vx.toFixed(2)}, vy=${lander.vy.toFixed(2)}`, 10, 25);
+    text(`Position: x=${lander.x.toFixed(1)}, y=${lander.y.toFixed(1)}`, 10, 40);
+    text(`Wind: ${wind.toFixed(4)}`, 10, 55);
 }
