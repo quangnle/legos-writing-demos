@@ -29,8 +29,8 @@ let maxHistory = 150;
 let episodeCounter = 0; // Đổi tên counter thành episodeCounter cho rõ nghĩa
 let successCounter = 0;
 let failCounter = 0;
-let safeVy = 3.8;
-let safeVx = 2.2;
+let safeVy = 3.0;
+let safeVx = 1.6;
 let maxWindVariation = 0.0003;
 let timer = 0; // Đếm frame tổng thể (có thể dùng để phạt thời gian)
 
@@ -48,7 +48,7 @@ function resetEpisode() {
          // Tính tỷ lệ thành công thực tế
          let successRate = (successCounter + failCounter > 0) ? successCounter / (successCounter + failCounter) : 0;
          rewardHistory.push(successRate);
-         console.log(`Episode ${episodeCounter} ended. Reward: ${episodeReward.toFixed(2)}. Success Rate: ${successRate.toFixed(2)}`);
+         console.log(`Episode ${episodeCounter} ended. Reward: ${episodeReward.toFixed(2)}. Success Rate: ${successRate.toFixed(2)}.`);
     }
 
     // Khởi tạo lại các biến cho một lần tập mới
