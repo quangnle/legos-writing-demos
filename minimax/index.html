@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo of Minimax Algorithm</title>
+    <title>Minimax Algorithm Demo</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,6 +26,15 @@
             font-weight: bold;
             text-align: center;
         }
+        #canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #canvas-container canvas {
+            border: 1px solid #000;
+            background-color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -46,12 +55,10 @@
                 <option value="11">11</option>
             </select>
         </p>
-    </div>   
-    <div id="canvas-holder"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="sketch.js"></script>
-    <script src="board.js"></script>
-    <script src="state.js"></script>
+    </div>  
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+    <script src="sketch.js"></script> 
     <script>
         function depthChanged() {
             depth = +document.getElementById('depth').value;
