@@ -4,15 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Miller-Rabin Primality Test Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 40px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+        div {
+            margin: 10px;
+        }
+        button {
+            background-color: #333;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        input[type="number"] {
+            padding: 5px;
+            width: 120px;
+        }
+        textarea {
+            padding: 5px;    
+            width:  500px;        
+            height: 100px;
+        }   
+        span {
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <h1>Miller-Rabin Primality Test Demo</h1>
-    <div><input type="number" id="inp"></div>
+    <header>
+        <h1>Miller-Rabin Primality Test Demo</h1>
+    </header>    
+
     <div>
+        <input type="number" id="inp">
+        <button onclick="test()">Check Prime</button>
         <p id="result"></p>
     </div>
 
-    <button onclick="test()">Check Prime</button>
     <script>
         function test() {
             const n = parseInt(document.getElementById('inp').value);
