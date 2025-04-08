@@ -28,11 +28,6 @@ header h1 {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     margin-top: 50px;
 }
-h1 {
-    text-align: center;
-    font-size: 22px;
-    color: #333;
-}
 .form-group {
     margin-bottom: 10px;
 }
@@ -67,4 +62,18 @@ h1 {
     font-size: 12px;
     border: 1px solid #ccc;
     border-radius: 5px;
+}
+div canvas {
+    border: 1px solid #ccc;
+    margin-top: 20px;
+    display: block;      
+}
+#canvas-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#canvas-container canvas {
+    border: 1px solid #000;
+    background-color: #fff;
 }

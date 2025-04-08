@@ -137,20 +137,27 @@ class EllipticCurve {
         this.pB.selected = false;
     }
 
+    // hàm tính giao điểm của hai điểm trên đường cong
     intersectionPoint(p1, p2) {
         let s = 0;
-        const epsilon = 0.00001;
-        const xP = p1.x / this.scale;
+        const epsilon = 0.00001; // tránh chia cho 0
+        // chuyển zoom rate cho phù hợp với toạ độ hiển thị đồ hoạ
+        const xP = p1.x / this.scale; 
         const yP = p1.y / this.scale;
         const xQ = p2.x / this.scale;
         const yQ = p2.y / this.scale;
 
+        // tính giao điểm của hai diểm trên đường cong y^2 = x^3 + ax + b
+        
+        // nếu hai điểm trùng nhau thì s = (3 * xP * xP + a) / (2 * yP)
+        // nếu không thì s = (yP - yQ) / (xP - xQ + epsilon)
         if (p1.x == p2.x && p1.y == p2.y) {
             s = (3 * xP * xP + this.a) / (2 * yP);
         } else {
             s = (yP - yQ) / (xP - xQ + epsilon);
         }
 
+        // tính toạ độ giao điểm từ s đã tính ở trên
         const xR = s * s - xP - xQ;
         const yR = yP + s * (xR - xP);
 
@@ -158,16 +165,20 @@ class EllipticCurve {
     }
 
     findNearestPoint(x, y) {
-        let min = 100000;
-        let nPoint = null;
+        // tìm điểm gần nhất với vị trí (x, y)
+        // trong mảng this.points để xác định điểm nào đang được chọn
+        let min = Infinity; // khoảng cách nhỏ nhất ban đầu được đặt là vô cực
+        let nearestPoint = null; 
 
         this.points.forEach((p) => {
             const d = dist(p, { x: x, y: y });
-            if (d < min) {
-                min = d;
-                nPoint = p;
+            if (d < min) { // nếu khoảng cách hiện tại nhỏ hơn khoảng cách nhỏ nhất
+                min = d; // cập nhật khoảng cách nhỏ nhất
+                nearestPoint = p; // cập nhật điểm gần nhất
             }
         });
-        return nPoint;
+        
+        // nearestPoint là điểm gần nhất với (x, y)
+        return nearestPoint;
     }
 }
