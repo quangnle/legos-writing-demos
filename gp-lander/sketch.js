@@ -14,11 +14,12 @@ let simulationRunning = true;
 let commonStartPos = {}; // Lưu vị trí bắt đầu chung để hiển thị
 
 // --- Tham số Thuật toán Di truyền (GA) ---
-const populationSize = 50;
-const chromosomeLength = 160;
-const mutationRate = 0.05;
+let populationSize = 50; // Kích thước quần thể
+let chromosomeLength = 150; // Độ dài chuỗi gen
+let mutationRate = 0.02; // Tỉ lệ đột biến
 const elitismCount = 2;
 const actions = ["NONE", "UP", "LEFT", "RIGHT", ]; // 0, 1, 2, 3
+let population = []; // Mảng chứa quần thể cá thể
 
 // --- Lịch sử Fitness ---
 let bestFitnessHistory = [];
@@ -35,11 +36,7 @@ function setup() {
     // Reset lần đầu và lấy vị trí bắt đầu chung
     commonStartPos = resetSimulationForNewGeneration(width, height);
 
-    console.log(
-        `Generation ${generation} initialized. Starting at (${commonStartPos.startX.toFixed(
-            0
-        )}, ${commonStartPos.startY.toFixed(0)})`
-    );
+    console.log(`Generation ${generation} initialized. Starting at (${commonStartPos.startX.toFixed(0)}, ${commonStartPos.startY.toFixed(0)})`);
 }
 
 function draw() {
@@ -57,15 +54,7 @@ function draw() {
     // --- Chạy mô phỏng & Vẽ ---
     if (simulationRunning) {
         // Chạy 1 bước mô phỏng từ gp.js, truyền các tham số cần thiết
-        runSimulationStep(
-            wind,
-            timeStep,
-            gravity,
-            groundY,
-            landingZone,
-            safeVx,
-            safeVy
-        );
+        runSimulationStep(wind, timeStep, gravity, groundY, landingZone, safeVx, safeVy);
 
         // Vẽ quần thể từ mảng population trong gp.js
         drawPopulation();
@@ -75,17 +64,10 @@ function draw() {
         // --- Kiểm tra kết thúc thế hệ ---
         let allDone = population.every((ind) => !ind.isAlive); // Kiểm tra xem tất cả cá thể đã dừng chưa
         if (timeStep >= chromosomeLength || allDone) {
-            console.log(
-                `Generation ${generation} finished simulation at step ${timeStep}. All done: ${allDone}`
-            );
+            console.log(`Generation ${generation} finished simulation at step ${timeStep}. All done: ${allDone}`);
 
             // Tính fitness từ gp.js
-            let fitnessResults = calculateFitnessAll(
-                landingZone,
-                groundY,
-                safeVx,
-                safeVy
-            );
+            let fitnessResults = calculateFitnessAll(landingZone, groundY, safeVx, safeVy);
 
             // Lưu lịch sử fitness
             if (bestFitnessHistory.length > maxHistory)
@@ -107,15 +89,26 @@ function draw() {
             generation++;
             simulationRunning = true; // Đảm bảo chạy lại
             console.log(
-                `Generation ${generation} started. Starting at (${commonStartPos.startX.toFixed(
-                    0
-                )}, ${commonStartPos.startY.toFixed(0)})`
+                `Generation ${generation} started. Starting at (${commonStartPos.startX.toFixed(0)}, ${commonStartPos.startY.toFixed(0)})`
             );
         }
     } else {
         // Nếu cần xử lý gì đó khi toàn bộ quá trình dừng hẳn
         drawPopulation(); // Vẫn vẽ trạng thái cuối
     }
+}
+
+function resetTraining() {
+    // Reset lại mọi thứ về trạng thái ban đầu
+    timeStep = 0;
+    generation = 0;
+    simulationRunning = true;
+    commonStartPos = resetSimulationForNewGeneration(width, height); // Lấy vị trí bắt đầu chung
+    bestFitnessHistory = [];
+    avgFitnessHistory = [];
+    wind = 0; // Reset gió về 0
+    initializePopulation(); // Khởi tạo lại quần thể
+    console.log(`Simulation reset. Starting at (${commonStartPos.startX.toFixed(0)}, ${commonStartPos.startY.toFixed(0)})`);
 }
 
 // --- Các hàm vẽ Helper ---
@@ -126,16 +119,9 @@ function drawGround() {
 }
 
 function drawLandingZone() {
-    fill(180, 180, 255, 150);
+    fill(100, 100, 255);
     noStroke();
     rect(landingZone.x, groundY, landingZone.w, 10);
-    stroke(255, 255, 255, 100);
-    line(
-        landingZone.x + landingZone.w / 2,
-        groundY,
-        landingZone.x + landingZone.w / 2,
-        groundY + 10
-    );
 }
 
 function drawPopulation() {
@@ -143,13 +129,7 @@ function drawPopulation() {
     for (let i = 0; i < population.length; i++) {
         // Vẽ lander của cá thể này và dấu X nếu rơi
         let ind = population[i];
-        ind.lander.draw(
-            i === 0
-                ? color(255, 255, 0, 220)
-                : ind.isAlive
-                ? color(255, 255, 255, 100)
-                : color(150, 150, 150, 50)
-        );
+        ind.lander.draw(i === 0 ? color(255, 255, 0, 220) : ind.isAlive ? color(255, 255, 255, 100): color(150, 150, 150, 50));
         if (!ind.isAlive && ind.status !== "SUCCESS") {
             return; // ko vẽ gì thêm nếu đã rơi vì vẽ rối mắt quá! :( 
             //   push();
@@ -169,7 +149,7 @@ function drawInfo() {
     textAlign(LEFT, TOP);
     text(`Generation: ${generation}`, 10, 10);
     text(`Time Step: ${timeStep} / ${chromosomeLength}`, 10, 25);
-    text(`Population: ${populationSize}`, 10, 40);
+    text(`Population Size: ${populationSize}`, 10, 40);
     // Lấy best fitness từ quần thể đã sắp xếp
     if (
         population.length > 0 &&

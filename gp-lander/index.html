@@ -7,22 +7,58 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            font-size: 12px;
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
         }
         header {
-            background-color: #333;
-            color: white;
-            padding: 10px 20px;
+            background: #333;
+            padding-top: 10px;
+            min-height: 40px;
+            border-bottom: #333 solid 3px;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
             text-align: center;
         }
-        h1 {
-            margin: 0;
+        .form-group {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .form-group label {
+            margin-right: 10px;
+            font-size: 10px;
+        }
+        .form-group select {
+            padding: 5px;
+            font-size: 10px;
+            margin-right: 10px;
+        }
+        .form-group button {
+            padding: 5px 10px;
+            font-size: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+        .form-group button:active {
+            background-color: #004085;
         }
         canvas {
             display: block;
-            margin: 20px auto;
+            margin: 0 auto;
+            background-color: #fff;
             border: 1px solid #ccc;
         }
     </style>
@@ -31,9 +67,48 @@
     <header>
         <h1>Genetic Programming Application - Rocket Lander</h1>
     </header>
+    <div class="form-group">
+        <div class="form-group">
+            <label for="selectChromosomeLength">Chromosome Length</label>
+            <select id="selectChromosomeLength">
+                <option value="100">100</option>
+                <option value="150" selected>150</option>
+                <option value="200">200</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="selectPopulationSize">Population Size</label>
+            <select id="selectPopulationSize">
+                <option value="30">30</option>
+                <option value="50" selected>50</option>
+                <option value="70">70</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="selectMutationRate">Mutation Rate</label>
+            <select id="selectMutationRate">
+                <option value="0.01">0.01</option>
+                <option value="0.02" selected>0.02</option>
+                <option value="0.03">0.03</option>
+            </select>
+        </div>
+        <button onclick="reset()">Reset</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="lander.js"></script>
     <script src="gp.js"></script>
     <script src="sketch.js"></script>
+    <script>
+        function reset() {
+            // Reset với các giá trị mới từ dropdown
+            chromosomeLength = +parseInt(document.getElementById('selectChromosomeLength').value);
+            populationSize = +parseInt(document.getElementById('selectPopulationSize').value);
+            mutationRate = +parseFloat(document.getElementById('selectMutationRate').value);
+
+            // Gọi hàm resetTraining từ sketch.js để khởi động lại quá trình huấn luyện
+            resetTraining();
+        }
+        
+    </script>
 </body>
 </html>

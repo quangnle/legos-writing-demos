@@ -1,7 +1,3 @@
-// --- Quần thể ---
-let population = [];
-
-// --- Lớp Individual ---
 class Individual {
     constructor(chromosome = null) {
         this.lander = new Lander(); // Lander sẽ được reset đúng vị trí sau
@@ -124,11 +120,13 @@ function calculateFitnessAll(landingZone, groundY, safeVx, safeVy) {
 
 function evolvePopulation() {
     let newPopulation = [];
-    // 1. Elitism
+    // 1. Elitism - chọn những cá thể tốt nhất để giữ lại cho thế hệ sau
+    // Giữ lại elitismCount cá thể tốt nhất từ quần thể hiện tại
     for (let i = 0; i < elitismCount; i++) {
         newPopulation.push(new Individual(population[i].chromosome));
     }
-    // 2. Crossover & Mutation
+    // 2. Crossover & Mutation - tạo ra cá thể mới từ các cá thể cha mẹ
+    // Chọn 2 cá thể cha mẹ từ quần thể hiện tại và lai ghép chúng để tạo ra cá thể con
     for (let i = elitismCount; i < populationSize; i++) {
         let parent1 = tournamentSelection();
         let parent2 = tournamentSelection();
@@ -142,8 +140,12 @@ function evolvePopulation() {
 function tournamentSelection() {
     let tournamentSize = 5;
     let bestInd = null;
+    // chọn ngẫu nhiên một số lần (tournamentSize) để tìm cá thể tốt nhất trong số đó
+    // cách này sẽ làm cho việc chọn cá thể lai ghép trở nên đa dạng hơn
+    // và không bị ảnh hưởng quá nhiều bởi cá thể tốt nhất trong quần thể hiện tại
     for (let i = 0; i < tournamentSize; i++) {
-        let randomInd = random(population); // p5.js random(array)
+        let randomInd = random(population); // lấy ngẫu nhiên 1 cá thể từ quần thể
+        // Nếu bestInd chưa được khởi tạo hoặc cá thể ngẫu nhiên tốt hơn bestInd thì cập nhật bestInd
         if (bestInd === null || randomInd.fitness > bestInd.fitness) {
             bestInd = randomInd;
         }
@@ -151,10 +153,14 @@ function tournamentSelection() {
     return bestInd;
 }
 
+// Crossover (lai ghép) giữa 2 cá thể, trả về một cá thể mới
 function crossover(chromo1, chromo2) {
     let newChromo = [];
+    // chọn môi điểm cắt ngẫu nhiên
     let crossoverPoint = floor(random(1, chromosomeLength - 1));
     for (let i = 0; i < chromosomeLength; i++) {
+        // Nếu i < crossoverPoint thì lấy từ chromo1, ngược lại lấy từ chromo2
+        // Đảm bảo không lấy cả 2 từ 1 cá thể
         newChromo.push(i < crossoverPoint ? chromo1[i] : chromo2[i]);
     }
     return newChromo;
