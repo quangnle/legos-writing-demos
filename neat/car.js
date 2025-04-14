@@ -1,7 +1,3 @@
-// ==========================
-// === File: car.js ===
-// ==========================
-
 class Car {
     /**
      * Khởi tạo xe
@@ -75,7 +71,7 @@ class Car {
                 let intersectionInfo = null;
 
                 if (item.type === 'circle') {
-                    // Gọi hàm tính giao điểm tia-hình tròn (tự viết)
+                    // Gọi hàm tính giao điểm tia-hình tròn 
                     intersectionInfo = intersectLineSegmentCircle(
                         rayStartVec, rayEndVec,
                         createVector(item.x, item.y), item.radius
@@ -109,12 +105,19 @@ class Car {
     // --- Quyết định từ NEAT ---
     think() {
         if (!this.alive) return;
-        const inputs = this.sensorDistances;
-        const outputs = this.genome.activate(inputs);
-        // Map output (giả sử 0-1) sang lực lái và ga/phanh
+        
+        // Tính toán đầu vào cho mạng nơ-ron
+        let inputs = [...this.sensorDistances]; // input sẽ bao gồm các thông tin của cảm biến và
+        inputs.push(this.vel.x / MAX_SPEED); // thông số tốc độ vx hiện tại (0-1)
+        inputs.push(this.vel.y / MAX_SPEED); // thông số tốc độ vy hiện tại (0-1)
+        let distanceToTarget = map(this.pos.y, this.initialY, 0, 0, 1); // khoảng cách đến vạch đích (0-1)
+        inputs.push(distanceToTarget); // khoảng cách đến vạch đích (0-1)    
+
+        const outputs = this.genome.activate(inputs); // Đầu ra từ mạng nơ-ron        
+        // Map output sang lực lái và ga/phanh
         this.steer = map(outputs[0], 0, 1, -STEER_FORCE, STEER_FORCE);
         const throttle = map(outputs[1], 0, 1, -ACCELERATION * 0.3, ACCELERATION); // Giảm khả năng lùi
-        this.applyForce(createVector(throttle, 0));
+        this.applyForce(createVector(throttle, 0)); // Tạo lực ga/phanh
     }
 
     // --- Áp dụng lực ---
@@ -224,14 +227,9 @@ class Car {
             finishBonus += max(0, MAX_TIME_ALIVE - this.timeToFinish) * 0.5;
         }
 
-        
-
         // Phần thưởng tiến độ dựa trên quãng đường Y đi được
         let progressReward = this.progress;
-
-        // phần thưởng nếu xe càng gần đích càng tốt
-        // finishLine.y là đường Y của vạch đích                
-        progressReward += max(0, finishLine.y - this.pos.y); // Quá trình đi được
+        //console.log("Progress: ", this.progress);
 
         // Phạt nhẹ nếu chết giữa đường (để phân biệt với xe không làm gì)
         let penalty = 0;
@@ -263,7 +261,16 @@ class Car {
 
         rect(0, 0, this.width, this.height);          // Thân xe
         fill(0, 0, 0, this.alive ? 200 : 100);        // Màu đen cho dấu phía trước
-        rect(this.width * 0.3, 0, this.width * 0.4, this.height * 0.5); // Dấu phía trước rõ hơn
+        beginShape(); // Bắt đầu vẽ hình tam giác
+        fill(255, 0, 0, this.alive ? 200 : 100); // Màu đỏ cho dấu phía trước
+        vertex(this.width * 0.3, -this.height * 0.25); // Đỉnh trên
+        vertex(this.width * 0.3, this.height * 0.25); // Đỉnh dưới
+        vertex(this.width * 0.5, 0); // Đỉnh nhọn phía trước
+        endShape(CLOSE); // Kết thúc vẽ hình tam giác
+        // mui xe là một hình chữ nhật nhỏ hơn nhưng nằm ở giữa thân xe
+        // và có màu khác để tạo sự tương phản với thân xe
+        fill(130, 130, 255, this.alive ? 200 : 100); // Màu xanh dương cho mui xe
+        rect(0, 0, this.width * 0.5, this.height); // Mui xe
 
         pop();
 

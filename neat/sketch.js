@@ -1,22 +1,22 @@
 // --- Cài đặt NEAT ---
-const POPULATION_SIZE = 60; // Tăng số lượng để khám phá nhiều hơn
-const MUTATION_RATE = 0.4;
-const ELITISM_PERCENT = 0.1;
+const POPULATION_SIZE = 60; // Kích thước quần thể, tăng để khám phá nhiều hơn
+const MUTATION_RATE = 0.4; // Tỷ lệ đột biến, tăng để khám phá nhiều hơn
+const ELITISM_PERCENT = 0.1; // Tỷ lệ chọn lọc, tăng để giữ lại nhiều cá thể tốt hơn
 
 // --- Cài đặt Mô phỏng & Xe ---
 const SENSOR_COUNT = 7;
 const SENSOR_LENGTH = 100; // Chiều dài cảm biến
 const MAX_SPEED = 5;
-const STEER_FORCE = 0.12; // Tăng nhẹ lực lái
-const ACCELERATION = 0.08; // Tăng nhẹ gia tốc
-const FRICTION = 0.03;
+const STEER_FORCE = 0.12; // Lực rẽ (điều khiển góc)
+const ACCELERATION = 0.08; // Lực tăng Gia tốc
+const FRICTION = 0.03; // Lực ma sát (giảm tốc độ)
 const MAX_TIME_ALIVE = 1000; // Tăng thời gian để về đích (~50s)
 let DEBUG_MODE = true; // Bật/tắt vẽ debug
 
 // --- Cài đặt Môi trường ---
-const TRACK_WIDTH = 300; // Kích thước Đường đua 
+const TRACK_WIDTH = 200; // Kích thước Đường đua 
 const FINISH_LINE_Y = 0; // Vạch đích ở Y = 0
-const NUM_OBSTACLES = 15; // số lượng obstacles
+const NUM_OBSTACLES = 10; // số lượng obstacles
 const OBSTACLE_MIN_RADIUS = 15; // Kích thước chướng ngại vật nhỏ nhất
 const OBSTACLE_MAX_RADIUS = 20; // Kích thước chướng ngại vật lớn nhất
 const OBSTACLE_MIN_DIST = 50; // Khoảng cách tối thiểu giữa các chướng ngại vật
@@ -42,36 +42,32 @@ function setup() {
     createCanvas(windowWidth, windowHeight);
     startYPosition = height - 60; // Xuất phát gần cuối hơn
 
-    // Kiểm tra thư viện, cài đặt backend
+    // Kiểm tra thư viện, cài đặt cho TensorFlow.js nếu có
     try {
         if (tf) tf.setBackend("cpu");
         else throw new Error();
     } catch (e) {
         console.warn("TensorFlow.js (tf) not found or backend setting failed.");
     }
-    try {
-        if (!collideCircleCircle) throw new Error();
-    } catch (e) {
-        console.error(
-            "p5.collide2D library not loaded correctly! Required for collisions."
-        );
-    }
 
     // 1. Tạo môi trường ban đầu
     createEnvironment(startYPosition);
 
     // 2. Khởi tạo NEAT
-    neat = new neataptic.Neat(SENSOR_COUNT, 2, null, {
-        mutation: neataptic.methods.mutation.ALL,
-        popsize: POPULATION_SIZE,
+    const inputSize = SENSOR_COUNT + 2 + 1; // số cảm biến + tốc độ hiện tại vx, vy và khoảng cách đến điểm đích
+    neat = new neataptic.Neat(inputSize, 2, null, {
+        mutation: neataptic.methods.mutation.ALL, 
+        popsize: POPULATION_SIZE, 
         mutationRate: MUTATION_RATE,
         elitism: Math.round(ELITISM_PERCENT * POPULATION_SIZE),
-        network: new neataptic.architect.Random(
-            SENSOR_COUNT,
-            Math.ceil(SENSOR_COUNT / 1.5),
+        network: new neataptic.architect.Random( 
+            inputSize,
+            Math.ceil(inputSize / 1.5),
+            Math.ceil(inputSize / 1.5),
+            Math.ceil(inputSize / 1.5),
             2
-        ), // Mạng ẩn nhỏ hơn chút
-    });
+        ),});
+
     console.log("NEAT Initialized.");
 
     // 3. Bắt đầu thế hệ đầu tiên
@@ -237,7 +233,7 @@ function createEnvironment(startY) {
     finishLine = { y: FINISH_LINE_Y, x1: trackLeftX, x2: trackRightX };
 
     // --- Tạo Chướng Ngại Vật  ---
-    let safeZoneY = startY - 100;
+    let safeZoneY = startY - 30;
     let attempts = 0;
     while (obstacles.length < NUM_OBSTACLES && attempts < NUM_OBSTACLES * 5) {
         attempts++;
@@ -308,14 +304,11 @@ function displayInfo() {
     noStroke();
     textSize(10);
     textAlign(LEFT, TOP);
-    let yPos = 10;
-    text(`Generation: ${generation}`, 10, yPos);
-    yPos += 10;
-    text(`Cars Active: ${activeCars} / ${POPULATION_SIZE}`, 10, yPos);
-    yPos += 10;
+    
+    text(`Generation: ${generation}`, 10, 10);
+    text(`Cars Alive: ${activeCars} / ${POPULATION_SIZE}`, 10, 20);
+    
     // Hiển thị fitness của thế hệ *trước* (đã hoàn thành)
-    text(`Highest Fitness (Prev Gen): ${highestFitness.toFixed(2)}`, 10, yPos);
-    yPos += 10;
-    text(`Average Fitness (Prev Gen): ${averageFitness.toFixed(2)}`, 10, yPos);
-    yPos += 10;
+    text(`Highest Fitness (Prev Gen): ${highestFitness.toFixed(2)}`, 10, 30);
+    text(`Average Fitness (Prev Gen): ${averageFitness.toFixed(2)}`, 10, 40);
 }
