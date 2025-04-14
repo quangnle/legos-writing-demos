@@ -65,6 +65,9 @@ function setup() {
             Math.ceil(inputSize / 1.5),
             Math.ceil(inputSize / 1.5),
             Math.ceil(inputSize / 1.5),
+            Math.ceil(inputSize / 1.5),
+            Math.ceil(inputSize / 1.5),
+            Math.ceil(inputSize / 1.5),
             2
         ),});
 
@@ -232,30 +235,26 @@ function createEnvironment(startY) {
     // --- Vạch Đích ---
     finishLine = { y: FINISH_LINE_Y, x1: trackLeftX, x2: trackRightX };
 
-    // --- Tạo Chướng Ngại Vật  ---
+    // --- Tạo Chướng Ngại Vật theo hình zigzag ---
     let safeZoneY = startY - 30;
-    let attempts = 0;
-    while (obstacles.length < NUM_OBSTACLES && attempts < NUM_OBSTACLES * 5) {
-        attempts++;
-        let obsRadius = random(OBSTACLE_MIN_RADIUS, OBSTACLE_MAX_RADIUS);
-        let obsX = random(trackLeftX + obsRadius, trackRightX - obsRadius);
-        // Đảm bảo Y nằm giữa đích và biên dưới (và vùng an toàn)
-        let obsY = random(FINISH_LINE_Y + obsRadius + 5, safeZoneY - obsRadius);
-        // Kiểm tra Y > bottomBoundary.y1 - obsRadius? (Không cần thiết nếu safeZoneY < bottomY)
+    let spacingY = (safeZoneY - FINISH_LINE_Y) / NUM_OBSTACLES; // Khoảng cách dọc giữa các chướng ngại vật   
+    let direction = 1; // Hướng zigzag (1: phải, -1: trái)
 
-        if (dist(obsX, obsY, width / 2, startY) < obsRadius + 50) continue;
-        let overlapping = false;
-        for (let other of obstacles) {
-            if (dist(obsX, obsY, other.x, other.y) <obsRadius + other.radius + 10) {
-                overlapping = true;
-                break;
-            }
-        }
-        if (!overlapping) {
-            obstacles.push({x: obsX, y: obsY, radius: obsRadius, type: "circle" });
-        }
+    for (let i = 0; i < NUM_OBSTACLES; i++) {
+        let zigzagOffset = random(OBSTACLE_MAX_RADIUS, TRACK_WIDTH / 4); // Độ lệch zigzag
+        let obsRadius = random(OBSTACLE_MIN_RADIUS, OBSTACLE_MAX_RADIUS);
+        let obsY = FINISH_LINE_Y + spacingY * i + spacingY / 2; // Vị trí Y đều nhau
+        let obsX = width / 2 + direction * zigzagOffset; // Zigzag qua lại quanh tâm đường đua
+
+        // Đảm bảo chướng ngại vật không vượt ra ngoài biên đường đua
+        obsX = constrain(obsX, trackLeftX + obsRadius, trackRightX - obsRadius);
+
+        obstacles.push({ x: obsX, y: obsY, radius: obsRadius, type: "circle" });
+
+        // Đổi hướng zigzag cho chướng ngại vật tiếp theo
+        direction *= -1;
     }
-    console.log(`Generated ${obstacles.length} obstacles.`);
+    console.log(`Generated ${obstacles.length} zigzag obstacles.`);
 }
 
 function drawEnvironment() {

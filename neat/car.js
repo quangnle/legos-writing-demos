@@ -228,7 +228,7 @@ class Car {
         }
 
         // Phần thưởng tiến độ dựa trên quãng đường Y đi được
-        let progressReward = this.progress;
+        let progressReward = this.progress * 5;
         //console.log("Progress: ", this.progress);
 
         // Phạt nhẹ nếu chết giữa đường (để phân biệt với xe không làm gì)
