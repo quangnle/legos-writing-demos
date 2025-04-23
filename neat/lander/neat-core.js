@@ -17,7 +17,7 @@ let lastBestGenomeJSON = null; // Lưu JSON của genome tốt nhất thế hệ
 // Initialize the NEAT instance
 function initializeNeat() {
     neat = new Neat(
-        INPUT_SIZE, // Sử dụng INPUT_SIZE mới (7)
+        INPUT_SIZE, // kích thước đầu vào (7 inputs)
         OUTPUT_SIZE,
         null, // Fitness assigned during evaluation
         {
@@ -32,7 +32,8 @@ function initializeNeat() {
                 methods.mutation.SUB_NODE, // Xóa node
                 methods.mutation.SUB_CONN, // Xóa kết nối
             ],
-            // Cập nhật architect để sử dụng INPUT_SIZE mới (7)
+            // Cập nhật architect với các thông số mới
+            // Nếu không có architect, NEAT sẽ tự động tạo một mạng ngẫu nhiên
             network: new architect.Random(INPUT_SIZE, Math.floor(POPULATION_SIZE / 5), OUTPUT_SIZE)
         }
     );
