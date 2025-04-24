@@ -19,8 +19,6 @@ let networkCanvasHeight = 300;
 let networkButton; // Button to toggle network view
 let viewToggleButton; // Button to toggle all/best lander view
 
-
-
 // === p5.js Setup ===
 function setup() {
     let canvas = createCanvas(canvasWidth, canvasHeight);
