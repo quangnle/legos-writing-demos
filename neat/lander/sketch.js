@@ -1,5 +1,5 @@
 // === Global Simulation Variables ===
-let canvasWidth = 800;
+let canvasWidth = 700;
 let canvasHeight = 600;
 let groundHeight = 20;
 let landingZoneX1, landingZoneX2, landingZoneY;
