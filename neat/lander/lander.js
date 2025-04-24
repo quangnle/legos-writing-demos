@@ -8,6 +8,10 @@ const SUCCESS_REWARD = 200; // Điểm thưởng cơ bản khi hạ cánh thành
 const SAFE_LANDING_VX = 1.0; // Vận tốc ngang tối đa cho phép khi hạ cánh
 const SAFE_LANDING_VY = 1.5; // Vận tốc dọc tối đa cho phép khi hạ cánh
 const MAX_STEPS = 800; // Số bước tối đa cho mỗi lần thử nghiệm
+const DISTANCE_PENALTY_FACTOR = 100; // Hệ số phạt khoảng cách
+const OOB_PENALTY = -2000; // Điểm phạt khi bay ra ngoài
+const EXCESS_VX_PENALTY_FACTOR = 50; // Hệ số phạt cho vận tốc ngang vượt ngưỡng
+const EXCESS_VY_PENALTY_FACTOR = 50; // Hệ số phạt cho vận tốc dọc vượt ngưỡng
 
 // --- Thêm hằng số cho gió ---
 const MAX_WIND_STRENGTH = 0.006; // Gia tốc ngang tối đa do gió
@@ -163,43 +167,56 @@ class Lander {
 
     calculateFitness() {
         let fitness = 0;
+
+        // 1. Tiêu chí: Thưởng lớn khi hạ cánh thành công
         if (this.landed) {
             fitness = SUCCESS_REWARD;
-            let vxFactor = constrain(1.0 - (abs(this.landingVx) / SAFE_LANDING_VX), 0, 1);
-            let vyFactor = constrain(1.0 - (abs(this.landingVy) / SAFE_LANDING_VY), 0, 1);
-            fitness += (vxFactor * 40) + (vyFactor * 40); // Thưởng nếu vận tốc nhỏ 
-    
-            let centerDist = abs(this.pos.x - (landingZoneX1 + landingZoneX2) / 2);
-            let precisionFactor = constrain(1 - (centerDist / ((landingZoneX2 - landingZoneX1) / 2)), 0, 1);
-            fitness += precisionFactor * 30; // thưởng nếu hạ cánh gần giữa vùng hạ cánh
-            fitness += (MAX_STEPS - this.steps) * (40 / MAX_STEPS);
-            fitness -= this.fuelUsed * FUEL_PENALTY * 0.5;
-        } else if (this.crashed) {
-            fitness = CRASH_PENALTY;
-            const crashedInZone = this.pos.x >= landingZoneX1 && this.pos.x <= landingZoneX2 && this.pos.y >= landingZoneY;
-            if (crashedInZone) {
-                fitness *= 0.7;
-                fitness += 80; // Thưởng thêm nếu rơi vào vùng hạ cánh
-            }
-            // Hình phạt khoảng cách
-            let distanceToTargetCenter = dist(this.pos.x, this.pos.y, (landingZoneX1 + landingZoneX2) / 2, landingZoneY);
-            fitness -= distanceToTargetCenter * 0.1; // Penalize distance from target
-            // Phạt thêm tốc độ va chạm mạnh (nếu không phải timeout/out of bounds)
-            if (!this.reason.includes("Timeout") && !this.reason.includes("Out of Bounds")) {
-                let excessiveVy = max(0, abs(this.landingVy) - SAFE_LANDING_VY);
-                fitness -= excessiveVy * 20; // Phạt thêm tốc độ dọc
-                let excessiveVx = max(0, abs(this.landingVx) - SAFE_LANDING_VX);
-                fitness -= excessiveVx * 10; // Phạt thêm tốc độ ngang
-            }
-            if (this.reason === "Timeout") {
-                fitness *= 0.8;
-            } // giảm hình phạt nếu hết giờ
-            fitness -= this.fuelUsed * FUEL_PENALTY; // Phạt thêm nhiên liệu đã sử dụng
+            // tính thêm điểm thưởng nếu hạ cánh nhanh
+            if (this.steps < 200) {
+                fitness += 100; // Thưởng thêm cho hạ cánh nhanh                
+            }            
+            // thêm điểm thưởng cho việc tiết kiệm nhiên liệu
+           fitness += (this.steps / MAX_STEPS) * 200 // Thưởng cho số bước còn lại
+        } else if (this.reason === "Out of Bounds") {
+            // phạt rất nặng khi bay ra ngoài
+            fitness = OOB_PENALTY;
+        } else if (this.crashed || this.reason === "Timeout") {  
+
+            fitness = 0; // Bắt đầu tính điểm phạt từ 0
+
+            // --- Tính toán hình phạt dựa trên khoảng cách ---
+            let padCenterX = (landingZoneX1 + landingZoneX2) / 2;
+            let padCenterY = landingZoneY;
+            let finalDistance = dist(this.pos.x, this.pos.y, padCenterX, padCenterY);
+            // Chuẩn hóa khoảng cách
+            let maxDist = dist(0, 0, canvasWidth, canvasHeight); // Khoảng cách tối đa có thể
+            let normalizedFinalDist = constrain(finalDistance / maxDist, 0, 1); // Giá trị từ 0 đến 1
+
+            // Áp dụng hình phạt theo hàm bậc hai (phạt nặng hơn nhiều khi ở xa)
+            let distancePenalty = -DISTANCE_PENALTY_FACTOR * pow(normalizedFinalDist, 2);
+            fitness += distancePenalty;
+
+            // --- Tính toán hình phạt dựa trên tốc độ vượt ngưỡng ---
+            // Sử dụng landingVx/Vy đã được lưu trong update() khi kết thúc
+            let excessiveVx = max(0, abs(this.landingVx) - SAFE_LANDING_VX);
+            let excessiveVy = max(0, abs(this.landingVy) - SAFE_LANDING_VY);
+
+            // Áp dụng hình phạt tuyến tính dựa trên tốc độ vượt ngưỡng
+            let speedPenalty = - (excessiveVx * EXCESS_VX_PENALTY_FACTOR + excessiveVy * EXCESS_VY_PENALTY_FACTOR);
+            fitness += speedPenalty;
+
+            // Đảm bảo fitness không dương khi thất bại (trừ trường hợp hy hữu gần như bằng 0)
+             fitness = min(fitness, -0.01); // Đặt một giá trị âm nhỏ làm sàn
+
         } else {
-            fitness = CRASH_PENALTY * 2;
-            fitness -= this.fuelUsed * FUEL_PENALTY;
+            // Trường hợp không xác định (ví dụ: chưa kết thúc nhưng bị gọi?)
+            // Gán điểm phạt rất thấp để tránh được chọn
+            fitness = -1000;
         }
-        this.genome.score = isNaN(fitness) ? CRASH_PENALTY * 2 : fitness;
+
+        // Gán điểm fitness cuối cùng cho genome
+        // Kiểm tra NaN để đề phòng lỗi tính toán
+        this.genome.score = isNaN(fitness) ? -1000 : fitness;
     }
 
     // --- draw() với hình ảnh chi tiết và căn chỉnh chân ---
