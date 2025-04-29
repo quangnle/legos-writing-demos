@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dots & Boxes - Minimax and Alpha Beta Prunning</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <header>
+        <h1>Dots & Boxes Game - Minimax and Alpha Beta Prunning Demo</h1>
+    </header>
+    <div id="button-container" style="display: flex; justify-content: center; align-items: center; margin: 10px; flex-wrap: wrap;">
+        <label for="depth">Depth Level</label>
+        <select id="depth" name="depth">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+        </select>
+        <button id="reset-button">Reset Game</button>
+    </div>
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
+    <script src="gameplay.js"></script>    
+    <script src="minimax.js"></script>
+    <script src="sketch.js"></script>
+    <script>        
+        document.getElementById('depth').addEventListener('change', function() {
+            aiSearchDepth = this.value;
+            initializeGameData();
+        });
+        
+        document.getElementById('reset-button').addEventListener('click', function() {
+            initializeGameData();
+        });
+    </script>
+    
+</body>
+</html>
