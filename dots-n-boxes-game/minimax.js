@@ -34,29 +34,110 @@ function isGameOverState(state) {
     return state.drawnLines === state.totalLines;
 }
 
-// --- Hàm Tính toán Tiềm năng Điểm trong Lượt (Heuristic phụ) ---
-// Tính toán đệ quy số điểm tối đa một người chơi có thể ghi được
-// bắt đầu từ 'state' và tiếp tục đi nếu ăn được ô.
-function calculateMaxGainForTurn(state, player) {
-    let maxGainFound = 0;
-    let possibleMoves = getPossibleMoves(state); // Các nước đi từ trạng thái hiện tại
+function checkMoveCompletesBoxes(state, move) {
+    let completedCount = 0;
+    let r = move.r;
+    let c = move.c;
 
-    for (let move of possibleMoves) {
-        let currentPathGain = 0;
-        // *** Mô phỏng nước đi trên bản sao ***
-        let simResult = applyMove(state, move, player); // applyMove trả về { newState, boxesCompleted, nextTurnPlayer }
-
-        if (simResult && simResult.boxesCompleted > 0) {
-            // Nếu ăn ô: cộng điểm và gọi đệ quy trên trạng thái mới (newState) cho cùng người chơi
-            currentPathGain = simResult.boxesCompleted + calculateMaxGainForTurn(simResult.newState, player);
-        } else {
-            // Nếu không ăn ô, chuỗi kết thúc, không cộng thêm điểm từ nước này
-            currentPathGain = 0;
+    // Logic kiểm tra tương tự như trong applyMove/checkAndUpdateBoxes
+    // nhưng chỉ kiểm tra các cạnh *khác* đã tồn tại chưa
+    if (move.type === 'h') { // Đường ngang hLines[r][c]
+        // Check ô trên
+        if (r > 0 && state.boxes[r - 1][c] === 0) {
+            if (state.hLines[r - 1]?.[c] && state.vLines[r - 1]?.[c] && state.vLines[r-1]?.[c+1]) {
+                 completedCount++;
+            }
         }
-        // Lưu lại số điểm lớn nhất tìm được từ mọi chuỗi có thể
-        maxGainFound = max(maxGainFound, currentPathGain);
+        // Check ô dưới
+        if (r < m - 1 && state.boxes[r][c] === 0) {
+             if (state.hLines[r + 1]?.[c] && state.vLines[r]?.[c] && state.vLines[r]?.[c+1]) {
+                 completedCount++;
+            }
+        }
+    } else { // type === 'v' // Đường dọc vLines[r][c]
+        // Check ô trái
+        if (c > 0 && state.boxes[r][c - 1] === 0) {
+           if (state.vLines[r]?.[c-1] && state.hLines[r]?.[c-1] && state.hLines[r+1]?.[c-1]) {
+               completedCount++;
+           }
+        }
+       // Check ô phải
+       if (c < n - 1 && state.boxes[r][c] === 0) {
+           if (state.vLines[r]?.[c+1] && state.hLines[r]?.[c] && state.hLines[r+1]?.[c]) {
+               completedCount++;
+           }
+       }
     }
-    return maxGainFound;
+    return completedCount;
+}
+
+// --- Hàm Tính toán Tiềm năng Điểm trong Lượt ---
+// Tính toán số điểm ghi được bằng cách lặp đi lặp lại việc tìm và thực hiện
+// nước đi đầu tiên hoàn thành ô vuông cho đến khi không còn nước nào như vậy.
+// Nhanh hơn nhưng có thể không phải là điểm tối đa tuyệt đối nếu có nhiều lựa chọn.
+function calculateMaxGainForTurn(originalState, player) {
+    let totalGain = 0;
+    // Luôn làm việc trên bản sao để không ảnh hưởng state gốc
+    let currentState = copyState(originalState);
+    let safetyBreak = 0; // Ngăn vòng lặp vô hạn nếu có lỗi
+    const MAX_ITERATIONS = m * n * 2; // Giới hạn số lần lặp hợp lý
+
+    // console.log(`Calculating Max Gain Iterative for Player ${player}`); // Debug
+
+    while (safetyBreak < MAX_ITERATIONS) {
+        safetyBreak++;
+        let foundScoringMove = false;
+        let moveThatScored = null;
+        let boxesCompletedByChosenMove = 0;
+
+        // Lấy các nước đi hợp lệ trong trạng thái *hiện tại* của vòng lặp
+        let possibleMoves = getPossibleMoves(currentState);
+
+        // Tìm *một* nước đi đầu tiên hoàn thành ô vuông
+        for (let move of possibleMoves) {
+            let boxesCompletedByThisMove = checkMoveCompletesBoxes(currentState, move);
+            if (boxesCompletedByThisMove > 0) {
+                // console.log(`  Found potential scoring move: ${move.type}[${move.r}][${move.c}] completes ${boxesCompletedByThisMove}`); // Debug
+                moveThatScored = move;
+                boxesCompletedByChosenMove = boxesCompletedByThisMove; // Lưu lại số ô hoàn thành dự kiến
+                foundScoringMove = true;
+                break; // Dừng tìm kiếm ngay khi thấy nước đi đầu tiên ăn điểm
+            }
+        }
+
+        // Nếu tìm thấy một nước đi ăn điểm trong vòng lặp này
+        if (foundScoringMove) {
+             // console.log(`  Applying scoring move: ${moveThatScored.type}[${moveThatScored.r}][${moveThatScored.c}]`); // Debug
+             // Thực hiện mô phỏng nước đi đó để cập nhật điểm và trạng thái
+             let simResult = applyMove(currentState, moveThatScored, player);
+
+             // Kiểm tra xem applyMove có thành công không
+             if (simResult && simResult.boxesCompleted > 0) {
+                 // Cộng dồn điểm số
+                 totalGain += simResult.boxesCompleted;
+                 // Cập nhật trạng thái hiện tại cho vòng lặp tiếp theo
+                 currentState = simResult.newState;
+                 // console.log(`  Applied. Gain so far: ${totalGain}. Continuing loop.`); // Debug
+                 // Tiếp tục vòng lặp while để tìm nước ăn điểm tiếp theo
+                 continue;
+             } else {
+                 // Nếu applyMove không thành công hoặc không ăn điểm như dự kiến (lỗi?)
+                 console.warn("calculateMaxGainForTurn: applyMove failed or completed 0 boxes unexpectedly for move:", moveThatScored);
+                 break; // Thoát vòng lặp để tránh lỗi
+             }
+        } else {
+            // Không tìm thấy nước đi nào ăn điểm nữa trong vòng lặp này
+            // console.log("  No more scoring moves found. Exiting loop."); // Debug
+            break; // Thoát khỏi vòng lặp while
+        }
+    }
+
+    if (safetyBreak >= MAX_ITERATIONS) {
+        console.error("calculateMaxGainForTurn exceeded max iterations. Possible infinite loop?");
+    }
+
+    // console.log(`Finished Calculating Max Gain Iterative for Player ${player}. Total Gain: ${totalGain}`); // Debug
+    return totalGain;
 }
 
 
@@ -158,7 +239,7 @@ function minimax(state, depth, alpha, beta, maximizingPlayer, turnPlayer) {
     // --- Điều kiện dừng đệ quy ---
     if (depth === 0 || isGameOverState(state)) {
         // Trả về giá trị heuristic của trạng thái lá
-        return evaluateState(state);
+        return evaluateState(state, turnPlayer);
     }
     // --- Kết thúc điều kiện dừng ---
 
