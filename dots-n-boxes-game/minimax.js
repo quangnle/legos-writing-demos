@@ -141,30 +141,79 @@ function calculateMaxGainForTurn(originalState, player) {
 }
 
 
-// --- Hàm Đánh giá Trạng thái (Heuristic chính cho Minimax) ---
-// Được sử dụng khi đạt độ sâu tối đa hoặc game kết thúc trong mô phỏng.
-// Kết hợp điểm số hiện tại và tiềm năng ăn điểm tức thời.
-function evaluateState(state) {
-    // 1. Điểm số hiện tại (góc nhìn của AI)
-    let currentScoreDiff = state.scores[aiPlayer] - state.scores[humanPlayer];
+// Tính toán đệ quy số điểm tối đa một người chơi có thể ghi được
+// bắt đầu từ 'state' và tiếp tục đi nếu ăn được ô.
+function calculateMaxGainForTurn(state, player) {
+    let maxGainFound = 0;
+    let possibleMoves = getPossibleMoves(state); // Các nước đi từ trạng thái hiện tại
 
-    // Nếu game thực sự kết thúc trong trạng thái này, trả về hiệu điểm cuối cùng
+    // Duyệt qua tất cả các nước đi hợp lệ cho 'player' trong 'state' này
+    for (let move of possibleMoves) {
+        let currentPathGain = 0;
+        // *** Mô phỏng nước đi trên bản sao ***
+        let simResult = applyMove(state, move, player); // applyMove trả về { newState, boxesCompleted, nextTurnPlayer }
+
+        // Chỉ gọi đệ quy nếu mô phỏng thành công VÀ ăn được ô
+        if (simResult && simResult.boxesCompleted > 0) {
+            // Nếu ăn được ô -> được đi tiếp từ trạng thái mới (simResult.newState)
+            // Cộng điểm vừa ăn và gọi đệ quy để xem có thể ăn thêm bao nhiêu nữa
+            currentPathGain = simResult.boxesCompleted + calculateMaxGainForTurn(simResult.newState, player); // Gọi đệ quy
+        } else {
+            // Nếu nước đi không ăn được ô, hoặc mô phỏng lỗi, chuỗi kết thúc.
+            // Điểm kiếm được từ nhánh này chỉ là 0 (cho nước đi cuối cùng này).
+            currentPathGain = 0;
+        }
+
+        // Giữ lại số điểm tối đa tìm thấy từ bất kỳ chuỗi đi nào bắt đầu từ trạng thái gốc 'state'
+        maxGainFound = max(maxGainFound, currentPathGain);
+    }
+
+    return maxGainFound;
+}
+
+
+
+// --- Hàm Đánh giá Trạng thái (Heuristic chính cho Minimax) ---
+// Giá trị = (Điểm hiện tại của người có lượt + Điểm tối đa có thể ăn thêm) - Điểm hiện tại của đối phương
+function evaluateState(state, turnPlayer) { // Cần turnPlayer
+    // Xử lý trạng thái KẾT THÚC GAME trước tiên
     if (isGameOverState(state)) {
-        // Nhân với một số lớn để ưu tiên trạng thái kết thúc game
-        // (Thắng > Hòa > Thua)
-        if (currentScoreDiff > 0) return 1000 + currentScoreDiff; // AI thắng
-        if (currentScoreDiff < 0) return -1000 + currentScoreDiff; // AI thua
+        let finalScoreDiff = state.scores[aiPlayer] - state.scores[humanPlayer];
+        if (finalScoreDiff > 0) return 1000 + finalScoreDiff;  // AI thắng
+        if (finalScoreDiff < 0) return -1000 + finalScoreDiff; // AI thua
         return 0; // Hòa
     }
 
-    // 2. Nếu chưa kết thúc (chỉ hết độ sâu tìm kiếm), tính heuristic
-    let aiPotentialGain = calculateMaxGainForTurn(state, aiPlayer);
-    let humanPotentialGain = calculateMaxGainForTurn(state, humanPlayer);
+    // Nếu chưa kết thúc game (hết độ sâu tìm kiếm)
+    let opponent = (turnPlayer === humanPlayer) ? aiPlayer : humanPlayer;
 
-    // Kết hợp: Điểm hiện tại + Lợi thế tiềm năng của AI - Nguy cơ tiềm năng từ Người
-    // Có thể điều chỉnh trọng số nếu muốn
-    let heuristicValue = currentScoreDiff * 10 + aiPotentialGain - humanPotentialGain;
-    return heuristicValue;
+    // Tính điểm tối đa có thể ăn thêm trong lượt này (dùng hàm đệ quy)
+    let maxGain = calculateMaxGainForTurn(state, turnPlayer);
+
+    // Tính điểm cuối cùng tiềm năng của người có lượt
+    let potentialScore = state.scores[turnPlayer] + maxGain;
+
+    // Tính giá trị heuristic
+    let heuristicValue = potentialScore - state.scores[opponent];
+
+    // Quan trọng: Heuristic này cần được xem xét từ góc độ của AI (maximizingPlayer)
+    // Nếu turnPlayer là AI, heuristicValue dương là tốt.
+    // Nếu turnPlayer là Người, heuristicValue dương có nghĩa là Người đang có lợi thế tiềm năng,
+    // do đó giá trị này thực sự là "xấu" đối với AI.
+    // Vì vậy, chúng ta cần điều chỉnh giá trị trả về dựa trên góc nhìn của AI.
+
+    if (turnPlayer === aiPlayer) {
+        // Nếu là lượt AI tính toán, giá trị heuristic là đúng theo góc nhìn của AI
+        return heuristicValue;
+    } else {
+        // Nếu là lượt Người tính toán, giá trị này đại diện cho lợi thế của Người.
+        // AI (Minimizing player lúc này trong cây tìm kiếm) muốn giá trị này nhỏ nhất,
+        // nhưng hàm minimax của chúng ta quy ước Max luôn là AI.
+        // Do đó, ta cần trả về giá trị âm để phản ánh đúng góc nhìn "bất lợi" cho AI.
+        return -heuristicValue;
+        // Ví dụ: Người có thể đạt 10 điểm, AI có 2 điểm -> heuristicValue = 10 - 2 = 8.
+        // Đây là trạng thái tốt cho Người, xấu cho AI -> trả về -8.
+    }
 }
 
 
