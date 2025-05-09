@@ -14,6 +14,9 @@ const OUTPUT_SIZE = 3; // Thrust Up, Left, Right
 let neat;
 let lastBestGenomeJSON = null; // Lưu JSON của genome tốt nhất thế hệ trước
 
+// === History statistics ===
+const successfulLanders = []; // Lưu lại các lander thành công
+
 // Initialize the NEAT instance
 function initializeNeat() {
     neat = new Neat(
@@ -77,6 +80,10 @@ function endEvaluation() {
             }
         }
     }
+
+    // Lưu lại các lander thành công
+    let nSuccessfulLanders = landers.filter(lander => lander.landed).length;
+    successfulLanders.push(nSuccessfulLanders);
 
     if (isFinite(currentMaxScore) && currentMaxScore > highestScore) {
         highestScore = currentMaxScore;

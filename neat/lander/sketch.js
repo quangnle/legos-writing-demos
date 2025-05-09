@@ -107,13 +107,38 @@ function draw() {
         }
     }
 
+    // --- draw a mini chart of the number of successful landings ---
+    textSize(10);
+    textAlign(LEFT, TOP);
+    text(`Successful landers chart`, 10, 70);
+    let chartWidth = 150;
+    let chartHeight = 51;
+    let chartX = 10;
+    let chartY = 80;
+    // draw the chart background
+    fill(50, 50, 70, 200);
+    noStroke();
+    rect(chartX, chartY, chartWidth, chartHeight);    
+    // draw the chart data
+    noStroke(); 
+    fill(0, 200, 0, 150);
+    let chartData = successfulLanders.slice(-chartWidth); // Get the last 150 generations
+    for (let i = 0; i < chartData.length; i++) {
+        let x = chartX + i;
+        let y = chartY + chartHeight - chartData[i] - 1;
+        let val = chartData[i] + 1; // Avoid zero height bars
+        rect(x, y, 1, val); // Draw the bar
+    }
+
     // --- Display Info Texts ---
     fill(255);
     textSize(10);
     textAlign(LEFT, TOP);
     text(`Generation: ${currentGeneration}`, 10, 10);
-    text(`Active Landers: ${activeLanders} / ${POPULATION_SIZE}`, 10, 30);
-    text(`Highest Score Ever: ${isFinite(highestScore) ? highestScore.toFixed(2) : 'N/A'}`, 10, 50);
+    text(`Active Landers: ${activeLanders} / ${POPULATION_SIZE}`, 10, 25);
+    text(`Number of successful landings: ${landers.filter(l => l.landed).length}`, 10, 40);
+    text(`Highest Score Ever: ${isFinite(highestScore) ? highestScore.toFixed(2) : 'N/A'}`, 10, 55);
+    
 
     // --- Wind Indicator ---
     let currentWindForDisplay = 0;
