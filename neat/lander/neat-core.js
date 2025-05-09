@@ -25,9 +25,9 @@ function initializeNeat() {
         null, // Fitness assigned during evaluation
         {
             popsize: POPULATION_SIZE,
-            elitism: Math.round(0.1 * POPULATION_SIZE),
+            elitism: Math.round(0.8 * POPULATION_SIZE), // Số lượng genome tốt nhất được giữ lại cho thế hệ tiếp theo
             mutationRate: 0.7, // Tỉ lệ đột biến
-            mutationAmount: 3, // Độ lớn của đột biến 
+            mutationAmount: 3, // Số lượng của đột biến 
             mutation: [ // Các phương thức đột biến
                 methods.mutation.ADD_NODE, // Thêm node mới
                 methods.mutation.ADD_CONN,  // Thêm kết nối mới
