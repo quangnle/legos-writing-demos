@@ -1,14 +1,4 @@
-const {
-    Neat,
-    architect,
-    methods,
-    config
-} = neataptic;
 
-// === NEAT Constants ===
-const POPULATION_SIZE = 50;
-const INPUT_SIZE = 7; // !!! Đã cập nhật thành 7 inputs (thêm gió) !!!
-const OUTPUT_SIZE = 3; // Thrust Up, Left, Right
 
 // === NEAT Global Instance & State ===
 let neat;
@@ -26,7 +16,7 @@ function initializeNeat() {
         {
             popsize: POPULATION_SIZE,
             elitism: Math.round(0.8 * POPULATION_SIZE), // Số lượng genome tốt nhất được giữ lại cho thế hệ tiếp theo
-            mutationRate: 0.7, // Tỉ lệ đột biến
+            mutationRate: 0.2, // Tỉ lệ đột biến
             mutationAmount: 3, // Số lượng của đột biến 
             mutation: [ // Các phương thức đột biến
                 methods.mutation.ADD_NODE, // Thêm node mới
@@ -37,7 +27,8 @@ function initializeNeat() {
             ],
             // Cập nhật architect với các thông số mới
             // Nếu không có architect, NEAT sẽ tự động tạo một mạng ngẫu nhiên
-            network: new architect.Random(INPUT_SIZE, Math.floor(POPULATION_SIZE / 5), OUTPUT_SIZE)
+            // network: new architect.Random(INPUT_SIZE, Math.floor(POPULATION_SIZE / 5), OUTPUT_SIZE)
+            network: new architect.Random(INPUT_SIZE, 10, OUTPUT_SIZE)
         }
     );
     console.log(`NEAT Initialized with ${INPUT_SIZE} inputs.`);
