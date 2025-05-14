@@ -129,17 +129,13 @@ function drawPopulation() {
     for (let i = 0; i < population.length; i++) {
         // Vẽ lander của cá thể này và dấu X nếu rơi
         let ind = population[i];
-        ind.lander.draw(i === 0 ? color(255, 255, 0, 220) : ind.isAlive ? color(255, 255, 255, 100): color(150, 150, 150, 50));
-        if (!ind.isAlive && ind.status !== "SUCCESS") {
-            return; // ko vẽ gì thêm nếu đã rơi vì vẽ rối mắt quá! :( 
-            //   push();
-            //   translate(ind.lander.x, ind.lander.y);
-            //   stroke(255,0,0,150);
-            //   strokeWeight(2);
-            //   line(-5,-5, 5,5);
-            //   line(-5,5, 5,-5);
-            //   pop();
-        }
+        // nếu cá thể hạ cánh thành công thì vẽ màu xanh
+        if (ind.status === "SUCCESS") {
+            ind.lander.draw(color(0, 255, 0, 220));
+            continue;
+        } else {
+            ind.lander.draw(color(150, 150, 150, 150));
+        }   
     }
 }
 
