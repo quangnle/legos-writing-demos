@@ -23,13 +23,63 @@
         canvas {
             border: 1px solid black;
         }
+        input[type="number"] {
+            width: 50px;
+            margin-left: 5px;
+            font-size: 10px;
+        }
+        #info-container { 
+            margin-top: 20px; 
+            margin-right: 10px;
+            background-color: rgba(255, 255, 255, 0.8); padding: 15px; border-radius: 5px; border: 1px solid #ccc; text-align: left; 
+        }
+        .info-line { margin-bottom: 5px; }
     </style>
 </head>
 <body>
+    <div id="container">
+        <div id="info-container">
+            <div class="info-line"><b>Thế hệ:</b> <span id="generation">0</span></div>
+            <div class="info-line"><b>Khung hình:</b> <span id="frame">0</span> / <span id="maxFrame">0</span></div>
+            <div class="info-line"><b>Xe hoạt động:</b> <span id="activeCars">0</span> / <span id="populationSize">0</span></div>
+            <div class="info-line"><b>Fitness Cao Nhất:</b> <span id="bestFitness">0.00</span></div>
+            <div class="info-line"><b>Fitness TB (Cuối):</b> <span id="avgFitness">N/A</span></div>
+            <div class="info-line">Nhấn 'S' để lưu bộ não tốt nhất.</div>            
+            <div class="info-line">
+                Nhấn 'U' để huấn luyện tự động.
+                <br>
+                Số lần tự động huấn luyện: <input type="number" id="maxTrainingTimes" value="500" min="0"> 
+            </div>
+        </div>
+    </div>
+
     <script src="constants.js"></script> 
     <script src="track.js"></script>
     <script src="car.js"></script>
     <script src="neat-controller.js"></script>
     <script src="sketch.js"></script>
+    <script>
+        const generationDisplay = document.getElementById('generation');
+        const frameDisplay = document.getElementById('frame');
+        const maxFrameDisplay = document.getElementById('maxFrame');
+        const activeCarsDisplay = document.getElementById('activeCars');
+        const populationSizeDisplay = document.getElementById('populationSize');
+        const bestFitnessDisplay = document.getElementById('bestFitness');
+        const avgFitnessDisplay = document.getElementById('avgFitness');
+
+        function updateInfoDisplay() {
+            if (generationDisplay) generationDisplay.textContent = generationCount;
+            if (frameDisplay) frameDisplay.textContent = currentFrame;
+            if (maxFrameDisplay) maxFrameDisplay.textContent = MAX_FRAMES_PER_GENERATION;
+            if (activeCarsDisplay) activeCarsDisplay.textContent = cars.filter(c => c.isActive).length;
+            if (populationSizeDisplay) populationSizeDisplay.textContent = POPULATION_SIZE;
+            if (bestFitnessDisplay) bestFitnessDisplay.textContent = bestFitnessEver.toFixed(2);
+            if (avgFitnessDisplay && averageFitnessHistory.length > 0) {
+                avgFitnessDisplay.textContent = averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2);
+            } else if (avgFitnessDisplay) {
+                avgFitnessDisplay.textContent = 'N/A';
+            }
+        }
+    </script>
 </body>
 </html>

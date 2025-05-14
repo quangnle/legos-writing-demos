@@ -18,6 +18,7 @@ let networkCanvasWidth = 400;
 let networkCanvasHeight = 300;
 let networkButton; // Button to toggle network view
 let viewToggleButton; // Button to toggle all/best lander view
+let trainWithoutGraphicButton; // Flag to disable graphics during training
 
 // === p5.js Setup ===
 function setup() {
@@ -52,6 +53,14 @@ function setup() {
     networkButton = createButton('Show Network');
     networkButton.parent(buttonContainer);
     networkButton.mousePressed(toggleNetworkVisualization);
+
+    trainWithoutGraphicButton = createButton('Train Without Graphics (300 times)');
+    trainWithoutGraphicButton.parent(buttonContainer);
+    trainWithoutGraphicButton.mousePressed(() => {
+        setTimeout(() => {
+            simulateTrain(300);
+        }, 1000); 
+    });
 
     // Create graphics buffer for network visualization
     networkCanvas = createGraphics(networkCanvasWidth, networkCanvasHeight);

@@ -9,7 +9,7 @@ const NATURAL_DECELERATION = 0.01; // Tự giảm tốc nếu không làm gì (m
 const TURN_SPEED = 0.05; // radians per frame (khoảng 2.8 độ)
 
 // Sensor Constants
-const SENSOR_COUNT = 7;
+const SENSOR_COUNT = 5;
 const SENSOR_RANGE = 300; // pixels
 const SENSOR_FOV_DEGREES = 180; // Field of View in degrees
 const SENSOR_FOV_RADIANS = SENSOR_FOV_DEGREES * Math.PI / 180;
@@ -24,13 +24,13 @@ const TRACK_CORNER_RADIUS = RACE_LANE_WIDTH * 0.8; // Bán kính bo góc của �
 const WAYPOINT_CAPTURE_RADIUS = CAR_WIDTH * 1.5; 
 
 // Simulation Constants
-const MAX_FRAMES_PER_GENERATION = 550; // Giới hạn thời gian cho mỗi thế hệ
-const POPULATION_SIZE = 50;
+const MAX_FRAMES_PER_GENERATION = 600; // Giới hạn thời gian cho mỗi thế hệ
+const POPULATION_SIZE = 250;
 const START_X_OFFSET = 100; // Vị trí bắt đầu của xe, tính từ lề trái của canvas
 const START_Y_OFFSET_FACTOR = 0.5; // Vị trí bắt đầu của xe theo chiều dọc (0.5 là giữa)
 
 // NEAT Constants
-const INPUT_NODES = 2 + SENSOR_COUNT; // vx, vy, sensor values
+const INPUT_NODES = 3 + SENSOR_COUNT; // lap direction, vx, vy, sensor values
 const OUTPUT_NODES = 4; // Tăng tốc, Giảm tốc (Phanh), Rẽ Trái, Rẽ Phải
 
 // Colors

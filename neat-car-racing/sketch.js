@@ -1,5 +1,3 @@
-// js/sketch.js
-
 let populationController;
 let track;
 let cars = [];
@@ -27,9 +25,6 @@ function setup() {
     populationController = new NeatController(POPULATION_SIZE, INPUT_NODES, OUTPUT_NODES);
     // 3. Bắt đầu thế hệ đầu tiên
     startNewGeneration();
-
-    // 4. Thiết lập Div hiển thị thông tin
-    setupInfoDiv();
 }
 
 function draw() {
@@ -80,7 +75,7 @@ function draw() {
     pop();
 
     // 4. Hiển thị thông tin huấn luyện
-    displayInfo(activeCarsCount);
+    updateInfoDisplay() 
 }
 
 function startNewGeneration() {
@@ -135,40 +130,64 @@ function endCurrentGeneration() {
     populationController.neat.evolve(); // Đây là hàm cốt lõi của Neataptic
 }
 
-function setupInfoDiv() {
-    let infoDiv = select('#infoDiv');
-    if (!infoDiv) { // Tạo nếu chưa có
-        infoDiv = createDiv('');
-        infoDiv.id('infoDiv'); // Đặt ID để có thể chọn lại
-        infoDiv.style('font-family', 'Arial, sans-serif');
-        infoDiv.style('position', 'fixed'); // Hoặc 'absolute' nếu canvas là tương đối
-        infoDiv.style('top', '10px');
-        infoDiv.style('left', '10px');
-        infoDiv.style('background-color', 'rgba(255, 255, 255, 0.85)');
-        infoDiv.style('padding', '10px');
-        infoDiv.style('border-radius', '5px');
-        infoDiv.style('border', '1px solid #ccc');
-        infoDiv.style('max-width', '250px'); // Giới hạn chiều rộng
-        infoDiv.style('line-height', '1.4');
+function trainWOGraphicRender(nTimes) {
+    console.log(`Bắt đầu huấn luyện không hiển thị đồ họa trong ${nTimes} thế hệ...`);
+    for (let i = 0; i < nTimes; i++) {
+        console.log(`Huấn luyện Thế hệ: ${populationController.neat.generation + 1}`);
+        startNewGeneration(); // Tạo quần thể xe mới
+
+        let generationFrame = 0;
+        let activeCarsCount = cars.filter(car => car.isActive).length;
+
+        while (activeCarsCount > 0 && generationFrame < MAX_FRAMES_PER_GENERATION) {
+            for (let car of cars) {
+                if (car.isActive) {
+                    car.updateSensors(track);
+                    car.think();
+                    car.updatePhysics();
+                    car.checkBoundaries(track);
+                    car.calculateProgress(track);
+                    car.checkFinishLine(track);
+                }
+            }
+            generationFrame++;
+            activeCarsCount = cars.filter(car => car.isActive).length;
+        }
+
+        endCurrentGeneration(); // Đánh giá và tiến hóa quần thể
+        console.log(`Fitness (avg/best) của lần huấn luyện ${populationController.neat.generation}: ${averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2)} / ${bestFitnessEver.toFixed(2)}`);
     }
+    console.log("Huấn luyện không hiển thị đồ họa hoàn tất.");
 }
 
+// Huấn luyện không hiển thị đồ họa cho đến khi có xe về đích
+function trainWOGraphicRenderUntilSuccess() {
+    let maxTrainingTimes = populationController.neat.generation + (+document.getElementById('maxTrainingTimes').value);
+    while (averageFitnessHistory[averageFitnessHistory.length - 1] < 2000 && populationController.neat.generation < maxTrainingTimes) {
+        console.log(`Huấn luyện Thế hệ: ${populationController.neat.generation + 1}`);
+        startNewGeneration(); // Tạo quần thể xe mới
 
-function displayInfo(activeCarsCount) {
-    let infoContent = `
-        <b>Thế hệ:</b> ${generationCount} (Neat: ${populationController.neat.generation})<br>
-        <b>Khung hình:</b> ${currentFrame} / ${MAX_FRAMES_PER_GENERATION}<br>
-        <b>Xe hoạt động:</b> ${activeCarsCount} / ${POPULATION_SIZE}<br>
-        <hr style="margin: 4px 0;">
-        <b>Fitness Cao Nhất (Từ trước đến nay):</b> ${bestFitnessEver.toFixed(2)}<br>
-        <b>Fitness TB (Cuối):</b> ${averageFitnessHistory.length > 0 ? averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2) : 'N/A'}<br>
-        <hr style="margin: 4px 0;">
-        Nhấn 'S' để lưu bộ não tốt nhất hiện tại. <br>
-        Nhấn 'L' để tải bộ não tốt nhất đã lưu.
-    `;
-    const infoDiv = select('#infoDiv');
-    if (infoDiv) {
-        infoDiv.html(infoContent);
+        let generationFrame = 0;
+        let activeCarsCount = cars.filter(car => car.isActive).length;
+
+        while (activeCarsCount > 0 && generationFrame < MAX_FRAMES_PER_GENERATION) {
+            for (let car of cars) {
+                if (car.isActive) {
+                    car.updateSensors(track);
+                    car.think();
+                    car.updatePhysics();
+                    car.checkBoundaries(track);
+                    car.calculateProgress(track);
+                    car.checkFinishLine(track);
+                }
+            }
+            generationFrame++;
+            activeCarsCount = cars.filter(car => car.isActive).length;
+        }
+
+        endCurrentGeneration(); // Đánh giá và tiến hóa quần thể
+
+        console.log(`Fitness (avg/best) của lần huấn luyện ${populationController.neat.generation}: ${averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2)} / ${bestFitnessEver.toFixed(2)}`);
     }
 }
 
@@ -186,6 +205,10 @@ function keyPressed() {
         }
     } else if (key === 'l' || key === 'L') {
         loadBestBrain();
+    } else if (key === 't' || key === 'T') {
+        trainWOGraphicRender(300); // Huấn luyện không hiển thị đồ họa trong 300 thế hệ
+    } else if (key === 'u' || key === 'U') {
+        trainWOGraphicRenderUntilSuccess(); // Huấn luyện không hiển thị đồ họa cho đến khi có xe về đích
     }
 }
 

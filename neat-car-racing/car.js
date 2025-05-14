@@ -4,7 +4,6 @@
 
 class Car {
     constructor(x, y, brain, startAngle = 0) {
-        // ... (constructor giữ nguyên như trước) ...
         this.pos = createVector(x, y);
         this.vel = createVector(0, 0);
         this.acc = createVector(0, 0);
@@ -80,7 +79,7 @@ class Car {
             p5.Vector.add(this.pos, rr_rel), p5.Vector.add(this.pos, rl_rel)
         ];
     }
-    updateSensors(track) { /* ... giữ nguyên ... */
+    updateSensors(track) { 
         if (!this.isActive) return;
         const sensorOriginOffset = this.carLength / 2 * 0.9;
         const sensorOrigin = this.pos.copy().add(this.getHeadingVector().mult(sensorOriginOffset));
@@ -100,21 +99,41 @@ class Car {
         }
     }
 
-    think() { /* ... giữ nguyên ... */
+    think() { 
         if (!this.isActive) return;
+
         const inputs = [];
         const localVelocity = this.vel.dot(this.getHeadingVector());
         inputs.push(localVelocity / MAX_SPEED);
+
         const localSidewaysVelocity = this.vel.dot(this.getSidewaysVector());
         inputs.splice(1, 0, localSidewaysVelocity / MAX_SPEED);
+
+        // **Tính toán hướng của đường chạy**
+        let trackDirectionInput = 0;
+        if (track.centerlineWaypoints.length > 1) {
+            const currentWpIndex = this.currentWaypointIndex % track.centerlineWaypoints.length;
+            const nextWpIndex = (this.currentWaypointIndex + 1) % track.centerlineWaypoints.length;
+
+            const currentWp = track.centerlineWaypoints[currentWpIndex];
+            const nextWp = track.centerlineWaypoints[nextWpIndex];
+
+            const trackDirVector = p5.Vector.sub(nextWp.pos, currentWp.pos).normalize();
+            // Chuyển vector hướng thành một giá trị scalar để đưa vào input
+            // Chúng ta có thể dùng góc (heading) của vector này
+            trackDirectionInput = trackDirVector.heading() / (2 * PI); // Chuẩn hóa về khoảng [0, 1]
+        }
+        inputs.push(trackDirectionInput);
+
         for (let i = 0; i < this.numSensors; i++) {
             inputs.push(this.sensors[i] / this.sensorRange);
         }
+
         const outputs = this.brain.activate(inputs);
         this.applyControls(outputs);
     }
 
-    applyControls(outputs) { /* ... giữ nguyên ... */
+    applyControls(outputs) { 
         let accelerateInput = outputs[0];
         let brakeInput = outputs[1];
         let turnLeftInput = outputs[2];
@@ -282,17 +301,31 @@ class Car {
     calculateAndSetFitness(track) { 
         if (!this.brain) return 0;
         let fitness = 0;
-        fitness += this.distanceOnCurrentLap + (this.lapsCompleted * track.totalCenterlineLength * 1.1); 
+        fitness += this.distanceOnCurrentLap + (this.lapsCompleted * track.totalCenterlineLength * 1.1);
 
-        if (this.isWinner) { 
-            fitness += 2000; 
-            fitness += (MAX_FRAMES_PER_GENERATION * 2 - this.timeToFinish) * 1.5; 
-        } else if (this.isExploded) {
-            fitness *= 0.75; 
-        } else { 
-            fitness *= 0.9; 
+        // Thưởng thêm nếu xe đang đi đúng hướng
+        if (track.centerlineWaypoints.length > 1 && this.vel.magSq() > 0.1) {
+            const currentWp = track.centerlineWaypoints[this.currentWaypointIndex % track.centerlineWaypoints.length];
+            const nextWpIndex = (this.currentWaypointIndex + 1) % track.centerlineWaypoints.length;
+            const nextWp = track.centerlineWaypoints[nextWpIndex];
+
+            const trackDir = p5.Vector.sub(nextWp.pos, currentWp.pos).normalize();
+            const carHeading = this.getHeadingVector().normalize();
+            const alignment = carHeading.dot(trackDir);
+
+            // Thưởng nếu alignment dương (cùng hướng), phạt nhẹ nếu ngược hướng            
+            fitness += fitness * 0.5 * alignment;
         }
-        this.fitness = max(1, fitness); 
+
+        if (this.isWinner) {
+            fitness += 2000;
+            fitness += (MAX_FRAMES_PER_GENERATION * 2 - this.timeToFinish) * 0.5;
+        } else if (this.isExploded) {
+            fitness *= 0.75;
+        } else {
+            fitness *= 0.9;
+        }
+        this.fitness = max(1, fitness);
         this.brain.score = this.fitness;
         return this.fitness;
     }

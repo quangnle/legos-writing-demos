@@ -1,5 +1,3 @@
-// js/neat_controller.js
-
 class NeatController {
     constructor(populationSize, inputNodes, outputNodes) {
         this.populationSize = populationSize;
@@ -12,19 +10,25 @@ class NeatController {
             null, // fitness function (chúng ta tự đặt score)
             {
                 popsize: this.populationSize,
-                elitism: Math.round(0.1 * this.populationSize), // Giữ lại 10% cá thể tốt nhất
+                elitism: Math.round(0.75 * this.populationSize), // Giữ lại 50% cá thể tốt nhất
                 mutationRate: 0.3, // Tỷ lệ một genome sẽ bị đột biến
-                // mutationAmount: 1, // Số lần một phương thức đột biến được áp dụng (thường để Neataptic tự quản lý hoặc đặt là 1 và dùng nhiều mutation methods)
+                //mutationAmount: 3, // Số lần một phương thức đột biến được áp dụng (thường để Neataptic tự quản lý hoặc đặt là 1 và dùng nhiều mutation methods)
                 
                 // Cấu trúc mạng ban đầu: kết nối trực tiếp input tới output.
                 // N.E.A.T. sẽ tự thêm node và kết nối.
-                network: new neataptic.Network(this.inputNodes, this.outputNodes),
+                // network: new neataptic.Network(this.inputNodes, this.outputNodes),
+                network: new neataptic.architect.Random(this.inputNodes, 10, 10, 10, this.outputNodes),
 
                 // Sử dụng bộ phương thức đột biến tiêu chuẩn cho mạng truyền thẳng (Feed-Forward)
                 // Đây là cách khuyến nghị và ít lỗi hơn là liệt kê thủ công.
-                mutation: neataptic.methods.mutation.FFW,
-
-                selection: neataptic.methods.selection.POWER // Phương thức chọn lọc POWER thường cho kết quả tốt
+                mutation: [ // Các phương thức đột biến
+                    neataptic.methods.mutation.ADD_NODE, // Thêm node mới
+                    neataptic.methods.mutation.ADD_CONN,  // Thêm kết nối mới
+                    neataptic.methods.mutation.MOD_WEIGHT, // Thay đổi trọng số
+                    neataptic.methods.mutation.SUB_NODE, // Xóa node
+                    neataptic.methods.mutation.SUB_CONN, // Xóa kết nối
+                ],
+                //selection: neataptic.methods.selection.POWER // Phương thức chọn lọc POWER thường cho kết quả tốt
             }
         );
         // console.log("Neataptic Initialized with FFW mutations: ", this.neat);

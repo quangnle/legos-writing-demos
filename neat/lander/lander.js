@@ -180,7 +180,10 @@ class Lander {
         } else if (this.reason === "Out of Bounds") {
             // phạt rất nặng khi bay ra ngoài
             fitness = OOB_PENALTY;
-        } else if (this.crashed || this.reason === "Timeout") {  
+        } else if (this.reason === "Timeout") {
+            // phạt nặng khi hết thời gian
+            fitness = -MAX_STEPS; // Phạt theo số bước đã thực hiện
+        }else if (this.crashed) {  
 
             fitness = 0; // Bắt đầu tính điểm phạt từ 0
 
