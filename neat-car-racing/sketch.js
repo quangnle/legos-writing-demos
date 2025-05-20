@@ -197,7 +197,7 @@ function keyPressed() {
         let fittest = populationController.getFittestGenome();
         if (fittest) {
             let json = fittest.toJSON();
-            saveJSON(json, `best_brain.json`);
+            saveJSON(json, `best_brain_${generationCount}.json`);
             console.log(`Đã lưu bộ não tốt nhất của thế hệ ${generationCount} vào file!`);
             fittestBrainJSON = json; // Cập nhật cả biến trong bộ nhớ
         } else {
@@ -213,16 +213,21 @@ function keyPressed() {
 }
 
 function loadBestBrain() {
-    loadJSON('best_brain.json', (loadedBrain) => {
-        if (loadedBrain) {
-            populationController.loadBrain(loadedBrain);
-            generationCount = 0; // Reset thế hệ
-            startNewGeneration(); // Khởi tạo lại quần thể với bộ não đã tải
-            console.log("Đã tải bộ não tốt nhất từ best_brain.json và khởi tạo lại quần thể.");
-        } else {
-            console.log("Không tìm thấy file best_brain.json.");
-        }
-    }, (error) => {
-        console.error("Lỗi khi tải best_brain.json:", error);
-    });
+
+    populationController.loadBrain(BEST_BRAIN); // Tải bộ não tốt nhất từ JSON
+    startNewGeneration(); // Khởi tạo lại quần thể với bộ não đã tải
+
+    // không hiểu sao lại không chạy được
+    // loadJSON('best_brain.json', (loadedBrain) => {
+    //     if (loadedBrain) {
+    //         populationController.loadBrain(loadedBrain);
+    //         generationCount = 0; // Reset thế hệ
+    //         startNewGeneration(); // Khởi tạo lại quần thể với bộ não đã tải
+    //         console.log("Đã tải bộ não tốt nhất từ best_brain.json và khởi tạo lại quần thể.");
+    //     } else {
+    //         console.log("Không tìm thấy file best_brain.json.");
+    //     }
+    // }, (error) => {
+    //     console.error("Lỗi khi tải best_brain.json:", error);
+    // });
 }
