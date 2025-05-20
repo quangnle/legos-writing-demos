@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LSTM Canvas Visualization Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>LSTM Canvas Visualization Demo</h1>
+
+    <div class="controls">
+        <label for="sequence-length">Nhập Sequence Length (tối đa 5):</label>
+        <input type="number" id="sequence-length" min="1" max="5" value="3">
+        <button id="draw-structure-btn">Vẽ Cấu Trúc & Reset</button>
+    </div>
+
+    <div class="controls">
+        <div>
+            <label for="input-values">Nhập giá trị Input (cách nhau bằng dấu phẩy, ví dụ: 0.5,0.2,0.8):</label>
+            <input type="text" id="input-values" placeholder="Ví dụ: 0.5,0.2,0.8">
+        </div>
+        <div>
+            <label for="target-output-input">Nhập giá trị Target Output (cho BPTT):</label>
+            <input type="number" id="target-output-input" step="0.01" value="1.0">
+        </div>
+        <div>
+            <label for="learning-rate-input">Learning Rate:</label>
+            <input type="number" id="learning-rate-input" step="0.01" value="0.1">
+        </div>
+        <button id="run-iteration-btn" disabled>Huấn luyện 1 Iteration</button>
+    </div>
+
+    <canvas id="lstm-canvas" width="900" height="300"></canvas> 
+
+    <div class="output-area">
+        <h3>Đầu ra dự đoán (Sau Forward Pass):</h3>
+        <div id="final-output">Chưa có</div>
+        <h5>Iteration hiện tại: <span id="iteration-count">0</span></h5>
+    </div>
+    
+    <div class="info-area">
+        <h3>Thông tin Shared Weights:</h3>
+        <div id="shared-weights-info">Chưa có trọng số.</div>
+    </div>
+
+    <div class="info-area">
+        <h3>Thông tin quá trình (BPTT của iteration cuối):</h3>
+        <div id="info-message">Nhập sequence length và vẽ cấu trúc.</div>
+        <h4>Giá trị cổng/trạng thái (cho BPTT cuối):</h4>
+        <div id="gate-values-info"></div>
+        <h4>Gradient tích lũy (cho BPTT cuối):</h4>
+        <div id="gradient-accumulation-info"></div>
+    </div>
+
+    <script src="lstm.js"></script> </body>
+</html>

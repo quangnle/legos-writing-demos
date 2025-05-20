@@ -1,0 +1,129 @@
+body {
+    font-family: sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+.controls {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	font-size: 12px;
+}
+
+.controls div { /* Áp dụng cho div bọc label và input mới */
+    margin-bottom: 10px;
+}
+
+label {
+    margin-right: 10px;
+}
+
+input[type="number"], input[type="text"] {
+    padding: 5px;
+    margin-right: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+button {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+#lstm-visualization-container {
+    display: flex;
+    justify-content: space-around; /* Hoặc space-between */
+    align-items: flex-start; /* Để các cell không bị kéo dãn chiều cao */
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    min-height: 200px; /* Đảm bảo có không gian */
+    overflow-x: auto; /* Nếu nhiều cell quá */
+}
+
+.lstm-cell {
+    border: 2px solid #007bff;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 0 10px; /* Khoảng cách giữa các cell */
+    min-width: 150px; /* Chiều rộng tối thiểu cho mỗi cell */
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.lstm-cell h4 {
+    margin-top: 0;
+    color: #007bff;
+    font-size: 1em; /* Giảm kích thước chữ */
+}
+.lstm-cell p {
+    font-size: 0.9em; /* Giảm kích thước chữ */
+    margin: 5px 0;
+    word-wrap: break-word; /* Tránh tràn chữ */
+}
+.lstm-cell strong {
+    color: #555;
+}
+
+
+.lstm-cell.active-forward {
+    transform: scale(1.05);
+    background-color: #d1e7ff; /* Màu xanh nhạt cho forward pass */
+}
+
+.lstm-cell.active-bptt {
+    transform: scale(1.05);
+    background-color: #ffeeba; /* Màu vàng nhạt cho BPTT */
+    border-color: #ffc107;
+}
+.lstm-cell.processed-bptt {
+    background-color: #f8d7da; /* Màu đỏ nhạt cho cell đã xử lý BPTT */
+    border-color: #f5c6cb;
+}
+
+#lstm-canvas {
+    display: block; /* Để căn giữa dễ hơn nếu dùng margin auto */
+    margin: 20px auto;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9; /* Nền nhẹ cho canvas */
+}
+
+
+.output-area, .info-area {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+.info-area h3, .info-area h4 {
+    margin-top: 0;
+}
+#final-output, #info-message, #gate-values-info, #gradient-accumulation-info, #shared-weights-info {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 3px;
+    min-height: 30px;
+    font-family: monospace;
+}
