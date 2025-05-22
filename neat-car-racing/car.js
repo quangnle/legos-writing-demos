@@ -61,7 +61,6 @@ class Car {
         return t > 0 && t < 1 && u > 0 && u < 1;
     }
 
-    // ... (getHeadingVector, getSidewaysVector, updateCorners, updateSensors, think, applyControls, updatePhysics giữ nguyên) ...
     getHeadingVector() { return p5.Vector.fromAngle(this.angle); }
     getSidewaysVector() { return p5.Vector.fromAngle(this.angle + PI / 2); }
 
@@ -79,6 +78,7 @@ class Car {
             p5.Vector.add(this.pos, rr_rel), p5.Vector.add(this.pos, rl_rel)
         ];
     }
+
     updateSensors(track) { 
         if (!this.isActive) return;
         const sensorOriginOffset = this.carLength / 2 * 0.9;
@@ -99,34 +99,45 @@ class Car {
         }
     }
 
-    think() { 
+    think() {
         if (!this.isActive) return;
 
         const inputs = [];
-        const localVelocity = this.vel.dot(this.getHeadingVector());
-        inputs.push(localVelocity / MAX_SPEED);
 
-        const localSidewaysVelocity = this.vel.dot(this.getSidewaysVector());
-        inputs.splice(1, 0, localSidewaysVelocity / MAX_SPEED);
+        // **1. Đầu vào mới: Độ lớn vận tốc của xe**
+        const speedMagnitude = this.vel.mag();
+        inputs.push(speedMagnitude / MAX_SPEED); // Chuẩn hóa về [0, 1]
 
-        // **Tính toán hướng của đường chạy**
-        let trackDirectionInput = 0;
+        // **2. Đầu vào mới: Góc lệch giữa hướng xe và hướng của tim đường**
+        let relativeAngleToTrack = 0;
         if (track.centerlineWaypoints.length > 1) {
-            const currentWpIndex = this.currentWaypointIndex % track.centerlineWaypoints.length;
-            const nextWpIndex = (this.currentWaypointIndex + 1) % track.centerlineWaypoints.length;
+            const currentWpIndex = this.currentWaypointIndex; // Đã cập nhật trong calculateProgress
+            const nextWpIndex = (currentWpIndex + 1) % track.centerlineWaypoints.length;
 
             const currentWp = track.centerlineWaypoints[currentWpIndex];
             const nextWp = track.centerlineWaypoints[nextWpIndex];
 
-            const trackDirVector = p5.Vector.sub(nextWp.pos, currentWp.pos).normalize();
-            // Chuyển vector hướng thành một giá trị scalar để đưa vào input
-            // Chúng ta có thể dùng góc (heading) của vector này
-            trackDirectionInput = trackDirVector.heading() / (2 * PI); // Chuẩn hóa về khoảng [0, 1]
-        }
-        inputs.push(trackDirectionInput);
+            // Đảm bảo có thể tính toán vector hướng
+            if (currentWp && nextWp) {
+                const trackDirVector = p5.Vector.sub(nextWp.pos, currentWp.pos);
+                if (trackDirVector.magSq() > 0.0001) { // Tránh chia cho 0 nếu 2 waypoint trùng nhau
+                    trackDirVector.normalize();
+                    const carHeadingVector = this.getHeadingVector();
 
+                    // Tính góc giữa hai vector (rad)
+                    // p5.Vector.angleBetween trả về góc giữa hai vector
+                    relativeAngleToTrack = p5.Vector.angleBetween(carHeadingVector, trackDirVector);
+                    // Chuẩn hóa góc lệch về khoảng [-1, 1] hoặc [0, 1]
+                    // Map từ [-PI, PI] sang [-1, 1]
+                    relativeAngleToTrack = map(relativeAngleToTrack, -PI, PI, -1, 1);
+                }
+            }
+        }
+        inputs.push(relativeAngleToTrack);
+
+        // **3. Đầu vào: Dữ liệu từ cảm biến**
         for (let i = 0; i < this.numSensors; i++) {
-            inputs.push(this.sensors[i] / this.sensorRange);
+            inputs.push(this.sensors[i] / this.sensorRange); // Chuẩn hóa cảm biến về [0, 1]
         }
 
         const outputs = this.brain.activate(inputs);
@@ -216,29 +227,50 @@ class Car {
         // console.log("Car exploded: " + reason);
     }
 
-    checkFinishLine(track) { 
+    checkFinishLine(track) {
+        // 1. Điều kiện thoát sớm (Guard Clauses)
         if (!this.isActive || this.isWinner || !track.actualFinishLine) return;
+        // Xe không hoạt động (đã nổ hoặc đã thắng) hoặc đã là người thắng cuộc thì không cần kiểm tra nữa.
+        // Nếu track.actualFinishLine chưa được định nghĩa (lỗi khởi tạo), cũng thoát.
 
+        // Lấy tọa độ hai điểm của vạch đích thực tế từ đối tượng track
         const finishLineP1 = track.actualFinishLine.check_p1;
         const finishLineP2 = track.actualFinishLine.check_p2;
-        
-        let targetFinishDistance = track.totalCenterlineLength * 0.90;
-        let proximityThreshold = this.vel.mag() > 0 ? this.vel.mag() * 10 : WAYPOINT_CAPTURE_RADIUS * 4; // Tăng cửa sổ kiểm tra một chút
 
-        if (this.distanceOnCurrentLap > targetFinishDistance - proximityThreshold && 
-            this.distanceOnCurrentLap < targetFinishDistance + proximityThreshold ) { 
+        // 2. Điều kiện về quãng đường (Proximity Check)
+        // Xe phải ở gần vạch đích về mặt quãng đường đã đi trong vòng hiện tại.
+        let targetFinishDistance = track.totalCenterlineLength * 0.90; // Vạch đích nằm ở 90% tổng chiều dài đường đua
+        // Khoảng cách kiểm tra: xe càng nhanh, cửa sổ kiểm tra càng lớn để đảm bảo bắt được khoảnh khắc cắt vạch
+        let proximityThreshold = this.vel.mag() > 0 ? this.vel.mag() * 10 : WAYPOINT_CAPTURE_RADIUS * 4;
 
+        // Kiểm tra xem quãng đường xe đã đi trong vòng hiện tại (distanceOnCurrentLap)
+        // có nằm trong một "cửa sổ" xung quanh vị trí vạch đích hay không.
+        // Điều này giúp tránh kiểm tra giao cắt không cần thiết khi xe ở xa vạch đích
+        // và đảm bảo xe đã đi đủ quãng đường của một vòng.
+        if (this.distanceOnCurrentLap > targetFinishDistance - proximityThreshold &&
+            this.distanceOnCurrentLap < targetFinishDistance + proximityThreshold) {
+
+            // 3. Kiểm tra giao cắt vật lý (Line Segment Intersection)
+            // Sử dụng phương thức lineLineIntersection() để xem đoạn đường xe đi trong frame vừa rồi
+            // (từ this.previousPos đến this.pos) có cắt qua vạch đích (finishLineP1 đến finishLineP2) hay không.
             if (this.lineLineIntersection(this.previousPos, this.pos, finishLineP1, finishLineP2)) {
+
+                // 4. Kiểm tra hướng di chuyển (Direction Check)
+                // Đảm bảo xe đi qua vạch đích đúng hướng (theo chiều kim đồng hồ của đường đua).
+                // Lấy vector hướng của đoạn đường đua tại vạch đích.
                 let trackDirectionAtFinish = p5.Vector.fromAngle(track.actualFinishLine.trackSegmentAngle);
+                // Lấy vector hướng di chuyển của xe trong frame vừa rồi.
                 let carMovementDirection = p5.Vector.sub(this.pos, this.previousPos);
 
-                if (carMovementDirection.dot(trackDirectionAtFinish) > 0.01) { // Đảm bảo di chuyển cùng hướng đáng kể
-                    this.isWinner = true;
-                    this.isActive = false; 
-                    this.timeToFinish = this.framesAlive;
-                    this.lapsCompleted++;
-                    this.carColor = color(0, 200, 50); 
-                    // console.log(`Car finished lap ${this.lapsCompleted} in ${this.timeToFinish} frames!`);
+                // Tính tích vô hướng (dot product) giữa vector hướng di chuyển của xe và vector hướng của đường đua.
+                // Nếu tích vô hướng dương (lớn hơn 0.01 để có độ chính xác), nghĩa là xe đang di chuyển cùng hướng.
+                if (carMovementDirection.dot(trackDirectionAtFinish) > 0.01) {
+                    // 5. Xác nhận chiến thắng và cập nhật trạng thái
+                    this.isWinner = true; // Đánh dấu xe này là người thắng cuộc
+                    this.isActive = false; // Ngừng cập nhật xe (để nó đứng yên sau khi thắng)
+                    this.timeToFinish = this.framesAlive; // Ghi lại thời gian hoàn thành (số frame)
+                    this.lapsCompleted++; // Tăng số vòng đã hoàn thành
+                    this.carColor = color(0, 200, 50); // Đổi màu xe thành màu xanh lá cây
                 }
             }
         }

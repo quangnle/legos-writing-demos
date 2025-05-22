@@ -10,14 +10,14 @@ class NeatController {
             null, // fitness function (chúng ta tự đặt score)
             {
                 popsize: this.populationSize,
-                elitism: Math.round(0.75 * this.populationSize), // Giữ lại 50% cá thể tốt nhất
+                elitism: Math.round(0.75 * this.populationSize), // Giữ lại 75% cá thể tốt nhất
                 mutationRate: 0.3, // Tỷ lệ một genome sẽ bị đột biến
-                //mutationAmount: 3, // Số lần một phương thức đột biến được áp dụng (thường để Neataptic tự quản lý hoặc đặt là 1 và dùng nhiều mutation methods)
+                mutationAmount: 10, // Số lần một phương thức đột biến được áp dụng (thường để Neataptic tự quản lý hoặc đặt là 1 và dùng nhiều mutation methods)
                 
                 // Cấu trúc mạng ban đầu: kết nối trực tiếp input tới output.
                 // N.E.A.T. sẽ tự thêm node và kết nối.
                 // network: new neataptic.Network(this.inputNodes, this.outputNodes),
-                network: new neataptic.architect.Random(this.inputNodes, 10, 10, 10, this.outputNodes),
+                network: new neataptic.architect.Random(this.inputNodes, 10, 5, this.outputNodes),
 
                 // Sử dụng bộ phương thức đột biến tiêu chuẩn cho mạng truyền thẳng (Feed-Forward)
                 // Đây là cách khuyến nghị và ít lỗi hơn là liệt kê thủ công.
@@ -28,7 +28,7 @@ class NeatController {
                     neataptic.methods.mutation.SUB_NODE, // Xóa node
                     neataptic.methods.mutation.SUB_CONN, // Xóa kết nối
                 ],
-                //selection: neataptic.methods.selection.POWER // Phương thức chọn lọc POWER thường cho kết quả tốt
+                selection: neataptic.methods.selection.POWER // Phương thức chọn lọc POWER thường cho kết quả tốt
             }
         );
         // console.log("Neataptic Initialized with FFW mutations: ", this.neat);
@@ -48,7 +48,7 @@ class NeatController {
         // neat.generation được tự động tăng bởi evolve()
     }
 
-    // (Tùy chọn) Lấy bộ não tốt nhất của thế hệ hiện tại
+    // Lấy bộ não tốt nhất của thế hệ hiện tại
     getFittestGenome() {
         if (this.neat.population && this.neat.population.length > 0) {
             // neat.getFittest() hoạt động trên quần thể đã được sắp xếp (evolve() làm điều này)
@@ -57,14 +57,16 @@ class NeatController {
         return null;
     }
 
-    // (Tùy chọn) Tải một bộ não từ JSON
+    // Tải một bộ não từ JSON
     loadBrain(json) {
         if (this.neat && json) {
+            const loadedNetwork = neataptic.Network.fromJSON(json);
             const newPop = [];
             for (let i = 0; i < this.neat.popsize; i++) {
-                newPop.push(neataptic.Network.fromJSON(json));
+                newPop.push(loadedNetwork);
             }
             this.neat.population = newPop;
+            this.neat.highestFitness = 0; // Reset highestFitness của neat object nếu có
             // Bạn có thể muốn reset neat.generation hoặc tải nó từ file nếu có
             this.neat.generation = 0; 
             console.log("Brain loaded into population from JSON.");

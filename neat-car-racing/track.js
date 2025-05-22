@@ -3,9 +3,9 @@ class Track {
         // 1. Định nghĩa kích thước cơ bản
         this.centerline = {
             TL: createVector(0, 0),
-            TR: createVector(500, 0),
-            BR: createVector(500, 300),
-            BL: createVector(0, 300)
+            TR: createVector(canvasWidth - 100, 0),
+            BR: createVector(canvasWidth - 100, canvasHeight - 100),
+            BL: createVector(0, canvasHeight - 100)
         };
         this.carWidth = carWidth;
         this.laneWidth = 4 * this.carWidth;
@@ -15,8 +15,8 @@ class Track {
         this.startPosition = createVector(50, 0); // Trên đoạn trên, gần bên trái
         this.startAngle = 0; // Hướng sang phải (theo chiều kim đồng hồ)
 
-        // 3. Vạch đích thực tế (tại 0,150 trên đoạn trái)
-        let finishLinePos = createVector(0, 150);
+        // 3. Vạch đích thực tế (tại 0, 150 trên đoạn trái)
+        let finishLinePos = createVector(0, 100);
         let finishLineTrackSegmentAngle = -PI / 2; // Xe chạy lên trên dọc đoạn trái
         let actualFinishLineOrientation = finishLineTrackSegmentAngle + PI / 2; // Vạch đích nằm ngang
 
@@ -148,7 +148,7 @@ class Track {
             endShape(CLOSE);
         }
         
-        // 3. Vẽ VẠCH ĐÍCH THỰC TẾ (tại 0,150)
+        // 3. Vẽ VẠCH ĐÍCH THỰC TẾ 
         if (this.actualFinishLine) {
             push(); 
             translate(this.actualFinishLine.pos.x, this.actualFinishLine.pos.y);
@@ -225,7 +225,7 @@ class Track {
         // 6. Vẽ các đoạn tâm đường đua màu trắng (để dễ nhìn hơn)
         stroke(255); // Màu trắng
         strokeWeight(2); // Độ dày đường vẽ
-        for (let i = 5; i < this.centerlineWaypoints.length - 15; i++) {
+        for (let i = 5; i < this.centerlineWaypoints.length - 11; i++) {
             const p1 = this.centerlineWaypoints[i].pos;
             const p2 = this.centerlineWaypoints[i + 1].pos;
             line(p1.x, p1.y, p2.x, p2.y);

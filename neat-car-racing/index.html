@@ -45,15 +45,17 @@
             <div class="info-line"><b>Fitness Cao Nhất:</b> <span id="bestFitness">0.00</span></div>
             <div class="info-line"><b>Fitness TB (Cuối):</b> <span id="avgFitness">N/A</span></div>
             <div class="info-line">Nhấn 'S' để lưu bộ não tốt nhất.</div>            
+            <div class="info-line">Nhấn 'T' huấn luyện tự động 100 lần.</div>            
             <div class="info-line">
-                Nhấn 'U' để huấn luyện tự động.
+                Nhấn 'U' để huấn luyện tự động đến khi có xe về đích
                 <br>
-                Số lần tự động huấn luyện: <input type="number" id="maxTrainingTimes" value="500" min="0"> 
+                hoặc sẽ dùng sau số lần huấn luyện: <input type="number" id="maxTrainingTimes" value="500" min="0"> 
             </div>
         </div>
     </div>
 
     <script src="constants.js"></script> 
+    <script src="best-brain.js"></script>
     <script src="track.js"></script>
     <script src="car.js"></script>
     <script src="neat-controller.js"></script>

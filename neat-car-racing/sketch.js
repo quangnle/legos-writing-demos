@@ -4,11 +4,12 @@ let cars = [];
 let generationCount = 0;
 let currentFrame = 0;
 let bestFitnessEver = 0;
+newBestFitnessGeneration = 0;
 let averageFitnessHistory = [];
 
 // Kích thước Canvas (có thể điều chỉnh hoặc lấy từ window)
-let canvasWidth = 600; // Tăng chiều rộng để đường đua thoải mái hơn
-let canvasHeight = 400; // Tăng chiều cao
+let canvasWidth = 400; // 
+let canvasHeight = 300; //
 
 let fittestBrainJSON = null; // Để lưu trữ JSON của bộ não tốt nhất
 
@@ -109,7 +110,11 @@ function endCurrentGeneration() {
     }
 
     if (bestFitnessThisGen > bestFitnessEver) {
+        // Nếu có bộ não tốt nhất mới, cập nhật bestFitnessEver
         bestFitnessEver = bestFitnessThisGen;
+        // lưu lại thế hệ tốt nhất
+        console.log(`Thế hệ ${generationCount} đạt bộ não tốt nhất với điểm fitness: ${bestFitnessThisGen}`);
+        newBestFitnessGeneration = generationCount; // Lưu thế hệ tốt nhất
         // Lưu bộ não tốt nhất nếu muốn
         let fittestGenomeOverall = populationController.getFittestGenome();
         if (fittestGenomeOverall) {
@@ -155,14 +160,15 @@ function trainWOGraphicRender(nTimes) {
         }
 
         endCurrentGeneration(); // Đánh giá và tiến hóa quần thể
-        console.log(`Fitness (avg/best) của lần huấn luyện ${populationController.neat.generation}: ${averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2)} / ${bestFitnessEver.toFixed(2)}`);
+        console.log(`Fitness (avg/best) của lần huấn luyện ${populationController.neat.generation}: ${averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2)} / ${bestFitnessEver.toFixed(2)} (đạt được ở thế hệ thứ ${newBestFitnessGeneration})`);
     }
     console.log("Huấn luyện không hiển thị đồ họa hoàn tất.");
 }
 
 // Huấn luyện không hiển thị đồ họa cho đến khi có xe về đích
-function trainWOGraphicRenderUntilSuccess() {
+function trainWOGraphicRenderUntilSuccess() {    
     let maxTrainingTimes = populationController.neat.generation + (+document.getElementById('maxTrainingTimes').value);
+    console.log(`Bắt đầu huấn luyện không hiển thị đồ họa trong cho đến khi có xe về đích hoặc nhiều nhất trong ${maxTrainingTimes} thế hệ...`);
     while (averageFitnessHistory[averageFitnessHistory.length - 1] < 2000 && populationController.neat.generation < maxTrainingTimes) {
         console.log(`Huấn luyện Thế hệ: ${populationController.neat.generation + 1}`);
         startNewGeneration(); // Tạo quần thể xe mới
@@ -187,7 +193,7 @@ function trainWOGraphicRenderUntilSuccess() {
 
         endCurrentGeneration(); // Đánh giá và tiến hóa quần thể
 
-        console.log(`Fitness (avg/best) của lần huấn luyện ${populationController.neat.generation}: ${averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2)} / ${bestFitnessEver.toFixed(2)}`);
+        console.log(`Fitness (avg/best) của lần huấn luyện ${populationController.neat.generation}: ${averageFitnessHistory[averageFitnessHistory.length - 1].toFixed(2)} / ${bestFitnessEver.toFixed(2)} (đạt được ở thế hệ thứ ${newBestFitnessGeneration})`);
     }
 }
 
@@ -206,9 +212,15 @@ function keyPressed() {
     } else if (key === 'l' || key === 'L') {
         loadBestBrain();
     } else if (key === 't' || key === 'T') {
-        trainWOGraphicRender(300); // Huấn luyện không hiển thị đồ họa trong 300 thế hệ
+        endCurrentGeneration(); // Kết thúc thế hệ hiện tại
+        startNewGeneration(); // Khởi tạo lại quần thể
+        trainWOGraphicRender(100); // Huấn luyện không hiển thị đồ họa 100 thế hệ
     } else if (key === 'u' || key === 'U') {
-        trainWOGraphicRenderUntilSuccess(); // Huấn luyện không hiển thị đồ họa cho đến khi có xe về đích
+        endCurrentGeneration(); // Kết thúc thế hệ hiện tại
+        startNewGeneration(); // Khởi tạo lại quần thể
+        // Huấn luyện không hiển thị đồ họa cho đến khi có xe về đích
+        // Hoặc đến khi đạt số thế hệ tối đa
+        trainWOGraphicRenderUntilSuccess(); 
     }
 }
 
