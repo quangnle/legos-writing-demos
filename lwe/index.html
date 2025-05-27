@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lattice Based Cryptography - LWE</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="lwe.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lattice Based Cryptography</h1>
+    <h2>LWE (Learning With Errors) 1-Bit Interactive Demo 🔐</h2>
+
+    <p>Mã hóa 1 bit. Bạn có thể tạo ngẫu nhiên hoặc tự nhập các tham số.</p>
+    <p><strong>Thông điệp M</strong> được mã hóa là một bit đơn: {0, 1}.</p>
+
+    <hr>
+
+    <h3>1. Bước Tạo Khóa 🔑</h3>
+    <div>
+        <label for="q_val">Chọn số nguyên tố q:</label>
+        <input type="number" id="q_val" value="97">
+    </div>
+    <div>
+        <label for="n_val">Chọn số chiều n cho vector bí mật s (số cột của A):</label>
+        <input type="number" id="n_val" value="4" onchange="updateCustomInputPlaceholders()">
+    </div>
+    <div>
+        <label for="m_val">Chọn số chiều m cho vector nhiễu e (số hàng của A):</label>
+        <input type="number" id="m_val" value="10" onchange="updateCustomInputPlaceholders()">
+    </div>
+
+    <div class="custom-input-toggle">
+        <input type="checkbox" id="custom_s_toggle" onchange="toggleCustomInput('s')">
+        <label for="custom_s_toggle">Tùy chỉnh vector bí mật s</label>
+        <div id="custom_s_input_area" class="custom-input-area" style="display:none;">
+            <label for="custom_s_val">Nhập vector s (n x 1):</label>
+            <p class="input-note">Định dạng: các số cách nhau bằng dấu phẩy (vd: 1,2,3). Sẽ được coi là vector cột.</p>
+            <textarea id="custom_s_val" placeholder="vd: 23,5,87,12"></textarea>
+        </div>
+    </div>
+
+    <div class="custom-input-toggle">
+        <input type="checkbox" id="custom_A_toggle" onchange="toggleCustomInput('A')">
+        <label for="custom_A_toggle">Tùy chỉnh ma trận A</label>
+        <div id="custom_A_input_area" class="custom-input-area" style="display:none;">
+            <label for="custom_A_val">Nhập ma trận A (m x n):</label>
+            <p class="input-note">Định dạng: các phần tử trong hàng cách nhau bằng ',', các hàng cách nhau bằng xuống hàng (&Backslash;n). Vd: 1,2,3;4,5,6</p>
+            <textarea id="custom_A_val" placeholder="vd: 10,2,3,4\n5,60,7,8\n... (m hàng, n cột)"></textarea>
+        </div>
+    </div>
+
+    <div class="custom-input-toggle">
+        <input type="checkbox" id="custom_e_toggle" onchange="toggleCustomInput('e')">
+        <label for="custom_e_toggle">Tùy chỉnh vector nhiễu e</label>
+        <div id="custom_e_input_area" class="custom-input-area" style="display:none;">
+            <label for="custom_e_val">Nhập vector nhiễu e (m x 1):</label>
+            <p class="input-note">Định dạng: các số {-1,0,1} cách nhau bằng dấu phẩy (vd: 0,1,-1). Sẽ được coi là vector cột.</p>
+            <textarea id="custom_e_val" placeholder="vd: 1,0,-1,1,0,0,-1,1,0,-1"></textarea>
+        </div>
+    </div>
+
+    <button onclick="generateKeys()">Tạo Khóa</button>
+    <div id="keyGenError" class="error"></div>
+
+    <div id="keyGenerationOutput" class="output" style="display:none;">
+        <h4>Kết quả Tạo Khóa:</h4>
+        <p><strong>Vector bí mật s (n x 1):</strong> <span id="secret_s"></span></p>
+        <p><strong>Ma trận A (m x n):</strong> <br/> <span id="matrix_A"></span></p>
+        <p><strong>Vector nhiễu e (m x 1):</strong> <span id="vector_e"></span></p>
+        <p><strong>Vector b = (A.s + e) mod q (m x 1):</strong> <span id="vector_b"></span></p>
+        <p class="success">Khóa công khai là (A, b). Khóa bí mật là s.</p>
+    </div>
+
+    <hr>
+
+    <h3>2. Bước Mã Hóa ✉️</h3>
+    <p>Người gửi chọn một thông điệp M và một vector nhị phân u.</p>
+    <div>
+        <label for="message_M">Chọn thông điệp M (0 hoặc 1):</label>
+        <select id="message_M">
+            <option value="0">0</option>
+            <option value="1">1</option>
+        </select>
+    </div>
+
+    <div class="custom-input-toggle">
+        <input type="checkbox" id="custom_u_toggle" onchange="toggleCustomInput('u')">
+        <label for="custom_u_toggle">Tùy chỉnh vector u</label>
+        <div id="custom_u_input_area" class="custom-input-area" style="display:none;">
+            <label for="custom_u_val">Nhập vector u (m x 1, các phần tử 0 hoặc 1):</label>
+            <p class="input-note">Định dạng: các số {0,1} cách nhau bằng dấu phẩy (vd: 0,1,1). Sẽ được coi là vector cột.</p>
+            <textarea id="custom_u_val" placeholder="vd: 1,0,1,1,0,0,1,1,0,1"></textarea>
+        </div>
+    </div>
+
+    <button onclick="encryptMessage()" id="encryptBtn" disabled>Mã Hóa</button>
+    <div id="encryptError" class="error"></div>
+
+    <div id="encryptionOutput" class="output" style="display:none;">
+        <h4>Kết quả Mã Hóa:</h4>
+        <p><strong>Vector ngẫu nhiên/tùy chỉnh u (dạng cột, m x 1):</strong> <span id="vector_u_display"></span></p>
+        <p><strong>Ciphertext c1 = (u<sup>T</sup> . A) mod q (1 x n):</strong> <span id="cipher_c1"></span></p>
+        <p><strong>Ciphertext c2 = (u<sup>T</sup> . b + M * floor(q/2)) mod q (scalar):</strong> <span id="cipher_c2"></span></p>
+        <p class="success">Bản mã là (c1, c2).</p>
+    </div>
+
+    <hr>
+
+    <h3>3. Bước Giải Mã 🔓</h3>
+    <p>Người nhận sử dụng khóa bí mật s để giải mã.</p>
+    <button onclick="decryptMessage()" id="decryptBtn" disabled>Giải Mã</button>
+    <div id="decryptError" class="error"></div>
+
+    <div id="decryptionOutput" class="output" style="display:none;">
+        <h4>Kết quả Giải Mã:</h4>
+        <p><strong>Giá trị v = (c2 - c1 . s) mod q:</strong> <span id="value_v"></span></p>
+        <p><strong>Thông điệp giải mã được M':</strong> <span id="decrypted_M"></span></p>
+        <p id="decryptionStatus"></p>
+    </div>
+</div>
+
+</body>
+</html>
