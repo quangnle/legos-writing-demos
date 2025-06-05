@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Homomorphic Encryption Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- THÊM THƯ VIỆN MARKED.JS -->
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+
+<div class="container">
+    <h1><span class="emoji">🛡️</span> Interactive Homomorphic Encryption Demo</h1>
+
+    <label for="secretS">Nhập một con số bí mật (s):</label>
+    <input type="number" id="secretS" value="24">
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'rsaTab')"><span class="emoji">✖️</span> RSA (Phép nhân)</button>
+        <button class="tab-button" onclick="openTab(event, 'paillierTab')"><span class="emoji">➕</span> Paillier (Phép cộng)</button>
+    </div>
+
+    <!-- RSA Tab Content -->
+    <div id="rsaTab" class="tab-content active">
+        <h2>Mã hóa đồng cấu trên phép nhân (RSA) <button class="gemini-button" onclick="explainConcept('RSA')">✨ Giải thích</button></h2>
+        <div class="gemini-output" id="rsaConceptExplanation">Hãy nhấn nút "Giải thích" để tìm hiểu về RSA!</div>
+
+        <div class="section settings-grid">
+            <div>
+                <label for="rsaP">Số nguyên tố p:</label>
+                <input type="number" id="rsaP" value="7">
+            </div>
+            <div>
+                <label for="rsaQ">Số nguyên tố q:</label>
+                <input type="number" id="rsaQ" value="13">
+            </div>
+            <div>
+                <label for="rsaE">Số mũ công khai e:</label>
+                <input type="number" id="rsaE" value="5">
+            </div>
+        </div>
+        <button class="generate-key-button" onclick="generateRsaKeys()">Tạo Khóa RSA & Cập nhật tham số</button>
+        <p class="params-display result" id="rsaParamsDisplay">Chưa tạo khóa.</p>
+
+        <div class="section">
+            <h3>Tách giá trị s thành các phần (s = s<sub>1</sub> * s<sub>2</sub> * ... * s<sub>k</sub> mod n)</h3>
+            <div id="rsaPartsContainer">
+                <!-- Parts will be added here by JavaScript -->
+            </div>
+            <button class="add-part-button" onclick="handleAddRsaPart()">Thêm 1 phần</button>
+            <button onclick="calculateRsaHomomorphic()">Tính toán đồng cấu RSA</button>
+        </div>
+
+        <label>Các phần đã mã hóa (c<sub>i</sub> = s<sub>i</sub><sup>e</sup> mod n):</label>
+        <textarea id="rsaEncryptedParts" readonly></textarea>
+
+        <label>Mã hóa gộp (C = c<sub>1</sub> * c<sub>2</sub> * ... * c<sub>k</sub> mod n):</label>
+        <textarea id="rsaCombinedCiphertext" readonly></textarea>
+
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+             <label style="margin-top:0;">Giải mã để tìm bí mật s (s' = C<sup>d</sup> mod n):</label>
+             <button class="gemini-button" onclick="interpretRsaResult()">✨ Diễn giải Kết quả</button>
+        </div>
+        <p class="result" id="rsaDecryptedResult"></p>
+        <div class="gemini-output" id="rsaResultInterpretation">Kết quả giải mã và diễn giải sẽ xuất hiện ở đây.</div>
+        <p class="error" id="rsaError"></p>
+    </div>
+
+    <!-- Paillier Tab Content -->
+    <div id="paillierTab" class="tab-content">
+        <h2>Mã hóa đồng cấu trên phép cộng (Paillier) <button class="gemini-button" onclick="explainConcept('Paillier')">✨ Giải thích</button></h2>
+        <div class="gemini-output" id="paillierConceptExplanation">Hãy nhấn nút "Giải thích" để tìm hiểu về Paillier!</div>
+
+         <div class="section settings-grid">
+            <div>
+                <label for="paillierP">Số nguyên tố p:</label>
+                <input type="number" id="paillierP" value="5">
+            </div>
+            <div>
+                <label for="paillierQ">Số nguyên tố q:</label>
+                <input type="number" id="paillierQ" value="7">
+            </div>
+        </div>
+        <button class="generate-key-button" onclick="generatePaillierKeys()">Tạo Khóa Paillier & Cập nhật tham số</button>
+        <p class="params-display result" id="paillierParamsDisplay">Chưa tạo khóa.</p>
+
+        <div class="section">
+            <h3>Tách giá trị s thành các phần (s = s<sub>1</sub> + s<sub>2</sub> + ... * s<sub>k</sub> mod n)</h3>
+            <div id="paillierPartsContainer">
+                <!-- Parts will be added here by JavaScript -->
+            </div>
+            <button class="add-part-button" onclick="handleAddPaillierPart()">Thêm 1 phần</button>
+            <button onclick="calculatePaillierHomomorphic()">Tính toán đồng cấu Paillier</button>
+        </div>
+        
+        <label>Các phần đã mã hóa (c<sub>i</sub> = g<sup>s<sub>i</sub></sup> * r<sub>i</sub><sup>n</sup> mod n<sup>2</sup>, demo này dùng r=1):</label>
+        <textarea id="paillierEncryptedParts" readonly></textarea>
+
+        <label>Mã hóa gộp (C = c<sub>1</sub> * c<sub>2</sub> * ... * c<sub>k</sub> mod n<sup>2</sup>):</label>
+        <textarea id="paillierCombinedCiphertext" readonly></textarea>
+
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <label style="margin-top:0;">Giải mã để tìm bí mật s (s' = L(C<sup>&lambda;</sup> mod n<sup>2</sup>) * &mu; mod n):</label>
+            <button class="gemini-button" onclick="interpretPaillierResult()">✨ Diễn giải Kết quả</button>
+        </div>
+        <p class="result" id="paillierDecryptedResult"></p>
+        <div class="gemini-output" id="paillierResultInterpretation">Kết quả giải mã và diễn giải sẽ xuất hiện ở đây.</div>
+        <p class="error" id="paillierError"></p>
+    </div>
+</div>
+<script src="index.js"></script>
+</body>
+</html>
