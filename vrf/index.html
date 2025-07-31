@@ -119,8 +119,6 @@
         // Các biến toàn cục để lưu trạng thái
         let p, q, N, phi, e, d, m, pi, y, alpha;
 
-        // --- CÁC HÀM TOÁN HỌC (SỬ DỤNG BigInt) ---
-
         // Hàm kiểm tra số nguyên tố (đơn giản)
         function isPrime(num) {
             if (num <= 1) return false;
@@ -143,27 +141,27 @@
         // Hàm tìm nghịch đảo modular (Extended Euclidean Algorithm)
         function modInverse(a, m) {
             let m0 = m, t, q;
-            let x0 = 0n, x1 = 1n;
-            if (m === 1n) return 0n;
-            while (a > 1n) {
-                q = a / m;
+            let x0 = 0, x1 = 1;
+            if (m === 1) return 0;
+            while (a > 1) {
+                q = Math.floor(a / m);
                 t = m;
                 m = a % m, a = t;
                 t = x0;
                 x0 = x1 - q * x0;
                 x1 = t;
             }
-            if (x1 < 0n) x1 += m0;
+            if (x1 < 0) x1 += m0;
             return x1;
         }
 
         // Hàm tính lũy thừa modular: (base^exp) % mod
         function power(base, exp, mod) {
-            let res = 1n;
+            let res = 1;
             base %= mod;
-            while (exp > 0n) {
-                if (exp % 2n === 1n) res = (res * base) % mod;
-                exp >>= 1n; // Tương đương exp = exp / 2
+            while (exp > 0) {
+                if (exp % 2 === 1) res = (res * base) % mod;
+                exp >>= 1; // Tương đương exp = exp / 2
                 base = (base * base) % mod;
             }
             return res;
@@ -172,10 +170,10 @@
         // Hàm tìm e phù hợp
         function findE(phi) {
             // Bắt đầu kiểm tra từ một số mũ công khai phổ biến
-            let e = 3n;
+            let e = 3;
             // Lặp cho đến khi tìm được e nguyên tố cùng nhau với phi
-            while (gcd(e, phi) !== 1n) {
-                e += 2n; // Kiểm tra số lẻ tiếp theo
+            while (gcd(e, phi) !== 1) {
+                e += 2; // Kiểm tra số lẻ tiếp theo
             }
             return e;
         }
@@ -186,7 +184,7 @@
             for (let i = 0; i < str.length; i++) {
                 sum += str.charCodeAt(i);
             }
-            return sum % 1024;
+            return sum % N;
         }
 
 
@@ -197,8 +195,8 @@
         document.getElementById('verifyBtn').addEventListener('click', verify);
 
         function generateKeys() {
-            const p_val = parseInt(document.getElementById('p').value);
-            const q_val = parseInt(document.getElementById('q').value);
+            const p = parseInt(document.getElementById('p').value);
+            const q = parseInt(document.getElementById('q').value);
 
             const keyResultsDiv = document.getElementById('keyResults');
             const keyCalcStepsDiv = document.getElementById('keyCalcSteps');
@@ -206,24 +204,21 @@
             keyCalcStepsDiv.innerHTML = '';
             
             // Validation
-            if (!p_val || !q_val) {
+            if (!p || !q) {
                 keyResultsDiv.innerHTML = '<p class="error">Vui lòng nhập cả p và q.</p>';
                 return;
             }
-            if (!isPrime(p_val) || !isPrime(q_val)) {
+            if (!isPrime(p) || !isPrime(q)) {
                 keyResultsDiv.innerHTML = '<p class="error">p và q phải là số nguyên tố.</p>';
                 return;
             }
-            if (p_val === q_val) {
+            if (p === q) {
                 keyResultsDiv.innerHTML = '<p class="error">p và q phải khác nhau.</p>';
                 return;
             }
 
-            p = BigInt(p_val);
-            q = BigInt(q_val);
-
             N = p * q;
-            phi = (p - 1n) * (q - 1n);
+            phi = (p - 1) * (q - 1);
             
             // Tìm một giá trị e phù hợp
             e = findE(phi);
@@ -243,7 +238,7 @@
                 <h4>Các bước tính toán khóa:</h4>
                 <ol>
                     <li>Tính <strong>N</strong> = p * q = ${p} * ${q} = <code>${N}</code>.</li>
-                    <li>Tính <strong>φ(N)</strong> = (p-1) * (q-1) = ${p-1n} * ${q-1n} = <code>${phi}</code>.</li>
+                    <li>Tính <strong>φ(N)</strong> = (p-1) * (q-1) = ${p-1} * ${q-1} = <code>${phi}</code>.</li>
                     <li>Tìm một số <strong>e</strong> sao cho 1 < e < φ(N) và e nguyên tố cùng nhau với φ(N). Ta tìm được e = <code>${e}</code>.</li>
                     <li>Tính <strong>d</strong> sao cho d * e ≡ 1 (mod φ(N)), tức là d * ${e} ≡ 1 (mod ${phi}). Kết quả d = <code>${d}</code>.</li>
                 </ol>
@@ -269,8 +264,7 @@
             }
             
             // Băm input
-            const m_val = customHash(alpha);
-            m = BigInt(m_val);
+            const m = customHash(alpha);
 
             // Tạo bằng chứng pi
             pi = power(m, d, N);
@@ -291,7 +285,7 @@
                 <h4>Các bước tạo bằng chứng:</h4>
                 <ol>
                     <li>Băm chuỗi input <strong>alpha</strong> = "${alpha}" bằng hàm băm đơn giản: <br>
-                        m = Hash(alpha) = (tổng mã ASCII) mod 1024 = <code>${m}</code>.</li>
+                        m = Hash(alpha) = (tổng mã ASCII) mod N = <code>${m}</code>.</li>
                     <li>Tạo bằng chứng <strong>π</strong> bằng khóa bí mật (d=${d}): <br>
                         π = m<sup>d</sup> mod N = ${m}<sup>${d}</sup> mod ${N} = <code>${pi}</code>.</li>
                     <li>Tạo giá trị ngẫu nhiên <strong>y</strong> bằng cách băm bằng chứng π: <br>
@@ -313,7 +307,7 @@
             const m_prime = power(pi, e, N);
 
             // Bước 2: Băm lại alpha
-            const m_hash = BigInt(customHash(alpha));
+            const m_hash = customHash(alpha);
 
             // Hiển thị các bước tính toán
             let stepsHTML = `
