@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mô phỏng Thuật toán Ant Colony Optimization</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #2c3e50;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      color: #ecf0f1;
+    }
+    .main-container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    canvas {
+      border-radius: 8px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .toolbar {
+      width: 150px;
+      padding: 15px;
+      background-color: #34495e;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+    .toolbar h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #7f8c8d;
+      padding-bottom: 10px;
+    }
+    .draggable {
+      padding: 10px 15px;
+      background-color: #95a5a6;
+      color: #2c3e50;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      cursor: grab;
+      font-weight: bold;
+      user-select: none;
+    }
+    .draggable:active {
+      cursor: grabbing;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+    .controls label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .controls button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #startButton {
+      background-color: #27ae60;
+      color: white;
+    }
+    #startButton:disabled {
+      background-color: #7f8c8d;
+      cursor: not-allowed;
+    }
+    #resetButton {
+      background-color: #c0392b;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mô phỏng Đàn kiến Tìm đường</h1>
+  <div class="main-container">
+    <div id="canvas-container"></div>
+    <div class="toolbar">
+      <h3>Công cụ</h3>
+      <div id="drag-nest" class="draggable">Tổ kiến 🐜</div>
+      <div id="drag-food" class="draggable">Thức ăn 🍎</div>
+      <div id="drag-obstacle" class="draggable">Vật cản 🧱</div>
+      <div class="controls">
+        <label for="ant-slider">Số lượng kiến: <span id="ant-count">50</span></label>
+        <input type="range" id="ant-slider" min="10" max="200" value="50" style="width: 100%;">
+        <label for="alpha-slider">Alpha (pheromone): <span id="alpha-value">3.0</span></label>
+        <input type="range" id="alpha-slider" min="0.1" max="3" step="0.1" value="3" style="width: 100%;">
+        <label for="beta-slider">Beta (heuristic): <span id="beta-value">2.0</span></label>
+        <input type="range" id="beta-slider" min="0.1" max="3" step="0.1" value="2" style="width: 100%;">
+        <button id="startButton">Bắt đầu</button>
+        <button id="resetButton">Làm lại</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- KHAI BÁO BIẾN TOÀN CỤC ---
+    let grid;
+    const cols = 80;
+    const rows = 60;
+    let cellSize;
+
+    let nest = null;
+    let food = null;
+    let obstacles = [];
+    let ants = [];
+
+    // Trạng thái mô phỏng
+    let simulationState = 'setup'; // 'setup', 'running'
+
+    // Trạng thái kéo thả
+    let draggedItem = null;
+    let isDragging = false;
+
+    // Tham số thuật toán
+    let evaporationRate = 0.005;
+    let pheromoneDeposit = 1.0;
+    let alpha = 3; // Trọng số pheromone
+    let beta = 2;  // Trọng số heuristic (khoảng cách)
+
+    // UI Elements
+    let antSlider, alphaSlider, betaSlider, startButton, resetButton, antCountSpan, alphaValueSpan, betaValueSpan;
+    
+    function setup() {
+      const canvas = createCanvas(500, 500);
+      canvas.parent('canvas-container');
+      cellSize = width / cols;
+
+      // Khởi tạo lưới
+      grid = Array(cols).fill(null).map(() => Array(rows).fill(null).map(() => ({
+          type: 'empty',
+          pheromone: 0
+      })));
+      
+      // Kết nối các phần tử UI
+      setupUI();
+    }
+    
+    function setupUI() {
+        // Draggable items
+        document.getElementById('drag-nest').onmousedown = () => { startDragging('nest'); };
+        document.getElementById('drag-food').onmousedown = () => { startDragging('food'); };
+        document.getElementById('drag-obstacle').onmousedown = () => { startDragging('obstacle'); };
+        
+        // Mouse release event for dropping
+        window.onmouseup = dropItem;
+
+        // Controls
+        antSlider = document.getElementById('ant-slider');
+        alphaSlider = document.getElementById('alpha-slider');
+        betaSlider = document.getElementById('beta-slider');
+        antCountSpan = document.getElementById('ant-count');
+        alphaValueSpan = document.getElementById('alpha-value');
+        betaValueSpan = document.getElementById('beta-value');
+        startButton = document.getElementById('startButton');
+        resetButton = document.getElementById('resetButton');
+
+        antSlider.oninput = () => {
+            antCountSpan.innerText = antSlider.value;
+        };
+
+        alphaSlider.oninput = () => {
+            alpha = parseFloat(alphaSlider.value);
+            alphaValueSpan.innerText = alpha.toFixed(1);
+        };
+
+        betaSlider.oninput = () => {
+            beta = parseFloat(betaSlider.value);
+            betaValueSpan.innerText = beta.toFixed(1);
+        };
+
+        startButton.onclick = startSimulation;
+        resetButton.onclick = resetSimulation;
+    }
+
+    function draw() {
+      background(51);
+      
+      drawGrid();
+      drawPheromones();
+
+      if (simulationState === 'running') {
+        updateAnts();
+        updatePheromones();
+      }
+      
+      drawItems();
+
+      if (isDragging) {
+        drawDraggedItem();
+      }
+      
+      updateStartButtonState();
+    }
+
+    // --- LOGIC MÔ PHỎNG ---
+    function startSimulation() {
+        if (nest && food && simulationState === 'setup') {
+            simulationState = 'running';
+            ants = [];
+            const antCount = parseInt(antSlider.value, 10);
+            for (let i = 0; i < antCount; i++) {
+                ants.push(new Ant());
+            }
+        }
+    }
+
+    function resetSimulation() {
+        simulationState = 'setup';
+        nest = null;
+        food = null;
+        obstacles = [];
+        ants = [];
+        grid.forEach(col => col.forEach(cell => {
+            cell.pheromone = 0;
+            cell.type = 'empty';
+        }));
+    }
+    
+    function updateAnts() {
+        for (let ant of ants) {
+            ant.update();
+            ant.draw();
+        }
+    }
+
+    function updatePheromones() {
+        for (let i = 0; i < cols; i++) {
+            for (let j = 0; j < rows; j++) {
+                if (grid[i][j].pheromone > 0) {
+                    grid[i][j].pheromone *= (1 - evaporationRate);
+                    if (grid[i][j].pheromone < 0.01) {
+                        grid[i][j].pheromone = 0;
+                    }
+                }
+            }
+        }
+    }
+    
+    // --- LOGIC KÉO THẢ ---
+    function startDragging(itemType) {
+        if (simulationState === 'setup') {
+            isDragging = true;
+            draggedItem = itemType;
+        }
+    }
+
+    function dropItem() {
+        if (isDragging && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+            const gridX = floor(mouseX / cellSize);
+            const gridY = floor(mouseY / cellSize);
+
+            if (draggedItem === 'nest') nest = { x: gridX, y: gridY };
+            else if (draggedItem === 'food') {
+                food = { x: gridX, y: gridY, quantity: 1000 };
+            }
+            else if (draggedItem === 'obstacle') {
+                obstacles.push({ x: gridX, y: gridY });
+                grid[gridX][gridY].type = 'obstacle';
+            }
+        }
+        isDragging = false;
+        draggedItem = null;
+    }
+    
+    function updateStartButtonState() {
+        startButton.disabled = !(nest && food && simulationState === 'setup');
+    }
+
+    // --- CÁC HÀM VẼ ---
+    function drawGrid() {
+      stroke(70);
+      strokeWeight(0.5);
+      for (let i = 0; i < cols; i++) {
+        line(i * cellSize, 0, i * cellSize, height);
+      }
+      for (let j = 0; j < rows; j++) {
+        line(0, j * cellSize, width, j * cellSize);
+      }
+    }
+
+    function drawPheromones() {
+        noStroke();
+        for (let i = 0; i < cols; i++) {
+            for (let j = 0; j < rows; j++) {
+                if (grid[i][j].pheromone > 0) {
+                    const alpha = map(grid[i][j].pheromone, 0, 5, 10, 200, true);
+                    fill(50, 255, 50, alpha);
+                    rect(i * cellSize, j * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+    }
+
+    function drawItems() {
+      fill(127, 140, 141);
+      noStroke();
+      for (const obs of obstacles) {
+        rect(obs.x * cellSize, obs.y * cellSize, cellSize, cellSize);
+      }
+
+      textSize(cellSize * 0.8);
+      textAlign(LEFT, TOP);
+      if (nest) text('🐜', nest.x * cellSize, (nest.y + 1) * cellSize);
+      
+      if (food && food.quantity > 0) {
+        text('🍎', food.x * cellSize, (food.y + 1) * cellSize);
+        fill(255);
+        textSize(cellSize * 0.6);
+        textAlign(CENTER, CENTER);
+        text(food.quantity, food.x * cellSize + cellSize / 2, (food.y - 0.2) * cellSize);
+      }
+      
+      textAlign(LEFT, TOP);
+    }
+
+    function drawDraggedItem() {
+        textSize(cellSize * 1.5);
+        textAlign(LEFT, TOP);
+        if (draggedItem === 'nest') text('🐜', mouseX - cellSize/2, mouseY - cellSize/2);
+        else if (draggedItem === 'food') text('🍎', mouseX - cellSize/2, mouseY - cellSize/2);
+        else if (draggedItem === 'obstacle') {
+            fill(127, 140, 141, 150);
+            noStroke();
+            rect(floor(mouseX / cellSize) * cellSize, floor(mouseY / cellSize) * cellSize, cellSize, cellSize);
+        }
+    }
+
+    // --- LỚP ANT ---
+    class Ant {
+        constructor() {
+            this.reset();
+        }
+
+        reset() {
+            this.pos = createVector(nest.x, nest.y);
+            this.path = [this.pos.copy()];
+            this.state = 'to_food';
+        }
+        
+        update() {
+            if (this.state === 'to_food') {
+                this.moveToTarget(food);
+                if (food && dist(this.pos.x, this.pos.y, food.x, food.y) < 1) {
+                    if (food.quantity > 0) {
+                        food.quantity--;
+                        this.state = 'to_nest';
+                        this.path.reverse();
+                    } else {
+                        this.reset();
+                    }
+                }
+            } else if (this.state === 'to_nest') {
+                this.depositPheromone();
+                if (this.path.length > 0) {
+                    this.pos = this.path.shift();
+                } else {
+                    this.reset();
+                }
+            }
+        }
+
+        moveToTarget(target) {
+            if (!target || (target === food && food.quantity <= 0)) {
+                this.reset();
+                return;
+            }
+            
+            const neighbors = this.getValidNeighbors();
+            if (neighbors.length === 0) {
+                this.reset();
+                return;
+            }
+
+            let probabilities = [];
+            let totalProb = 0;
+
+            for (const neighbor of neighbors) {
+                const pheromoneLevel = pow(1 + grid[neighbor.x][neighbor.y].pheromone, alpha);
+                const distanceToTarget = dist(neighbor.x, neighbor.y, target.x, target.y);
+                const heuristicValue = pow(1 / (distanceToTarget + 0.1), beta);
+                
+                const prob = pheromoneLevel * heuristicValue;
+                probabilities.push({cell: neighbor, prob: prob});
+                totalProb += prob;
+            }
+
+            let r = random(totalProb);
+            let cumulativeProb = 0;
+            let nextPos = null;
+
+            for(const p of probabilities) {
+                cumulativeProb += p.prob;
+                if(r < cumulativeProb) {
+                    nextPos = p.cell;
+                    break;
+                }
+            }
+            
+            if (nextPos) {
+                this.pos = nextPos;
+                this.path.push(this.pos.copy());
+            } else {
+                 this.reset();
+            }
+        }
+
+        getValidNeighbors() {
+            let neighbors = [];
+            const moves = [
+                { dx: 0, dy: -1 }, // Lên
+                { dx: 0, dy: 1 },  // Xuống
+                { dx: -1, dy: 0 }, // Trái
+                { dx: 1, dy: 0 }   // Phải
+            ];
+
+            for (const move of moves) {
+                const nx = this.pos.x + move.dx;
+                const ny = this.pos.y + move.dy;
+
+                if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && grid[nx][ny].type !== 'obstacle') {
+                    let alreadyVisited = false;
+                    for (const p of this.path) {
+                        if (p.x === nx && p.y === ny) {
+                            alreadyVisited = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyVisited) {
+                        neighbors.push(createVector(nx, ny));
+                    }
+                }
+            }
+            return neighbors;
+        }
+        
+        depositPheromone() {
+            const amount = pheromoneDeposit / (this.path.length + 1);
+            for(const p of this.path) {
+                grid[p.x][p.y].pheromone += amount;
+            }
+        }
+
+        draw() {
+            fill(255, 255, 0);
+            noStroke();
+            circle(this.pos.x * cellSize + cellSize / 2, this.pos.y * cellSize + cellSize / 2, cellSize * 0.4);
+        }
+    }
+  </script>
+</body>
+</html>
