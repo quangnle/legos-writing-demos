@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mô phỏng Bài toán Dừng</title>
+  <style>
+    :root {
+      --bg-color: #f4f7f9;
+      --text-color: #333;
+      --primary-color: #007bff;
+      --primary-hover: #0056b3;
+      --machine-bg: #ffffff;
+      --border-color: #dfe6e9;
+      --green-bg: rgba(40, 167, 69, 0.1);
+      --green-border: #28a745;
+      --red-bg: rgba(220, 53, 69, 0.1);
+      --red-border: #dc3545;
+      --reset-color: #6c757d;
+      --reset-hover: #5a6268;
+    }
+    body {
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: var(--bg-color);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      color: var(--text-color);
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    .simulation-area {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      margin-top: 30px;
+      padding: 20px;
+    }
+    .machine {
+      background: var(--machine-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+      width: 80%;
+      max-width: 550px;
+    }
+    .machine h3 {
+      margin: 0 0 10px 0;
+      font-size: 1.2em;
+      color: var(--primary-color);
+    }
+    #paradox-machine .logic-container {
+      display: flex;
+      justify-content: space-around;
+      gap: 20px;
+      margin-top: 15px;
+    }
+    .logic-branch {
+      flex: 1;
+      padding: 15px;
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    .arrow {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #arrow1 { top: 115px; }
+    #arrow2 { top: 320px; }
+    .contradiction {
+        position: absolute;
+        font-size: 2em;
+        font-weight: bold;
+        color: #e74c3c;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        text-shadow: 1px 1px 5px rgba(0,0,0,0.2);
+    }
+    #contradiction1 { top: 250px; right: 0px; }
+    #contradiction2 { top: 250px; left: 0px; }
+    
+    /* Highlight classes */
+    .highlight-green { border-color: var(--green-border); background-color: var(--green-bg); }
+    .highlight-red { border-color: var(--red-border); background-color: var(--red-bg); }
+    .visible { opacity: 1 !important; }
+
+    .controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .controls button {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    #next-button { background-color: var(--primary-color); color: white; }
+    #next-button:hover { background-color: var(--primary-hover); }
+    #prev-button, #reset-button { background-color: var(--reset-color); color: white; }
+    #prev-button:hover, #reset-button:hover { background-color: var(--reset-hover); }
+    .controls button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    .explanation {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: var(--machine-bg);
+      border-left: 5px solid var(--primary-color);
+      min-height: 80px;
+      text-align: left;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mô phỏng Bài toán Dừng</h1>
+        <p>Một chương trình có thể xác định liệu một chương trình khác có dừng lại hay không? Hãy cùng khám phá sự mâu thuẫn logic.</p>
+        
+        <div class="simulation-area">
+            <!-- Machine 1: Halts(P) -->
+            <div id="halts-machine" class="machine">
+                <h3>function Halts(P)</h3>
+                <p>Trả về "DỪNG" hoặc "LẶP"</p>
+            </div>
+
+            <!-- Arrow 1 -->
+            <svg id="arrow1" class="arrow" width="24" height="60" viewBox="0 0 24 60">
+                <line x1="12" y1="0" x2="12" y2="50" stroke="#333" stroke-width="2"/>
+                <polygon points="7,50 17,50 12,60" fill="#333"/>
+            </svg>
+
+            <!-- Machine 2: Paradox(P) -->
+            <div id="paradox-machine" class="machine">
+                <h3>function Paradox(P)</h3>
+                <div class="logic-container">
+                    <div id="if-branch" class="logic-branch">
+                        <b>Nếu</b> Halts(P) == "DỪNG" <br> <b>thì</b> LẶP VÔ HẠN
+                    </div>
+                    <div id="else-branch" class="logic-branch">
+                        <b>Nếu không</b> <br> <b>thì</b> DỪNG
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Arrow -->
+            <svg id="arrow2" class="arrow" width="100" height="60" viewBox="0 0 100 60">
+                 <path d="M 5,5 C 5,45 95,45 95,5" stroke="#c0392b" stroke-width="2" fill="none"/>
+                 <polygon points="5,5 10,10 15,5" fill="#c0392b" />
+            </svg>
+
+            <!-- Contradiction text -->
+            <div id="contradiction1" class="contradiction">MÂU THUẪN!</div>
+            <div id="contradiction2" class="contradiction">MÂU THUẪN!</div>
+        </div>
+
+        <div id="explanation-container" class="explanation">
+            Nhấn "Tiếp" để bắt đầu khám phá.
+        </div>
+        <div class="controls">
+            <button id="prev-button">Lùi</button>
+            <button id="next-button">Tiếp</button>
+            <button id="reset-button">Làm lại</button>
+        </div>
+    </div>
+
+  <script>
+    const elements = {
+        prevButton: document.getElementById('prev-button'),
+        nextButton: document.getElementById('next-button'),
+        resetButton: document.getElementById('reset-button'),
+        explanationDiv: document.getElementById('explanation-container'),
+        haltsMachine: document.getElementById('halts-machine'),
+        ifBranch: document.getElementById('if-branch'),
+        elseBranch: document.getElementById('else-branch'),
+        arrow1: document.getElementById('arrow1'),
+        arrow2: document.getElementById('arrow2'),
+        contradiction1: document.getElementById('contradiction1'),
+        contradiction2: document.getElementById('contradiction2'),
+    };
+
+    let currentStepIndex = -1;
+
+    const steps = [
+        { // Step 0
+            text: "<b>Bước 1: Giả định.</b> Giả sử chúng ta có một chương trình 'thần kỳ' tên là <b>Halts(P)</b>, có thể xác định chính xác liệu một chương trình P bất kỳ có dừng lại hay không.",
+            visuals: () => {
+                elements.arrow1.classList.add('visible');
+            }
+        },
+        { // Step 1
+            text: "<b>Bước 2: Xây dựng chương trình Nghịch lý (Paradox).</b> Dựa trên Halts(P), ta tạo ra một chương trình mới tên là <b>Paradox(P)</b> với logic đối nghịch.",
+            visuals: () => {
+                elements.arrow1.classList.add('visible');
+            }
+        },
+        { // Step 2
+            text: "<b>Bước 3: Câu hỏi cốt lõi.</b> Chuyện gì sẽ xảy ra nếu chúng ta đưa chính chương trình <b>Paradox</b> vào làm đầu vào cho chính nó? Tức là, <b>Paradox(Paradox)</b> sẽ dừng hay lặp vô hạn?",
+            visuals: () => {
+                elements.arrow1.classList.add('visible');
+                elements.arrow2.classList.add('visible');
+            }
+        },
+        { // Step 3
+            text: "<b>Trường hợp 1: Giả sử 'Paradox' sẽ DỪNG.</b><br>Nếu vậy, Halts(Paradox) sẽ trả về 'DỪNG'. Theo logic của Paradox, nó phải... <b>LẶP VÔ HẠN</b>.",
+            visuals: () => {
+                elements.arrow1.classList.add('visible');
+                elements.arrow2.classList.add('visible');
+                elements.haltsMachine.classList.add('highlight-green');
+                elements.ifBranch.classList.add('highlight-red');
+            }
+        },
+        { // Step 4
+            text: "<b>MÂU THUẪN!</b> Việc giả định 'Paradox' sẽ DỪNG lại dẫn đến kết luận nó phải LẶP VÔ HẠN.",
+            visuals: () => {
+                elements.arrow1.classList.add('visible');
+                elements.arrow2.classList.add('visible');
+                elements.haltsMachine.classList.add('highlight-green');
+                elements.ifBranch.classList.add('highlight-red');
+                elements.contradiction1.classList.add('visible');
+            }
+        },
+        { // Step 5
+            text: "<b>Trường hợp 2: Giả sử 'Paradox' sẽ LẶP VÔ HẠN.</b><br>Nếu vậy, Halts(Paradox) sẽ trả về 'LẶP'. Theo logic của Paradox, nó phải... <b>DỪNG</b>.",
+            visuals: () => {
+                elements.arrow1.classList.add('visible');
+                elements.arrow2.classList.add('visible');
+                elements.haltsMachine.classList.add('highlight-red');
+                elements.elseBranch.classList.add('highlight-green');
+            }
+        },
+        { // Step 6
+            text: "<b>LẠI MÂU THUẪN!</b> Việc giả định 'Paradox' sẽ LẶP VÔ HẠN lại dẫn đến kết luận nó phải DỪNG.",
+            visuals: () => {
+                elements.arrow1.classList.add('visible');
+                elements.arrow2.classList.add('visible');
+                elements.haltsMachine.classList.add('highlight-red');
+                elements.elseBranch.classList.add('highlight-green');
+                elements.contradiction2.classList.add('visible');
+            }
+        },
+        { // Step 7
+            text: "<b>Kết luận:</b> Vì cả hai trường hợp đều dẫn đến mâu thuẫn logic không thể thoát ra, giả định ban đầu của chúng ta là sai. <b>Không thể tồn tại một chương trình 'Halts(P)' chung cho mọi trường hợp.</b> Bài toán Dừng là không thể giải quyết được.",
+            visuals: () => {}
+        }
+    ];
+
+    function updateUI() {
+        // Reset all visuals first
+        Object.values(elements).forEach(el => {
+            if (el.classList) {
+                el.classList.remove('visible', 'highlight-green', 'highlight-red');
+            }
+        });
+
+        if (currentStepIndex === -1) {
+            elements.explanationDiv.innerHTML = "Nhấn \"Tiếp\" để bắt đầu khám phá.";
+        } else {
+            const step = steps[currentStepIndex];
+            elements.explanationDiv.innerHTML = step.text;
+            step.visuals();
+        }
+
+        // Update button states
+        elements.prevButton.disabled = currentStepIndex <= -1;
+        elements.nextButton.disabled = currentStepIndex >= steps.length - 1;
+    }
+
+    elements.nextButton.addEventListener('click', () => {
+        if (currentStepIndex < steps.length - 1) {
+            currentStepIndex++;
+            updateUI();
+        }
+    });
+
+    elements.prevButton.addEventListener('click', () => {
+        if (currentStepIndex > -1) {
+            currentStepIndex--;
+            updateUI();
+        }
+    });
+
+    elements.resetButton.addEventListener('click', () => {
+        currentStepIndex = -1;
+        updateUI();
+    });
+
+    // Initial UI state
+    updateUI();
+
+  </script>
+</body>
+</html>
