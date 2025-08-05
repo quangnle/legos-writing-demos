@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mô phỏng MPC Nâng cao: Tạo khóa Phân tán</title>
+  <style>
+    :root {
+      --bg-color: #f4f7f9;
+      --text-color: #333;
+      --primary-color: #2980b9;
+      --primary-hover: #2471a3;
+      --card-bg: #ffffff;
+      --border-color: #dfe6e9;
+      --reset-color: #6c757d;
+      --reset-hover: #5a6268;
+      --accent-color: #8e44ad;
+      --success-color: #27ae60;
+    }
+    body {
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: var(--bg-color);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      color: var(--text-color);
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+      text-align: center;
+    }
+    .panel {
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+      margin-top: 20px;
+    }
+    .party-container {
+      display: flex;
+      justify-content: space-around;
+      gap: 20px;
+      min-height: 180px;
+    }
+    .party-card { flex: 1; }
+    .party-card h3 {
+      margin: 0 0 10px 0;
+      font-size: 1.2em;
+      color: var(--primary-color);
+    }
+    .secret-input {
+      width: 80%;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      margin-top: 5px;
+      text-align: center;
+    }
+    .data-display {
+      margin-top: 10px;
+      font-size: 0.9em;
+      font-weight: bold;
+      color: var(--accent-color);
+      word-wrap: break-word;
+      min-height: 20px;
+      transition: all 0.3s ease;
+    }
+    .computation-area {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+    .visible { opacity: 1 !important; }
+
+    .controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .controls button {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    #next-button { background-color: var(--primary-color); color: white; }
+    #next-button:hover { background-color: var(--primary-hover); }
+    #prev-button, #reset-button { background-color: var(--reset-color); color: white; }
+    #prev-button:hover, #reset-button:hover { background-color: var(--reset-hover); }
+    .controls button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    .explanation {
+      border-left: 5px solid var(--primary-color);
+      min-height: 80px;
+      text-align: left;
+      line-height: 1.6;
+    }
+    code {
+        background-color: #e9ecef;
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-family: 'Courier New', Courier, monospace;
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mô phỏng MPC Nâng cao: Bí mật Lương trung bình</h1>
+        <div id="party-container" class="party-container panel">
+            <div id="party-an" class="party-card">
+                <h3>An</h3>
+                Lương (triệu): <input type="number" id="secret-an" class="secret-input" value="15">
+                <div class="data-display" id="data-an"></div>
+            </div>
+            <div id="party-binh" class="party-card">
+                <h3>Bình</h3>
+                Lương (triệu): <input type="number" id="secret-binh" class="secret-input" value="21">
+                <div class="data-display" id="data-binh"></div>
+            </div>
+            <div id="party-chi" class="party-card">
+                <h3>Chi</h3>
+                Lương (triệu): <input type="number" id="secret-chi" class="secret-input" value="24">
+                <div class="data-display" id="data-chi"></div>
+            </div>
+        </div>
+
+        <div id="computation-area" class="panel computation-area">
+            <h3>Khu vực Tính toán Công khai</h3>
+            <p id="computation-text"></p>
+            <h2 id="final-result-text"></h2>
+        </div>
+
+        <div id="explanation-container" class="panel explanation">
+            Nhấn "Tiếp" để bắt đầu.
+        </div>
+        <div class="controls">
+            <button id="prev-button">Lùi</button>
+            <button id="next-button">Tiếp</button>
+            <button id="reset-button">Làm lại</button>
+        </div>
+    </div>
+
+  <script>
+    const elements = {
+        prevButton: document.getElementById('prev-button'),
+        nextButton: document.getElementById('next-button'),
+        resetButton: document.getElementById('reset-button'),
+        explanationDiv: document.getElementById('explanation-container'),
+        inputs: {
+            an: document.getElementById('secret-an'),
+            binh: document.getElementById('secret-binh'),
+            chi: document.getElementById('secret-chi'),
+        },
+        dataDisplays: {
+            an: document.getElementById('data-an'),
+            binh: document.getElementById('data-binh'),
+            chi: document.getElementById('data-chi'),
+        },
+        computationArea: document.getElementById('computation-area'),
+        computationText: document.getElementById('computation-text'),
+        finalResultText: document.getElementById('final-result-text'),
+    };
+
+    let currentStepIndex = -1;
+    
+    // --- Paillier Cryptosystem Implementation (for simulation purposes) ---
+    // Chú thích: Các hàm toán học cơ bản cho số nguyên lớn (BigInt)
+    const power = (base, exp, mod) => { let r = 1n; base %= mod; while (exp > 0) { if (exp % 2n === 1n) r = (r * base) % mod; exp >>= 1n; base = (base * base) % mod; } return r; };
+    const modInverse = (a, m) => { let m0 = m, t, q; let x0 = 0n, x1 = 1n; if (m === 1n) return 0n; while (a > 1n) { q = a / m; t = m; m = a % m; a = t; t = x0; x0 = x1 - q * x0; x1 = t; } if (x1 < 0n) x1 += m0; return x1; };
+    const L = (x, n) => (x - 1n) / n;
+
+    // Chú thích: Để mô phỏng, chúng ta vẫn tạo một cặp khóa đầy đủ ở phía sau.
+    // Trong thực tế, quá trình tạo khóa phân tán (DKG) phức tạp hơn nhiều.
+    const p = 61n, q = 53n;
+    const n = p * q;
+    const n_sq = n * n;
+    const g = n + 1n; // Một cách chọn g đơn giản và phổ biến
+    
+    // lambda là một phần của khóa bí mật, tính bằng (p-1)*(q-1)
+    const lambda = (p - 1n) * (q - 1n);
+    // mu là phần còn lại của khóa bí mật, tính bằng nghịch đảo modular
+    const mu = modInverse(L(power(g, lambda, n_sq), n), n);
+    
+    // Khóa công khai được chia sẻ cho mọi người
+    const publicKey = { n, g, n_sq };
+    // Khóa bí mật đầy đủ (chỉ dùng để mô phỏng kết quả cuối cùng)
+    const privateKey = { lambda, mu };
+    
+    // Chú thích: Mô phỏng việc chia sẻ khóa bí mật (Distributed Key Generation).
+    // Trong thực tế, không ai biết giá trị `lambda` đầy đủ.
+    // Ở đây, ta chia `lambda` thành 3 mảnh s1, s2, s3 sao cho s1 + s2 + s3 = lambda.
+    // Mỗi người sẽ chỉ giữ một mảnh (s1, s2, hoặc s3).
+    const s1 = 1000n;
+    const s2 = 1500n;
+    const s3 = lambda - s1 - s2; // 3120 - 1000 - 1500 = 620
+    const privateKeyShares = [{share: s1}, {share: s2}, {share: s3}];
+
+    // Chú thích: Hàm mã hóa Paillier.
+    // m: tin nhắn (lương), pubKey: khóa công khai.
+    // r là một số ngẫu nhiên để đảm bảo mỗi lần mã hóa cùng một tin nhắn sẽ ra kết quả khác nhau.
+    const encrypt = (m, pubKey) => { const r = BigInt(Math.floor(Math.random() * Number(pubKey.n))) + 1n; return (power(pubKey.g, m, pubKey.n_sq) * power(r, pubKey.n, pubKey.n_sq)) % pubKey.n_sq; };
+    
+    // Chú thích: Hàm giải mã Paillier đầy đủ (chỉ dùng để mô phỏng kết quả cuối).
+    // c: bản mã, pubKey: khóa công khai, privKey: khóa bí mật.
+    const decrypt = (c, pubKey, privKey) => { const top = L(power(c, privKey.lambda, pubKey.n_sq), pubKey.n); return (top * privKey.mu) % pubKey.n; };
+
+    let secrets = {};
+    let ciphertexts = {};
+    let partialDecryptions = {};
+
+    const steps = [
+        { // Step 0: DKG
+            text: `<b>Bước 1: Tạo khóa Phân tán (DKG).</b> Mọi người cùng tạo ra <b>Khóa công khai (n=${publicKey.n}, g=${publicKey.g})</b>. Khóa bí mật <code>λ=${privateKey.lambda}</code> được chia thành các mảnh.`,
+            action: () => {
+                elements.dataDisplays.an.innerText = `Giữ Mảnh Khóa 1 (s1 = ${privateKeyShares[0].share})`;
+                elements.dataDisplays.binh.innerText = `Giữ Mảnh Khóa 2 (s2 = ${privateKeyShares[1].share})`;
+                elements.dataDisplays.chi.innerText = `Giữ Mảnh Khóa 3 (s3 = ${privateKeyShares[2].share})`;
+            }
+        },
+        { // Step 1: Encryption
+            text: `<b>Bước 2: Mã hóa.</b> Mỗi người dùng <b>Khóa công khai chung</b> để mã hóa mức lương của mình. Các bản mã này an toàn để gửi đến một nơi tính toán công khai.`,
+            action: () => {
+                secrets.an = BigInt(elements.inputs.an.value);
+                secrets.binh = BigInt(elements.inputs.binh.value);
+                secrets.chi = BigInt(elements.inputs.chi.value);
+
+                ciphertexts.an = encrypt(secrets.an, publicKey);
+                ciphertexts.binh = encrypt(secrets.binh, publicKey);
+                ciphertexts.chi = encrypt(secrets.chi, publicKey);
+
+                // *** FIX: Display full value ***
+                elements.dataDisplays.an.innerText = `Bản mã: ${ciphertexts.an.toString()}`;
+                elements.dataDisplays.binh.innerText = `Bản mã: ${ciphertexts.binh.toString()}`;
+                elements.dataDisplays.chi.innerText = `Bản mã: ${ciphertexts.chi.toString()}`;
+            }
+        },
+        { // Step 2: Secure Addition
+            text: `<b>Bước 3: Tính toán Công khai.</b> Các bản mã được nhân với nhau. Nhờ tính đồng cấu, kết quả là bản mã của tổng lương, <code>C_sum</code>. Công thức: <code>E(m1) * E(m2) * E(m3) = E(m1 + m2 + m3)</code>.`,
+            action: () => {
+                ciphertexts.sum = (ciphertexts.an * ciphertexts.binh * ciphertexts.chi) % publicKey.n_sq;
+                elements.computationArea.classList.add('visible');
+                // *** FIX: Display full value ***
+                elements.computationText.innerHTML = `Tính toán công khai: <code>(C1*C2*C3) mod n²</code> = <b>${ciphertexts.sum.toString()}</b>`;
+                elements.finalResultText.innerText = '';
+            }
+        },
+        { // Step 3: Partial Decryption
+            text: `<b>Bước 4: Giải mã cục bộ.</b> Mỗi người dùng <b>mảnh khóa bí mật</b> của mình để tính một "mảnh giải mã". Công thức: <code>PD_i = C_sum ^ s_i mod n²</code>.`,
+            action: () => {
+                partialDecryptions.an = power(ciphertexts.sum, privateKeyShares[0].share, publicKey.n_sq);
+                partialDecryptions.binh = power(ciphertexts.sum, privateKeyShares[1].share, publicKey.n_sq);
+                partialDecryptions.chi = power(ciphertexts.sum, privateKeyShares[2].share, publicKey.n_sq);
+                
+                // *** FIX: Display full value ***
+                elements.dataDisplays.an.innerText = `Mảnh giải mã 1: ${partialDecryptions.an.toString()}`;
+                elements.dataDisplays.binh.innerText = `Mảnh giải mã 2: ${partialDecryptions.binh.toString()}`;
+                elements.dataDisplays.chi.innerText = `Mảnh giải mã 3: ${partialDecryptions.chi.toString()}`;
+            }
+        },
+        { // Step 4: Combine to Decrypt
+            text: `<b>Bước 5: Giải mã Tập thể.</b> Các "mảnh giải mã" được công khai và nhân lại với nhau. Kết quả của phép nhân này chính là <code>C_sum ^ λ</code>, bước quan trọng để giải mã.`,
+            action: () => {
+                const combinedPartialDecryptions = (partialDecryptions.an * partialDecryptions.binh * partialDecryptions.chi) % publicKey.n_sq;
+                const finalSum = L(combinedPartialDecryptions, publicKey.n) * privateKey.mu % publicKey.n;
+
+                const finalAverage = Number(finalSum) / 3;
+                elements.computationText.innerHTML = `Kết hợp các mảnh giải mã: <code>(PD1*PD2*PD3) mod n² = C_sum^λ</code>. Sau đó áp dụng các bước cuối của giải mã Paillier.`;
+                elements.finalResultText.innerText = `Tổng lương: ${finalSum} triệu. Lương trung bình: ${finalAverage.toFixed(2)} triệu.`;
+            }
+        },
+        { // Step 5: Conclusion
+            text: "<b>Kết luận:</b> Bằng cách phân tán cả việc tạo khóa và giải mã, không một cá nhân nào có đủ thông tin để phá vỡ sự riêng tư của người khác. Hệ thống đã đạt được mục tiêu mà không cần tin tưởng bất kỳ ai.",
+            action: () => {}
+        }
+    ];
+
+    function updateUI() {
+        // Reset visuals first
+        elements.computationArea.classList.remove('visible');
+        Object.values(elements.dataDisplays).forEach(el => el.innerText = '');
+        Object.values(elements.inputs).forEach(input => input.disabled = (currentStepIndex > 0));
+        
+        if (currentStepIndex === -1) {
+            elements.explanationDiv.innerHTML = "Nhấn \"Tiếp\" để bắt đầu.";
+        } else {
+            // Re-apply actions up to the current step
+            for (let i = 0; i <= currentStepIndex; i++) {
+                const step = steps[i];
+                elements.explanationDiv.innerHTML = step.text;
+                step.action();
+            }
+        }
+
+        elements.prevButton.disabled = currentStepIndex <= -1;
+        elements.nextButton.disabled = currentStepIndex >= steps.length - 1;
+    }
+
+    elements.nextButton.addEventListener('click', () => {
+        if (currentStepIndex < steps.length - 1) {
+            currentStepIndex++;
+            updateUI();
+        }
+    });
+
+    elements.prevButton.addEventListener('click', () => {
+        if (currentStepIndex > -1) {
+            currentStepIndex--;
+            updateUI();
+        }
+    });
+
+    elements.resetButton.addEventListener('click', () => {
+        currentStepIndex = -1;
+        updateUI();
+    });
+
+    // Initial UI state
+    updateUI();
+  </script>
+</body>
+</html>
