@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo SVD & Nén ảnh Grayscale</title>
+    <!-- 1. Tải thư viện Numeric.js cho SVD -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+    
+    <!-- 2. Cấu hình MathJax -->
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']]
+        }
+      };
+    </script>
+    
+    <!-- 3. Tải thư viện MathJax -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1, h2, p {
+            color: #333;
+            text-align: center;
+        }
+        p {
+            font-size: 1.2em;
+        }
+        .controls, .approximation-controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 1000px;
+            text-align: center;
+        }
+        select, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            cursor: pointer;
+        }
+        #decompose-btn {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        #decompose-btn:hover {
+            background-color: #0056b3;
+        }
+        #clear-btn {
+            background-color: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+         #clear-btn:hover {
+            background-color: #5a6268;
+        }
+        #upload-btn {
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        #upload-btn:hover {
+             background-color: #218838;
+        }
+        .matrix-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+            width: 100%;
+        }
+        .matrix-wrapper {
+            margin: 10px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .matrix-display {
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             gap: 15px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            image-rendering: pixelated; /* Giữ cho ảnh sắc nét */
+            cursor: crosshair;
+        }
+        table {
+            border-collapse: collapse;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 0;
+            text-align: center;
+            width: 28px; /* Giảm kích thước ô */
+            height: 28px; /* Giảm kích thước ô */
+            font-family: monospace;
+            background-color: #fff;
+        }
+        input[type="number"] {
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 0.7em; /* Giảm font chữ */
+            font-family: monospace;
+            -moz-appearance: textfield;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+        input[type="range"] {
+            width: 300px;
+        }
+        hr {
+            width: 90%;
+            margin: 30px 0;
+            border: 0;
+            border-top: 1px solid #eee;
+        }
+        #storage-info {
+            font-size: 1em;
+            background-color: #e9f5ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Demo SVD & Nén ảnh Grayscale</h1>
+    <p>Phân tích ma trận A thành $A \approx U_k \Sigma_k V_k^T$</p>
+
+    <div class="controls">
+        <label for="matrix-size">Chọn kích thước ma trận (n x n):</label>
+        <select id="matrix-size">
+            <option value="8">8x8</option>
+            <option value="12">12x12</option>
+            <option value="16">16x16</option>
+        </select>
+        <button id="decompose-btn">Decompose</button>
+        <button id="clear-btn">Xóa trắng</button>
+        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+        <button id="upload-btn">Tải ảnh lên</button>
+    </div>
+
+    <!-- Container cho ma trận A có thể chỉnh sửa và ảnh gốc -->
+    <div id="matrix-a-container" class="matrix-container"></div>
+    
+    <hr>
+    
+    <!-- Slider và khu vực so sánh (bị ẩn ban đầu) -->
+    <div id="approximation-section" class="approximation-controls" style="display: none;">
+        <h2>Xấp xỉ ma trận A</h2>
+        <label for="k-slider">Chọn k (số giá trị suy biến): <b id="k-value">1</b></label><br>
+        <input type="range" id="k-slider" min="1" value="1">
+        <p id="storage-info"></p>
+        <div id="comparison-container" class="matrix-container"></div>
+    </div>
+    
+    <hr>
+    
+    <!-- Container cho kết quả U, Sigma, VT (bị ẩn ban đầu) -->
+    <div id="svd-results-container" class="matrix-container" style="display: none;"></div>
+
+
+    <script>
+        // DOM Elements
+        const sizeSelector = document.getElementById('matrix-size');
+        const decomposeBtn = document.getElementById('decompose-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const uploadBtn = document.getElementById('upload-btn');
+        const imageUpload = document.getElementById('image-upload');
+        const kSlider = document.getElementById('k-slider');
+        const kValueSpan = document.getElementById('k-value');
+        const storageInfoP = document.getElementById('storage-info');
+        const matrixAContainer = document.getElementById('matrix-a-container');
+        const svdResultsContainer = document.getElementById('svd-results-container');
+        const approximationSection = document.getElementById('approximation-section');
+        const comparisonContainer = document.getElementById('comparison-container');
+
+        let svdComponents = null;
+        let originalMatrixA = null;
+        const CANVAS_SIZE = 160; 
+
+        /**
+         * Vẽ một ma trận lên canvas dưới dạng ảnh grayscale
+         */
+        function drawMatrixOnCanvas(canvas, matrixData) {
+            const n = matrixData.length;
+            const ctx = canvas.getContext('2d');
+            const pixelSize = CANVAS_SIZE / n;
+            canvas.width = canvas.height = CANVAS_SIZE;
+
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const value = matrixData[r][c];
+                    ctx.fillStyle = `rgb(${value}, ${value}, ${value})`;
+                    ctx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
+                }
+            }
+        }
+        
+        /**
+         * Tạo và hiển thị một khối ma trận (gồm title, ảnh và bảng)
+         */
+        function createMatrixVisualization(parentEl, title, data, { isEditable = false, roundToIntAndClamp = false, canvasId = null, showCanvas = true }) {
+            parentEl.innerHTML = '';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'matrix-wrapper';
+
+            const titleElement = document.createElement('h2');
+            titleElement.innerHTML = title;
+            wrapper.appendChild(titleElement);
+
+            const displayDiv = document.createElement('div');
+            displayDiv.className = 'matrix-display';
+            
+            let canvas = null;
+            if (showCanvas) {
+                canvas = document.createElement('canvas');
+                if (canvasId) canvas.id = canvasId;
+                drawMatrixOnCanvas(canvas, data);
+                displayDiv.appendChild(canvas);
+            }
+            
+            const table = document.createElement('table');
+            data.forEach((rowData, r) => {
+                const row = document.createElement('tr');
+                rowData.forEach((cellData, c) => {
+                    const cell = document.createElement('td');
+                    if (isEditable) {
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.min = 0;
+                        input.max = 255;
+                        input.value = cellData;
+                        input.id = `cell-A-${r}-${c}`;
+                        input.addEventListener('input', () => {
+                             const matrix = readMatrixFromInputs(data.length);
+                             if (canvas) {
+                                drawMatrixOnCanvas(canvas, matrix);
+                             }
+                        });
+                        cell.appendChild(input);
+                    } else {
+                        let displayValue = cellData.toFixed(2);
+                        if (roundToIntAndClamp) {
+                            let val = Math.round(cellData);
+                            val = Math.max(0, Math.min(255, val)); // Clamp 0-255
+                            displayValue = val;
+                        }
+                        cell.textContent = displayValue;
+                    }
+                    row.appendChild(cell);
+                });
+                table.appendChild(row);
+            });
+            displayDiv.appendChild(table);
+            wrapper.appendChild(displayDiv);
+            parentEl.appendChild(wrapper);
+
+            if (isEditable && canvas) {
+                setupCanvasDrawing(canvas, data.length);
+            }
+        }
+
+        function readMatrixFromInputs(n) {
+            const matrix = [];
+            for (let r = 0; r < n; r++) {
+                matrix[r] = [];
+                for (let c = 0; c < n; c++) {
+                    const input = document.getElementById(`cell-A-${r}-${c}`);
+                    let value = parseInt(input.value, 10);
+                    if (isNaN(value) || value < 0) value = 0;
+                    if (value > 255) value = 255;
+                    input.value = value;
+                    matrix[r][c] = value;
+                }
+            }
+            return matrix;
+        }
+
+        function createRandomMatrix(n) {
+            const matrix = [];
+            for (let i = 0; i < n; i++) {
+                matrix[i] = [];
+                for (let j = 0; j < n; j++) {
+                    matrix[i][j] = Math.floor(Math.random() * 256);
+                }
+            }
+            return matrix;
+        }
+        
+        function generateEditableMatrixA() {
+            const n = parseInt(sizeSelector.value, 10);
+            approximationSection.style.display = 'none';
+            svdResultsContainer.style.display = 'none';
+            svdComponents = null;
+            originalMatrixA = createRandomMatrix(n);
+            createMatrixVisualization(matrixAContainer, 'Ma trận A (vẽ/chỉnh sửa)', originalMatrixA, { isEditable: true, canvasId: 'matrix-a-canvas' });
+        }
+        
+        function setupCanvasDrawing(canvas, n) {
+            let isDrawing = false;
+            const ctx = canvas.getContext('2d');
+            const pixelSize = CANVAS_SIZE / n;
+
+            const getEventPos = (evt) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+                const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            };
+
+            const drawAndUpdate = (evt) => {
+                if (!isDrawing) return;
+                evt.preventDefault();
+                const pos = getEventPos(evt);
+                const c = Math.floor(pos.x / pixelSize);
+                const r = Math.floor(pos.y / pixelSize);
+
+                if (r >= 0 && r < n && c >= 0 && c < n) {
+                    const input = document.getElementById(`cell-A-${r}-${c}`);
+                    if (input.value !== '255') {
+                        input.value = 255;
+                        ctx.fillStyle = 'rgb(255, 255, 255)';
+                        ctx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
+                    }
+                }
+            };
+            
+            canvas.addEventListener('mousedown', (e) => { isDrawing = true; drawAndUpdate(e); });
+            canvas.addEventListener('mousemove', drawAndUpdate);
+            canvas.addEventListener('mouseup', () => { isDrawing = false; });
+            canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+            canvas.addEventListener('touchstart', (e) => { isDrawing = true; drawAndUpdate(e); }, { passive: false });
+            canvas.addEventListener('touchmove', drawAndUpdate, { passive: false });
+            canvas.addEventListener('touchend', () => { isDrawing = false; });
+        }
+
+
+        function decomposeAndDisplayResults() {
+            const n = parseInt(sizeSelector.value, 10);
+            originalMatrixA = readMatrixFromInputs(n);
+            const svdResult = numeric.svd(originalMatrixA);
+
+            svdComponents = { U: svdResult.U, s_vector: svdResult.S, V: svdResult.V };
+            
+            svdResultsContainer.innerHTML = '';
+            svdResultsContainer.style.display = 'flex';
+            const uWrapper = document.createElement('div');
+            const sWrapper = document.createElement('div');
+            const vtWrapper = document.createElement('div');
+            createMatrixVisualization(uWrapper, 'Ma trận U', svdComponents.U, { showCanvas: false });
+            createMatrixVisualization(sWrapper, 'Ma trận &Sigma;', numeric.diag(svdComponents.s_vector), { showCanvas: false });
+            createMatrixVisualization(vtWrapper, 'Ma trận V<sup>T</sup>', numeric.transpose(svdComponents.V), { showCanvas: false });
+            svdResultsContainer.append(uWrapper, sWrapper, vtWrapper);
+
+            approximationSection.style.display = 'block';
+            kSlider.max = n;
+            kSlider.value = n;
+            updateApproximation();
+        }
+
+        function updateApproximation() {
+            if (!svdComponents) return;
+
+            const n = parseInt(sizeSelector.value, 10);
+            const k = parseInt(kSlider.value, 10);
+            kValueSpan.textContent = k;
+
+            const { U, s_vector, V } = svdComponents;
+            const U_k = U.map(row => row.slice(0, k));
+            const Sigma_k = numeric.diag(s_vector.slice(0, k));
+            const V_k = V.map(row => row.slice(0, k));
+            const VT_k = numeric.transpose(V_k);
+
+            const matrixAk = numeric.dot(numeric.dot(U_k, Sigma_k), VT_k);
+            
+            comparisonContainer.innerHTML = '';
+            const originalWrapper = document.createElement('div');
+            const approxWrapper = document.createElement('div');
+            createMatrixVisualization(originalWrapper, 'Ma trận gốc A', originalMatrixA, { roundToIntAndClamp: true });
+            createMatrixVisualization(approxWrapper, `Ma trận xấp xỉ A<sub>k</sub> (k=${k})`, matrixAk, { roundToIntAndClamp: true });
+            comparisonContainer.append(originalWrapper, approxWrapper);
+
+            const originalStorage = n * n;
+            const compressedStorage = (n * k) + k + (k * n);
+            const percentage = ((compressedStorage / originalStorage) * 100);
+            storageInfoP.innerHTML = `Lưu trữ gốc: <b>${originalStorage}</b> giá trị. <br>
+                                     Lưu trữ nén (k=${k}): <b>${compressedStorage}</b> giá trị.`;
+        }
+        
+        function clearMatrix() {
+            const n = parseInt(sizeSelector.value, 10);
+            const inputs = document.querySelectorAll('#matrix-a-container input[type="number"]');
+            inputs.forEach(input => input.value = 0);
+            const canvas = document.getElementById('matrix-a-canvas');
+            if (canvas) {
+                drawMatrixOnCanvas(canvas, readMatrixFromInputs(n));
+            }
+        }
+        
+        function loadImageToMatrix(file) {
+            const n = parseInt(sizeSelector.value, 10);
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = tempCanvas.height = n;
+                    const ctx = tempCanvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, n, n);
+                    
+                    const imageData = ctx.getImageData(0, 0, n, n).data;
+                    const newMatrix = [];
+                    for (let r = 0; r < n; r++) {
+                        newMatrix[r] = [];
+                        for (let c = 0; c < n; c++) {
+                            const index = (r * n + c) * 4;
+                            const rVal = imageData[index];
+                            const gVal = imageData[index + 1];
+                            const bVal = imageData[index + 2];
+                            const gray = Math.round(0.299 * rVal + 0.587 * gVal + 0.114 * bVal);
+                            newMatrix[r][c] = gray;
+                        }
+                    }
+                    
+                    // Update the editable matrix with the image data
+                    originalMatrixA = newMatrix;
+                    createMatrixVisualization(matrixAContainer, 'Ma trận A (vẽ/chỉnh sửa)', originalMatrixA, { isEditable: true, canvasId: 'matrix-a-canvas' });
+                }
+                img.src = event.target.result;
+            }
+            
+            reader.readAsDataURL(file);
+        }
+
+        sizeSelector.addEventListener('change', generateEditableMatrixA);
+        decomposeBtn.addEventListener('click', decomposeAndDisplayResults);
+        clearBtn.addEventListener('click', clearMatrix);
+        kSlider.addEventListener('input', updateApproximation);
+        uploadBtn.addEventListener('click', () => imageUpload.click());
+        imageUpload.addEventListener('change', (event) => {
+            if (event.target.files && event.target.files[0]) {
+                loadImageToMatrix(event.target.files[0]);
+            }
+            // *** FIX HERE ***
+            // Reset the input value. This allows the user to select the same file again
+            // and trigger the 'change' event reliably.
+            event.target.value = null;
+        });
+
+        generateEditableMatrixA();
+
+    </script>
+</body>
+</html>
+
