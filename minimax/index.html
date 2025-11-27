@@ -3,66 +3,540 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimax Algorithm Demo</title>
+    <title>Diamond Hunter - Canvas Version</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        header {
-            background: #333;
-            color: #fff;
-            padding-top: 10px;
-            min-height: 40px;
-            border-bottom: #333 solid 3px;
-        }
-        header h1 {
-            margin: 0;
-            padding: 0;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-        }
-        #canvas-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+        }
+
+        h1 { margin: 10px 0; color: #4facfe; text-shadow: 0 0 10px rgba(79, 172, 254, 0.5); }
+
+        .game-container {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #2a2a2a;
+        }
+
+        canvas {
+            display: block;
+            background-color: #252525;
+            cursor: pointer;
+        }
+
+        .ui-panel {
+            width: 100%;
+            max-width: 550px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .p1-score { color: #00ff88; }
+        .p2-score { color: #ff4d4d; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
             align-items: center;
         }
-        #canvas-container canvas {
-            border: 1px solid #000;
-            background-color: #fff;
+
+        select, button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
         }
+
+        select { background: #444; color: white; border: 1px solid #555; }
+        
+        button {
+            background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+            color: #000;
+        }
+        button:hover { transform: scale(1.05); }
+
+        #status-msg {
+            margin-top: 15px;
+            font-size: 1.2em;
+            height: 30px;
+            color: #ffd700;
+            text-align: center;
+        }
+
+        .legend {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #888;
+            display: flex;
+            gap: 15px;
+        }
+        .dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 5px; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Minimax Algorithm Demo</h1>
-    </header>
-    <div>
-        <p>Move you player by pressing by pressing ⬆ ⬇ ⬅ ➡  keys</p>
-    </div>   
-    <div>
-        <p>Bot's Thinking Depth Level 
-            <select id="depth" onchange="depthChanged()">
-                <option value="1">1</option>
-                <option value="3" selected>3</option>
-                <option value="5">5</option>
-                <option value="7">7</option>
-                <option value="9">9</option>
-                <option value="11">11</option>
+
+    <h1>DIAMOND HUNTER - Minimax Algorithm Demo</h1>
+
+    <div class="ui-panel">
+        <div class="stats">
+            <span class="p1-score">Bạn: <span id="score1">0</span></span>
+            <span class="p2-score">Bot: <span id="score2">0</span></span>
+        </div>
+        <div class="controls">
+            <select id="difficulty">
+                <option value="1">Dễ (Ply 1)</option>
+                <option value="3" selected>Vừa (Ply 3)</option>
+                <option value="5">Khó (Ply 5)</option>
             </select>
-        </p>
-    </div>  
-    <div id="canvas-container"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
-    <script src="sketch.js"></script> 
-    <script>
-        function depthChanged() {
-            depth = +document.getElementById('depth').value;
+            <button onclick="initGame()">Game Mới</button>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="550" height="550"></canvas>
+    </div>
+
+    <div id="status-msg">Dùng phím Mũi Tên để di chuyển</div>
+
+    <div class="legend">
+        <div><span class="dot" style="background:#00ff88"></span>Bạn</div>
+        <div><span class="dot" style="background:#ff4d4d"></span>Bot</div>
+        <div><span class="dot" style="background:#00d2ff"></span>Kim Cương</div>
+    </div>
+
+<script>
+    /**
+     * CẤU HÌNH GAME
+     */
+    const GRID_SIZE = 11;
+    const CELL_SIZE = 50;
+    const CENTER = 5; // Vị trí (5,5)
+    
+    // Canvas Context
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // State
+    let grid = []; // 0: trống, 1: kim cương
+    let p1 = { x: 0, y: 0, score: 0 };
+    let p2 = { x: 10, y: 10, score: 0 };
+    let turn = 'P1'; // 'P1' hoặc 'P2'
+    let gameOver = false;
+    let totalDiamonds = 0;
+
+    // Ảnh bot/người chơi (vẽ bằng code, không cần load ảnh)
+    
+    /**
+     * KHỞI TẠO GAME
+     */
+    function initGame() {
+        p1 = { x: 0, y: 0, score: 0 };
+        p2 = { x: 10, y: 10, score: 0 };
+        turn = 'P1';
+        gameOver = false;
+        grid = [];
+        totalDiamonds = 0;
+
+        document.getElementById('score1').innerText = '0';
+        document.getElementById('score2').innerText = '0';
+        updateStatus("Lượt của bạn!");
+
+        // Tạo lưới và kim cương đối xứng
+        // Khởi tạo lưới trống
+        for(let y=0; y<GRID_SIZE; y++) {
+            let row = [];
+            for(let x=0; x<GRID_SIZE; x++) row.push(0);
+            grid.push(row);
         }
-    </script>
+
+        // Rải kim cương
+        const numPairs = Math.floor(Math.random() * 6) + 10; // 10 đến 15 cặp
+        for(let i=0; i<numPairs; i++) {
+            let rx = Math.floor(Math.random() * GRID_SIZE);
+            let ry = Math.floor(Math.random() * GRID_SIZE);
+
+            // Tránh vị trí xuất phát
+            if((rx === 0 && ry === 0) || (rx === 10 && ry === 10)) continue;
+            
+            // Đặt kim cương nếu chưa có
+            if(grid[ry][rx] === 0) {
+                grid[ry][rx] = 1;
+                totalDiamonds++;
+
+                // Đối xứng qua tâm (5,5): x' = 10-x, y' = 10-y
+                let symX = 10 - rx;
+                let symY = 10 - ry;
+
+                if(grid[symY][symX] === 0) {
+                    grid[symY][symX] = 1;
+                    totalDiamonds++;
+                }
+            }
+        }
+
+        draw();
+    }
+
+    /**
+     * VẼ (RENDER)
+     */
+    function draw() {
+        // Xóa màn hình
+        ctx.fillStyle = "#252525";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Vẽ lưới
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 1;
+        for(let i=0; i<=GRID_SIZE; i++) {
+            // Dọc
+            ctx.beginPath();
+            ctx.moveTo(i * CELL_SIZE, 0);
+            ctx.lineTo(i * CELL_SIZE, canvas.height);
+            ctx.stroke();
+            // Ngang
+            ctx.beginPath();
+            ctx.moveTo(0, i * CELL_SIZE);
+            ctx.lineTo(canvas.width, i * CELL_SIZE);
+            ctx.stroke();
+        }
+
+        // 2. Vẽ Tâm (5,5) highlight
+        ctx.fillStyle = "#333";
+        ctx.fillRect(CENTER * CELL_SIZE + 1, CENTER * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+
+        // 3. Vẽ Kim cương & Người chơi
+        for(let y=0; y<GRID_SIZE; y++) {
+            for(let x=0; x<GRID_SIZE; x++) {
+                let cx = x * CELL_SIZE + CELL_SIZE/2;
+                let cy = y * CELL_SIZE + CELL_SIZE/2;
+
+                // Vẽ kim cương
+                if(grid[y][x] === 1) {
+                    drawDiamond(cx, cy);
+                }
+            }
+        }
+
+        // Vẽ P1 (Xanh)
+        drawPlayer(p1.x, p1.y, '#00ff88', p1.score);
+        // Vẽ P2 (Đỏ)
+        drawPlayer(p2.x, p2.y, '#ff4d4d', p2.score);
+    }
+
+    function drawDiamond(cx, cy) {
+        ctx.fillStyle = "#00d2ff";
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 10);
+        ctx.lineTo(cx + 10, cy);
+        ctx.lineTo(cx, cy + 10);
+        ctx.lineTo(cx - 10, cy);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Hiệu ứng sáng
+        ctx.shadowColor = "#00d2ff";
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0; // Reset
+    }
+
+    function drawPlayer(x, y, color, score) {
+        let cx = x * CELL_SIZE + CELL_SIZE/2;
+        let cy = y * CELL_SIZE + CELL_SIZE/2;
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, CELL_SIZE/2 - 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Viền
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    /**
+     * XỬ LÝ SỰ KIỆN
+     */
+    document.addEventListener('keydown', (e) => {
+        if(gameOver || turn !== 'P1') return;
+
+        let dx = 0, dy = 0;
+        if(e.key === 'ArrowUp') dy = -1;
+        else if(e.key === 'ArrowDown') dy = 1;
+        else if(e.key === 'ArrowLeft') dx = -1;
+        else if(e.key === 'ArrowRight') dx = 1;
+        else return;
+
+        // Di chuyển P1
+        movePlayer(p1, dx, dy, 'P1');
+    });
+
+    function movePlayer(playerObj, dx, dy, who) {
+        let nx = playerObj.x + dx;
+        let ny = playerObj.y + dy;
+
+        // Check biên
+        if(nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) return;
+
+        // Cập nhật vị trí
+        playerObj.x = nx;
+        playerObj.y = ny;
+
+        // Check ăn kim cương
+        if(grid[ny][nx] === 1) {
+            grid[ny][nx] = 0;
+            playerObj.score++;
+            totalDiamonds--;
+            updateUI();
+        }
+
+        // Check va chạm (Kill)
+        if(p1.x === p2.x && p1.y === p2.y) {
+            endGame(who === 'P1' ? 'P1' : 'P2'); // Người vừa đi là người giết
+            draw();
+            return;
+        }
+
+        // Check hết kim cương
+        if(totalDiamonds === 0) {
+            checkWinByScore();
+            draw();
+            return;
+        }
+
+        draw();
+
+        // Chuyển lượt
+        if(who === 'P1') {
+            turn = 'P2';
+            updateStatus("Bot đang suy nghĩ...");
+            setTimeout(botTurn, 50); // Delay nhỏ để UI render kịp
+        } else {
+            turn = 'P1';
+            updateStatus("Lượt của bạn!");
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('score1').innerText = p1.score;
+        document.getElementById('score2').innerText = p2.score;
+    }
+
+    function updateStatus(msg) {
+        document.getElementById('status-msg').innerText = msg;
+    }
+
+    function endGame(winner) {
+        gameOver = true;
+        let msg = "";
+        if(winner === 'P1') msg = "CHIẾN THẮNG! Bạn đã tiêu diệt Bot.";
+        else if(winner === 'P2') msg = "THẤT BẠI! Bot đã tiêu diệt bạn.";
+        else if(winner === 'Draw') msg = "HÒA!";
+        else if(winner === 'ScoreP1') msg = "CHIẾN THẮNG! Điểm cao hơn.";
+        else if(winner === 'ScoreP2') msg = "THẤT BẠI! Điểm thấp hơn.";
+        
+        updateStatus(msg);
+    }
+
+    function checkWinByScore() {
+        if(p1.score > p2.score) endGame('ScoreP1');
+        else if(p2.score > p1.score) endGame('ScoreP2');
+        else endGame('Draw');
+    }
+
+    /**
+     * AI MINIMAX
+     */
+    function botTurn() {
+        if(gameOver) return;
+
+        const depth = parseInt(document.getElementById('difficulty').value);
+        
+        // Clone state hiện tại để tính toán
+        const initialState = {
+            grid: grid.map(row => [...row]),
+            p1: { ...p1 },
+            p2: { ...p2 },
+            diamondsLeft: totalDiamonds
+        };
+
+        // Tìm nước đi tốt nhất
+        const bestMove = getBestMove(initialState, depth);
+
+        if(bestMove) {
+            movePlayer(p2, bestMove.x - p2.x, bestMove.y - p2.y, 'P2');
+        }
+    }
+
+    function getBestMove(state, depth) {
+        let moves = getValidMoves(state.p2);
+        let bestScore = -Infinity;
+        let bestMove = moves[0];
+        let alpha = -Infinity;
+        let beta = Infinity;
+
+        for(let move of moves) {
+            let nextState = simulateMove(state, move, 'P2');
+            
+            // Nếu nước đi này giết được P1 ngay lập tức -> CHỌN LUÔN
+            if(nextState.p2.x === nextState.p1.x && nextState.p2.y === nextState.p1.y) {
+                return move;
+            }
+
+            let score = minimax(nextState, depth - 1, false, alpha, beta);
+            if(score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
+            alpha = Math.max(alpha, score);
+        }
+        return bestMove;
+    }
+
+    function minimax(state, depth, isMaximizing, alpha, beta) {
+        // Điều kiện dừng: Hết depth, hết kim cương, hoặc có người chết
+        let collision = (state.p1.x === state.p2.x && state.p1.y === state.p2.y);
+        
+        if (depth === 0 || state.diamondsLeft === 0 || collision) {
+            return evaluate(state, collision, isMaximizing);
+        }
+
+        if(isMaximizing) { // Bot (P2) đi
+            let maxEval = -Infinity;
+            let moves = getValidMoves(state.p2);
+            for(let move of moves) {
+                let nextState = simulateMove(state, move, 'P2');
+                let eval = minimax(nextState, depth - 1, false, alpha, beta);
+                maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
+                if(beta <= alpha) break;
+            }
+            return maxEval;
+        } else { // Người (P1) đi
+            let minEval = Infinity;
+            let moves = getValidMoves(state.p1);
+            for(let move of moves) {
+                let nextState = simulateMove(state, move, 'P1');
+                let eval = minimax(nextState, depth - 1, true, alpha, beta);
+                minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
+                if(beta <= alpha) break;
+            }
+            return minEval;
+        }
+    }
+
+    function simulateMove(state, pos, who) {
+        // Deep copy
+        let newState = {
+            grid: state.grid.map(r => [...r]),
+            p1: { ...state.p1 },
+            p2: { ...state.p2 },
+            diamondsLeft: state.diamondsLeft
+        };
+
+        if(who === 'P1') {
+            newState.p1.x = pos.x;
+            newState.p1.y = pos.y;
+            if(newState.grid[pos.y][pos.x] === 1) {
+                newState.grid[pos.y][pos.x] = 0;
+                newState.p1.score++;
+                newState.diamondsLeft--;
+            }
+        } else {
+            newState.p2.x = pos.x;
+            newState.p2.y = pos.y;
+            if(newState.grid[pos.y][pos.x] === 1) {
+                newState.grid[pos.y][pos.x] = 0;
+                newState.p2.score++;
+                newState.diamondsLeft--;
+            }
+        }
+        return newState;
+    }
+
+    function getValidMoves(pos) {
+        let moves = [];
+        const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+        for(let d of dirs) {
+            let nx = pos.x + d[0];
+            let ny = pos.y + d[1];
+            if(nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                moves.push({x: nx, y: ny});
+            }
+        }
+        return moves;
+    }
+
+    function evaluate(state, collision, isMaximizing) {
+        // 1. Kiểm tra sống còn (Ưu tiên cao nhất)
+        if (collision) {
+            // Nếu collision xảy ra, ai là người vừa đi?
+            // Trong Minimax, nếu đang ở node Maximizing (Bot sắp đi), nghĩa là node trước đó là Người đi.
+            // Nếu Người vừa đi mà va chạm -> Người chủ động giết -> Bot thua cực lớn.
+            if (isMaximizing) return -100000; 
+            
+            // Nếu đang ở node Minimizing (Người sắp đi), nghĩa là node trước đó là Bot đi.
+            // Nếu Bot vừa đi mà va chạm -> Bot chủ động giết -> Bot thắng cực lớn.
+            else return 100000;
+        }
+
+        let score = (state.p2.score - state.p1.score) * 1000;
+
+        // 2. Heuristic: Khoảng cách đến kim cương gần nhất
+        // Giúp bot không bị đứng im khi không giết được ai
+        let minDist = 999;
+        for(let y=0; y<GRID_SIZE; y++) {
+            for(let x=0; x<GRID_SIZE; x++) {
+                if(state.grid[y][x] === 1) {
+                    let d = Math.abs(x - state.p2.x) + Math.abs(y - state.p2.y);
+                    if(d < minDist) minDist = d;
+                }
+            }
+        }
+        if(minDist !== 999) score -= minDist * 10;
+
+        // 3. Heuristic: Tránh đứng cạnh đối thủ nếu chưa đến lượt mình giết
+        // (Phòng thủ cơ bản)
+        let distToEnemy = Math.abs(state.p1.x - state.p2.x) + Math.abs(state.p1.y - state.p2.y);
+        if(distToEnemy === 1 && isMaximizing) {
+            // Nếu đến lượt Bot đi mà khoảng cách là 1, Bot có thể giết (đã xử lý ở trên).
+            // Nhưng nếu đến lượt Người đi (isMaximizing = false cho Bot view, hay logic ngược lại)
+            // Đoạn này chủ yếu để phạt trạng thái "Sắp bị giết"
+        }
+        
+        return score;
+    }
+
+    // Bắt đầu
+    initGame();
+
+</script>
 </body>
 </html>
