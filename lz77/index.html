@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LZ77 Visualizer — Demo</title>
+  <style>
+    :root{--bg:#0f1724;--panel:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--card:#0b1320}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0;background:linear-gradient(180deg,#071029 0%, #081524 100%);color:#e6eef6}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    h1{margin:0 0 8px;font-size:20px}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
+    .card{background:rgba(255,255,255,0.02);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    textarea{width:100%;height:100px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);background:transparent;color:inherit}
+    .controls{display:flex;gap:8px;align-items:center;margin-top:8px}
+    label{font-size:13px;color:var(--muted)}
+    input[type=number]{width:86px;padding:6px;border-radius:6px;background:#071427;border:1px solid rgba(255,255,255,0.03);color:inherit}
+    button{background:var(--accent);border:none;padding:8px 10px;border-radius:8px;color:#042027;font-weight:600;cursor:pointer}
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .viz{font-family:monospace;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));padding:12px;border-radius:8px;overflow:auto}
+    .chars{display:flex;gap:6px;flex-wrap:wrap;position:relative}
+    .char{min-width:24px;text-align:center;padding:6px 6px;border-radius:6px}
+    .idx{font-size:11px;color:var(--muted)}
+    .highlight{background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.18)}
+    .match-window{background:rgba(250,204,21,0.16);border:1px solid rgba(250,204,21,0.28)}
+    .match-lookahead{background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.18)}
+    .window{outline:2px dashed rgba(255,255,255,0.04);border-radius:6px;padding:6px;position:relative}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:6px 8px;border-bottom:1px dashed rgba(255,255,255,0.02);font-family:monospace}
+    .tokens{max-height:240px;overflow:auto}
+    .explain{font-size:14px;line-height:1.45;margin-top:8px;color:#cfe8f2;background:rgba(255,255,255,0.01);padding:10px;border-radius:8px}
+    .small{font-size:13px;color:var(--muted)}
+    .row{display:flex;gap:8px;align-items:center}
+    .play{background:#0ea5a0;color:#042027}
+    .footer{margin-top:12px;color:var(--muted);font-size:13px}
+    #arrowLayer{position:absolute;left:0;top:0;pointer-events:none}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>LZ77 Visualizer — Minh họa từng bước (Sliding window & Look-ahead)</h1>
+    <div class="grid">
+      <div class="card">
+        <div>
+          <label class="small">Nhập chuỗi / văn bản:</label>
+          <textarea id="inputText" placeholder="Ví dụ: ABABABCABABABCABAB" spellcheck="false">ABABABCABABABCABAB</textarea>
+        </div>
+        <div class="controls">
+          <label class="small">Sliding window (look-behind):</label>
+          <input type="number" id="winSize" value="10" min="1" />
+          <label class="small">Max look-ahead:</label>
+          <input type="number" id="lookSize" value="8" min="1" />
+          <button id="runBtn">Chạy</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <button id="prevBtn" class="secondary">⟵ Trước</button>
+          <button id="nextBtn" class="secondary">Tiếp ⟶</button>
+          <button id="playBtn" class="play">▶ Tự chạy</button>
+          <div class="small" id="stepInfo">Bước 0 / 0</div>
+        </div>
+
+        <div class="viz" id="visualization" style="margin-top:12px">
+          <div class="window" id="windowArea">
+            <div class="small">Visual hóa chuỗi (một ký tự 1 ô). Màu vàng: vùng match trong window; màu tím: vùng match trong look-ahead; ô xanh: sliding window.</div>
+            <div style="height:10px"></div>
+            <div class="chars" id="charsRow"></div>
+            <div id="arrowLayer"></div>
+          </div>
+        </div>
+
+        <div class="explain" id="explainArea">Nhấn "Chạy" để bắt đầu. Mỗi bước hiển thị: vị trí, tìm match dài nhất trong sliding window, token (distance, length, nextChar).</div>
+
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 6px">Kết quả & Tokens</h3>
+        <div class="small">Danh sách token theo dạng (distance, length, next_char) — nếu length&gt;0 là một match, nếu length==0 là literal</div>
+        <div class="tokens" id="tokensArea" style="margin-top:8px"></div>
+
+        <h3 style="margin-top:10px">Thông tin bước</h3>
+        <table>
+          <thead><tr><th>Step</th><th>Pos</th><th>Distance</th><th>Length</th><th>Next char</th></tr></thead>
+          <tbody id="stepsTable"></tbody>
+        </table>
+        <div class="footer">Ghi chú: Đây là mô phỏng LZ77 đơn giản (không tối ưu bit-level). Các token được sinh theo dạng (distance, length, nextChar).</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM
+    const inputText = document.getElementById('inputText');
+    const winSize = document.getElementById('winSize');
+    const lookSize = document.getElementById('lookSize');
+    const runBtn = document.getElementById('runBtn');
+    const charsRow = document.getElementById('charsRow');
+    const explainArea = document.getElementById('explainArea');
+    const tokensArea = document.getElementById('tokensArea');
+    const stepsTable = document.getElementById('stepsTable');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const playBtn = document.getElementById('playBtn');
+    const stepInfo = document.getElementById('stepInfo');
+    const arrowLayer = document.getElementById('arrowLayer');
+
+    let steps = []; // array of step objects
+    let current = 0;
+    let playInterval = null;
+
+    function computeLZ77Steps(str, windowLen, lookLen){
+      const n = str.length;
+      const out = [];
+      let pos = 0;
+      while(pos < n){
+        const windowStart = Math.max(0, pos - windowLen);
+        const window = str.slice(windowStart, pos);
+        const lookahead = str.slice(pos, Math.min(n, pos + lookLen));
+
+        // find longest match of lookahead prefix in window
+        let bestDistance = 0;
+        let bestLength = 0;
+        if(window.length > 0){
+          for(let i=0;i<window.length;i++){
+            let length = 0;
+            while(length < lookahead.length && window[i+length] === lookahead[length]){
+              length++;
+              if(i+length >= window.length) break; // prevent overflow
+            }
+            if(length > bestLength){
+              bestLength = length;
+              bestDistance = window.length - i; // distance back from pos
+            }
+          }
+        }
+
+        if(bestLength === 0){
+          const token = {pos, windowStart, windowEnd: pos-1, distance:0, length:0, nextChar: str[pos]};
+          out.push(token);
+          pos += 1;
+        } else {
+          const nextChar = (pos + bestLength < n) ? str[pos + bestLength] : '';
+          const token = {pos, windowStart, windowEnd: pos-1, distance: bestDistance, length: bestLength, nextChar};
+          out.push(token);
+          pos += bestLength + (nextChar !== '' ? 1 : 0);
+        }
+      }
+      return out;
+    }
+
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function renderChars(str, step){
+      charsRow.innerHTML = '';
+      arrowLayer.innerHTML = '';
+
+      for(let i=0;i<str.length;i++){
+        const el = document.createElement('div');
+        el.classList.add('char');
+        el.innerHTML = `<div class="idx">${i}</div><div>${escapeHtml(str[i])}</div>`;
+
+        if(step){
+          const {pos, windowStart, windowEnd, distance, length} = step;
+          // highlight sliding window area
+          if(i >= windowStart && i <= windowEnd){ el.classList.add('highlight'); }
+
+          if(length > 0){
+            const matchStart = pos - distance;
+            const matchEnd = matchStart + length - 1;
+            // highlight match in window
+            if(i >= matchStart && i <= matchEnd){ el.classList.add('match-window'); }
+            // highlight lookahead match
+            if(i >= pos && i < pos + length){ el.classList.add('match-lookahead'); }
+          }
+
+          if(i === pos){ el.style.outline = '2px solid rgba(6,182,212,0.12)'; }
+        }
+        charsRow.appendChild(el);
+      }
+
+      // draw arrow if match
+      if(step && step.length > 0){
+        const rects = charsRow.querySelectorAll('.char');
+        const matchStartIdx = step.pos - step.distance;
+        const lookIdx = step.pos;
+        if(rects[matchStartIdx] && rects[lookIdx]){
+          const ra = rects[matchStartIdx].getBoundingClientRect();
+          const rb = rects[lookIdx].getBoundingClientRect();
+          const wa = document.getElementById('windowArea').getBoundingClientRect();
+
+          const x1 = ra.left - wa.left + ra.width/2;
+          const y1 = ra.top - wa.top + ra.height;
+          const x2 = rb.left - wa.left + rb.width/2;
+          const y2 = rb.top - wa.top;
+
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('width', '100%');
+          svg.setAttribute('height', '100%');
+          svg.style.position = 'absolute';
+          svg.style.left = '0';
+          svg.style.top = '0';
+          svg.style.overflow = 'visible';
+
+          const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+          const marker = document.createElementNS('http://www.w3.org/2000/svg','marker');
+          marker.setAttribute('id','arrowhead'); marker.setAttribute('markerWidth','6'); marker.setAttribute('markerHeight','6'); marker.setAttribute('refX','2'); marker.setAttribute('refY','3'); marker.setAttribute('orient','auto');
+          const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+          poly.setAttribute('points','0 0, 6 3, 0 6'); poly.setAttribute('fill','rgba(255,255,255,0.6)');
+          marker.appendChild(poly);
+          defs.appendChild(marker);
+          svg.appendChild(defs);
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+          line.setAttribute('x1', x1); line.setAttribute('y1', y1); line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+          line.setAttribute('stroke','rgba(255,255,255,0.6)'); line.setAttribute('stroke-width','2');
+          line.setAttribute('marker-end','url(#arrowhead)');
+          svg.appendChild(line);
+
+          arrowLayer.appendChild(svg);
+        }
+      }
+    }
+
+    function renderStepsTable(steps){
+      stepsTable.innerHTML = '';
+      steps.forEach((s, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx}</td><td>${s.pos}</td><td>${s.distance}</td><td>${s.length}</td><td>${escapeHtml(s.nextChar)}</td>`;
+        stepsTable.appendChild(tr);
+      });
+    }
+
+    function renderTokens(steps){
+      tokensArea.innerHTML = '';
+      steps.forEach((t, idx) => {
+        const div = document.createElement('div');
+        div.style.padding = '6px 8px';
+        div.style.borderBottom = '1px dashed rgba(255,255,255,0.02)';
+        div.innerHTML = `<strong>(${t.distance}, ${t.length}, ${t.nextChar === '' ? "''" : escapeHtml(t.nextChar)})</strong> — pos ${t.pos}`;
+        tokensArea.appendChild(div);
+      });
+    }
+
+    function updateExplain(stepIdx){
+      if(steps.length === 0){ explainArea.innerText = 'Chưa có bước nào. Nhấn Chạy.'; return; }
+      const s = steps[stepIdx];
+      const start = s.windowStart;
+      const end = s.windowEnd;
+      const winStr = inputText.value.slice(start, end+1);
+      const look = inputText.value.slice(s.pos, s.pos + (s.length || 1) + (s.nextChar?1:0));
+      let text = `Bước ${stepIdx}: vị trí hiện tại = ${s.pos} \n`;
+      text += `Sliding window (look-behind) = [${start}..${end}] → "${escapeHtml(winStr)}"\n`;
+      if(s.length === 0){
+        text += `Không tìm thấy match → literal '${escapeHtml(s.nextChar)}' (ghi trực tiếp).`;
+      } else {
+        text += `Tìm match dài nhất length = ${s.length} với distance = ${s.distance}. `;
+        text += `Byte tiếp theo sau match = '${escapeHtml(s.nextChar)}' (nếu có).\n`;
+        text += `Chuỗi lookahead hiện tại = "${escapeHtml(look)}"`;
+      }
+      explainArea.innerText = text;
+    }
+
+    function renderAll(stepIdx = 0){
+      const str = inputText.value;
+      renderChars(str, steps[stepIdx] || null);
+      renderTokens(steps);
+      renderStepsTable(steps);
+      stepInfo.innerText = `Bước ${stepIdx} / ${Math.max(0, steps.length-1)}`;
+      updateExplain(stepIdx);
+      // highlight selected token in tokens area
+      Array.from(tokensArea.children).forEach((d,i)=>{
+        d.style.background = (i === stepIdx) ? 'rgba(6,182,212,0.06)' : 'transparent';
+      });
+    }
+
+    runBtn.addEventListener('click', ()=>{
+      steps = computeLZ77Steps(inputText.value, Number(winSize.value)||10, Number(lookSize.value)||8);
+      current = 0;
+      renderAll(current);
+    });
+
+    prevBtn.addEventListener('click', ()=>{
+      if(current > 0){ current--; renderAll(current); }
+    });
+    nextBtn.addEventListener('click', ()=>{
+      if(current < steps.length - 1){ current++; renderAll(current); }
+    });
+
+    playBtn.addEventListener('click', ()=>{
+      if(playInterval){ clearInterval(playInterval); playInterval = null; playBtn.innerText = '▶ Tự chạy'; playBtn.classList.remove('secondary'); playBtn.classList.add('play'); return; }
+      playBtn.innerText = '⏸ Dừng'; playBtn.classList.remove('play'); playBtn.classList.add('secondary');
+      playInterval = setInterval(()=>{
+        if(current < steps.length - 1){ current++; renderAll(current); } else { clearInterval(playInterval); playInterval = null; playBtn.innerText = '▶ Tự chạy'; playBtn.classList.remove('secondary'); playBtn.classList.add('play'); }
+      }, 900);
+    });
+
+    // initial render
+    steps = computeLZ77Steps(inputText.value, Number(winSize.value)||10, Number(lookSize.value)||8);
+    renderAll(0);
+  </script>
+</body>
+</html>
