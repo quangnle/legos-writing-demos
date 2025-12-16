@@ -1,0 +1,16 @@
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background: #e0e0e0; color: #333; }
+h1 { margin-bottom: 10px; }
+canvas { background: white; border: 3px solid #555; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 4px;}
+#status-panel { margin-top: 15px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; width: 600px; }
+#status-main { font-weight: bold; font-size: 1.3em; margin-bottom: 5px; color: #007bff; }
+#status-sub { font-size: 1em; color: #666; }
+.highlight-record { color: #28a745 !important; animation: pulse 1s infinite; }
+.controls { margin-top: 20px; }
+button { padding: 10px 25px; font-size: 1em; cursor: pointer; margin: 0 5px; border: none; border-radius: 4px; background-color: #333; color: white; transition: background-color 0.2s;}
+button:hover { background-color: #555; }
+button:disabled { background-color: #999; cursor: not-allowed; opacity: 0.6; }
+button.reset-btn { background-color: #d9534f; }
+button.reset-btn:hover { background-color: #c9302c; }
+button#btn-test { background-color: #5cb85c; }
+button#btn-test:hover { background-color: #449d44; }
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }

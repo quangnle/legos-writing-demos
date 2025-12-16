@@ -1,0 +1,29 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Actor-Critic JS Demo - Replay Best</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>CartPole Actor-Critic (Replay Best)</h1>
+    
+    <canvas id="canvas" width="600" height="300"></canvas>
+
+    <div id="status-panel">
+        <div id="status-main">Initializing...</div>
+        <div id="status-sub">No record yet.</div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="toggleTraining()" id="btn-toggle">Pause</button>
+        <button onclick="playTestEpisode()" id="btn-test">Test Play</button>
+        <button class="reset-btn" onclick="location.reload()">Reset Record & Retrain</button>
+    </div>
+
+    <script src="sketch.js"></script>
+</body>
+</html>
