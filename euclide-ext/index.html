@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo: Thuật toán Euclid Mở rộng & Nghịch đảo Modulo</title>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; text-align: center; }
+        .input-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+        
+        #result-area {
+            margin-top: 30px;
+            display: none; /* Ẩn mặc định */
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 15px;
+        }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 10px;
+            text-align: center;
+        }
+        th { background-color: #ecf0f1; }
+        td.explanation {
+            text-align: left;
+            font-size: 0.9em;
+            max-width: 300px;
+        }
+        .highlight { background-color: #e8f6f3; font-weight: bold; color: #16a085; }
+        .final-res {
+            background-color: #dff9fb;
+            border-left: 5px solid #22a6b3;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .error { color: #e74c3c; font-weight: bold; text-align: center; }
+        .note { font-size: 0.9em; color: #7f8c8d; margin-bottom: 15px; font-style: italic;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Tìm Nghịch Đảo Modulo</h1>
+    <p style="text-align: center;">Tìm $x$ sao cho $a \cdot x \equiv 1 \pmod m$</p>
+    <p style="text-align: center; font-size: 0.9em;">(Sử dụng thuật toán Euclid mở rộng)</p>
+
+    <div class="input-group">
+        <div>
+            <label for="val_a">Nhập a:</label>
+            <input type="number" id="val_a" placeholder="VD: 11">
+        </div>
+        <div>
+            <label for="val_m">Nhập m:</label>
+            <input type="number" id="val_m" placeholder="VD: 26">
+        </div>
+        <button onclick="calculateInverse()">Tính Toán</button>
+    </div>
+
+    <div id="error-msg" class="error"></div>
+
+    <div id="result-area">
+        <h3>1. Bảng thực hiện thuật toán (Iterative Table)</h3>
+        <p class="note">Ta duy trì đẳng thức: $a \cdot x + m \cdot y = r$ qua từng bước.</p>
+        
+        <table id="steps-table">
+            <thead>
+                <tr>
+                    <th>Bước</th>
+                    <th>Thương ($q$)</th>
+                    <th>Dư ($r$)</th>
+                    <th>Hệ số $x$ (của $a$)</th>
+                    <th>Hệ số $y$ (của $m$)</th>
+                    <th>Diễn giải</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+
+        <h3>2. Kết luận</h3>
+        <div id="final-conclusion" class="final-res"></div>
+    </div>
+</div>
+
+<script>
+    function calculateInverse() {
+        // 1. Lấy dữ liệu
+        const a_in = parseInt(document.getElementById('val_a').value);
+        const m_in = parseInt(document.getElementById('val_m').value);
+        const errDiv = document.getElementById('error-msg');
+        const resArea = document.getElementById('result-area');
+        const tbody = document.getElementById('table-body');
+        const finalDiv = document.getElementById('final-conclusion');
+
+        // Reset giao diện
+        errDiv.innerText = "";
+        resArea.style.display = "none";
+        tbody.innerHTML = "";
+        
+        // Validate
+        if (isNaN(a_in) || isNaN(m_in)) {
+            errDiv.innerText = "Vui lòng nhập số nguyên hợp lệ.";
+            return;
+        }
+        if (m_in <= 0) {
+            errDiv.innerText = "Modulo m phải lớn hơn 0.";
+            return;
+        }
+
+        // 2. Khởi tạo thuật toán Euclid mở rộng
+        // Ta cần tìm x, y sao cho: a*x + m*y = gcd(a,m)
+        // Biến 'r' là số dư, 'x' là hệ số của a, 'y' là hệ số của m
+        
+        let r0 = a_in, r1 = m_in;
+        let x0 = 1, x1 = 0;
+        let y0 = 0, y1 = 1;
+
+        // Lưu các bước để hiển thị
+        let stepCount = 0;
+        
+        // Hiển thị trạng thái khởi tạo
+        // r0 = a*1 + m*0
+        // r1 = a*0 + m*1
+        addRow(stepCount++, "-", r0, x0, y0, a_in, m_in);
+        addRow(stepCount++, "-", r1, x1, y1, a_in, m_in);
+
+        // Vòng lặp chính
+        while (r1 > 0) {
+            let q = Math.floor(r0 / r1); // Thương nguyên
+            
+            // Tính giá trị mới
+            let r_new = r0 - q * r1;
+            let x_new = x0 - q * x1;
+            let y_new = y0 - q * y1;
+
+            // Cập nhật biến cho vòng sau
+            r0 = r1; r1 = r_new;
+            x0 = x1; x1 = x_new;
+            y0 = y1; y1 = y_new;
+
+            // Thêm vào bảng (chỉ hiển thị nếu r cũ > 0)
+            if (r1 >= 0) { // r1 lúc này là r_new của bước tính toán
+                addRow(stepCount++, q, r1, x1, y1, a_in, m_in);
+            }
+        }
+
+        // 3. Xử lý kết quả
+        // Lúc này r0 chính là GCD(a, m)
+        // x0 là nghiệm riêng của phương trình ax + my = gcd
+        
+        let gcd = r0;
+        let x_res = x0;
+
+        resArea.style.display = "block";
+
+        let resultHTML = "";
+        
+        if (gcd !== 1) {
+            resultHTML = `
+                <p>Ước chung lớn nhất $\\gcd(${a_in}, ${m_in}) = ${gcd} \\neq 1$.</p>
+                <p><strong>Kết luận:</strong> Không tồn tại nghịch đảo modulo của ${a_in} theo mod ${m_in}.</p>
+            `;
+        } else {
+            // Xử lý nếu nghiệm âm
+            let x_positive = x_res;
+            let text_process = "";
+            
+            if (x_res < 0) {
+                while (x_positive < 0) x_positive += m_in;
+                text_process = `
+                    <p>Từ bảng trên, ta có nghiệm của phương trình Bézout $${a_in}x + ${m_in}y = 1$ là $x = ${x_res}$.</p>
+                    <p>Vì $x$ âm, ta cộng thêm module $m = ${m_in}$ để lấy số dương:</p>
+                    $$x \\equiv ${x_res} \\pmod{${m_in}} \\equiv ${x_res} + ${m_in} = ${x_positive}$$
+                `;
+            } else {
+                 text_process = `<p>Từ bảng trên, ta có nghiệm Bézout là $x = ${x_res}$. Nghiệm này đã dương nên ta giữ nguyên.</p>`;
+            }
+
+            resultHTML = `
+                <p><strong>Ước chung lớn nhất (GCD):</strong> ${gcd}. (Hai số nguyên tố cùng nhau).</p>
+                ${text_process}
+                <p><strong>Kết quả cuối cùng:</strong> Nghịch đảo của $${a_in}$ mod $${m_in}$ là <strong>${x_positive}</strong>.</p>
+                <p><em>Kiểm tra lại:</em> $${a_in} \\cdot ${x_positive} = ${a_in * x_positive}$.</p>
+                <p>$${a_in * x_positive} \\div ${m_in} = ${Math.floor((a_in * x_positive)/m_in)}$ dư $1$. (Đúng)</p>
+            `;
+        }
+
+        finalDiv.innerHTML = resultHTML;
+
+        // Render lại MathJax cho nội dung mới chèn vào
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            MathJax.typesetPromise([finalDiv]).catch(function (err) {
+                console.error('MathJax rendering error:', err);
+            });
+        }
+    }
+
+    function formatExpression(a, m, x, y, r) {
+        // Tạo biểu thức a*x + m*y = r
+        let expr = '';
+        
+        // Phần a*x
+        if (x === 0) {
+            // Bỏ qua
+        } else if (x === 1) {
+            expr += `${a}`;
+        } else if (x === -1) {
+            expr += `-${a}`;
+        } else {
+            expr += `${x < 0 ? '-' : ''}${Math.abs(x)} \\cdot ${a}`;
+        }
+        
+        // Phần m*y
+        if (y !== 0) {
+            if (expr !== '') {
+                expr += y > 0 ? ' + ' : ' - ';
+            } else if (y < 0) {
+                expr += '-';
+            }
+            
+            if (y === 1 || y === -1) {
+                expr += `${m}`;
+            } else {
+                expr += `${Math.abs(y)} \\cdot ${m}`;
+            }
+        }
+        
+        if (expr === '') expr = '0';
+        
+        return `$${expr} = ${r}$`;
+    }
+
+    function addRow(step, q, r, x, y, a, m) {
+        const tbody = document.getElementById('table-body');
+        const row = document.createElement('tr');
+        
+        // Highlight dòng có số dư = 1 (kết quả GCD)
+        if (r === 1) row.classList.add('highlight');
+        
+        // Tạo diễn giải
+        let explanation = '';
+        if (step === 0) {
+            explanation = `Khởi tạo: $r_0 = ${a} = ${a} \\cdot 1 + ${m} \\cdot 0$`;
+        } else if (step === 1) {
+            explanation = `Khởi tạo: $r_1 = ${m} = ${a} \\cdot 0 + ${m} \\cdot 1$`;
+        } else {
+            explanation = formatExpression(a, m, x, y, r);
+            if (q !== '-') {
+                explanation += ` (từ $r_{${step-2}} = r_{${step-2}} - ${q} \\cdot r_{${step-1}}$)`;
+            }
+        }
+        
+        row.innerHTML = `
+            <td>${step}</td>
+            <td>${q}</td>
+            <td>${r}</td>
+            <td>${x}</td>
+            <td>${y}</td>
+            <td class="explanation">${explanation}</td>
+        `;
+        tbody.appendChild(row);
+        
+        // Render MathJax cho dòng mới
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            MathJax.typesetPromise([row]).catch(function (err) {
+                console.error('MathJax rendering error:', err);
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
