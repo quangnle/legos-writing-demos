@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GP Polynomial Regression - Draggable Tree</title>
+    <style>
+        /* --- GIAO DIỆN CHUNG --- */
+        body { font-family: 'Segoe UI', sans-serif; background: #1e1e1e; color: #eee; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: scroll; }
+        h1 { margin-bottom: 10px; color: #61dafb; }
+        
+        .controls { 
+            background: #2d2d2d; padding: 15px; border-radius: 8px; 
+            display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: center;
+            margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid #444; 
+            max-width: 1000px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group label { font-size: 0.85em; color: #aaa; font-weight: bold; }
+        
+        input[type="text"], input[type="number"] { 
+            padding: 8px; border-radius: 4px; border: 1px solid #555; background: #333; color: #fff; 
+            font-family: monospace; font-size: 1em; 
+        }
+        input[type="number"] { width: 80px; }
+        input[type="text"] { width: 250px; }
+
+        button { padding: 10px 18px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-step { background: #007acc; color: white; }
+        .btn-step:hover { background: #005f9e; }
+        .btn-reset { background: #555; color: white; }
+        .btn-reset:hover { background: #777; }
+        .btn-tree { background: #e0a800; color: #111; }
+        .btn-tree:hover { background: #c69500; }
+        
+        .main-display { display: flex; gap: 20px; width: 100%; max-width: 1200px; }
+        .chart-container { flex: 2; background: #252526; border-radius: 8px; padding: 10px; border: 1px solid #444; position: relative; }
+        canvas.plot { width: 100%; height: 500px; background: #1e1e1e; border-radius: 4px; }
+        
+        .info-panel { flex: 1; background: #252526; padding: 15px; border-radius: 8px; border: 1px solid #444; display: flex; flex-direction: column; gap: 15px; }
+        .stat-box { background: #333; padding: 10px; border-radius: 4px; border-left: 4px solid #007acc; }
+        .stat-label { font-size: 0.8em; color: #aaa; text-transform: uppercase; margin-bottom: 4px; }
+        .stat-value { font-size: 1.3em; font-weight: bold; font-family: monospace; color: #fff; }
+        
+        .beautiful-box {
+            background: #1a1a1a; padding: 10px; border-radius: 4px; border: 1px solid #4caf50;
+            color: #4caf50; font-family: 'Times New Roman', serif; font-size: 1.4em; font-weight: bold;
+            width: 90%; min-height: 80px; resize: vertical;
+        }
+
+        /* --- MODAL (TREE VISUALIZATION) --- */
+        .modal {
+            display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: #252526; margin: 3% auto; padding: 10px; border: 1px solid #555; border-radius: 8px;
+            width: 90%; height: 85%; display: flex; flex-direction: column; position: relative;
+        }
+        .close-btn { 
+            position: absolute; right: 15px; top: 10px;
+            color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; z-index: 10;
+        }
+        .close-btn:hover { color: #fff; }
+        
+        /* Canvas Draggable Style */
+        #treeCanvas { 
+            background: #111; width: 100%; height: 100%; 
+            border-radius: 4px; border: 1px solid #333; 
+            cursor: grab; /* Icon bàn tay mở */
+        }
+        #treeCanvas:active {
+            cursor: grabbing; /* Icon bàn tay nắm khi kéo */
+        }
+
+        .modal-instructions {
+            position: absolute; bottom: 20px; left: 20px;
+            background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px;
+            color: #aaa; font-size: 0.9em; pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>GP Polynomial Regression (Draggable Tree)</h1>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Target Function f(x)</label>
+            <input type="text" id="targetFn" value="x^3 - 2*x + 1">
+        </div>
+        
+        <div class="control-group">
+            <label>Population Size</label>
+            <input type="number" id="popSizeInput" value="200" min="10" max="1000">
+        </div>
+
+        <div class="control-group">
+            <label>Mutation Rate</label>
+            <input type="number" id="mutRateInput" value="0.2" step="0.05" min="0" max="1">
+        </div>
+
+        <button class="btn-step" onclick="runBatch(10)">Run +10 Gen</button>
+        <button class="btn-tree" onclick="showTreeModal()">Show Tree Structure</button>
+        <button class="btn-reset" onclick="resetSim()">Reset</button>
+    </div>
+
+    <div class="main-display">
+        <div class="chart-container">
+            <canvas id="plotCanvas" class="plot"></canvas>
+        </div>
+
+        <div class="info-panel">
+            <div class="stat-box">
+                <div class="stat-label">Generation</div>
+                <div class="stat-value" id="genDisplay">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Best MSE Error</div>
+                <div class="stat-value" id="fitnessDisplay">---</div>
+            </div>
+            
+            <div>
+                <div class="stat-label" style="color: #4caf50;">Polynomial Form:</div>
+                <textarea class="beautiful-box" id="beautifulDisplay" readonly>(Wait for evolution...)</textarea>
+            </div>
+            
+            <div style="font-size: 0.8em; color: #888;">
+                <strong>Note:</strong> Open "Show Tree Structure" and <strong>drag</strong> the canvas to explore large trees.
+            </div>
+        </div>
+    </div>
+
+    <div id="treeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeTreeModal()">&times;</span>
+            <h2 style="margin: 0 0 10px 10px; color:#e0a800;">Structure Visualizer</h2>
+            
+            <canvas id="treeCanvas"></canvas>
+            
+            <div class="modal-instructions">
+                💡 Click and Drag to Pan • Nodes: <span style="color:#ff4d4d">Operator</span>, <span style="color:#007acc">Variable</span>, <span style="color:#4caf50">Constant</span>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- CONFIGURATION ---
+const OPS = ['+', '-', '*']; 
+const MAX_DEPTH = 6;
+const CROSSOVER_RATE = 0.7;
+const RANGE = { min: -3, max: 3, step: 0.2 }; 
+
+let population = [];
+let generation = 0;
+let targetData = []; 
+let isRunning = false;
+let bestIndividual = null;
+
+// --- ALGEBRA ENGINE ---
+class Poly {
+    constructor(terms = {}) { this.terms = terms; }
+    static fromConstant(c) { return new Poly({ "0": c }); }
+    static fromX() { return new Poly({ "1": 1 }); }
+    add(other) {
+        const t = { ...this.terms };
+        for (let p in other.terms) t[p] = (t[p] || 0) + other.terms[p];
+        return new Poly(t);
+    }
+    sub(other) {
+        const t = { ...this.terms };
+        for (let p in other.terms) t[p] = (t[p] || 0) - other.terms[p];
+        return new Poly(t);
+    }
+    mul(other) {
+        const t = {};
+        for (let p1 in this.terms) {
+            for (let p2 in other.terms) {
+                const np = parseInt(p1) + parseInt(p2);
+                t[np] = (t[np] || 0) + this.terms[p1] * other.terms[p2];
+            }
+        }
+        return new Poly(t);
+    }
+    toString() {
+        const powers = Object.keys(this.terms).map(Number).sort((a, b) => b - a);
+        let str = ""; let isFirst = true;
+        for (let p of powers) {
+            let coeff = this.terms[p];
+            if (Math.abs(coeff) < 1e-4) continue;
+            if (coeff > 0) { if (!isFirst) str += " + "; } else { str += (isFirst ? "-" : " - "); coeff = -coeff; }
+            let cStr = (Math.abs(coeff - Math.round(coeff)) < 0.01) ? Math.round(coeff).toString() : coeff.toFixed(2);
+            if (p === 0) str += cStr;
+            else { if (cStr !== "1") str += cStr; str += (p === 1) ? "x" : `x^${p}`; }
+            isFirst = false;
+        }
+        return str || "0";
+    }
+}
+
+// --- NODE CLASS ---
+class Node {
+    constructor(value, left = null, right = null) {
+        this.value = value; this.left = left; this.right = right;
+    }
+    eval(x) {
+        if (typeof this.value === 'number') return this.value;
+        if (this.value === 'x') return x;
+        if (!this.left || !this.right) return 0;
+        const l = this.left.eval(x); const r = this.right.eval(x);
+        switch(this.value) {
+            case '+': return l + r;
+            case '-': return l - r;
+            case '*': return l * r;
+        }
+        return 0;
+    }
+    clone() { return new Node(this.value, this.left ? this.left.clone() : null, this.right ? this.right.clone() : null); }
+    toBeautifulString() {
+        const p = this.toPoly();
+        return p ? "f(x) = " + p.toString() : "Raw: " + this.toString();
+    }
+    toPoly() {
+        if (typeof this.value === 'number') return Poly.fromConstant(this.value);
+        if (this.value === 'x') return Poly.fromX();
+        const l = this.left.toPoly(); const r = this.right.toPoly();
+        if (!l || !r) return null;
+        switch(this.value) {
+            case '+': return l.add(r);
+            case '-': return l.sub(r);
+            case '*': return l.mul(r);
+        }
+        return null;
+    }
+    getDepth() {
+        let d = 1;
+        if (this.left) d = Math.max(d, 1 + this.left.getDepth());
+        if (this.right) d = Math.max(d, 1 + this.right.getDepth());
+        return d;
+    }
+}
+
+// --- GP LOGIC ---
+function getAllNodes(root) {
+    const nodes = [];
+    function traverse(n) { nodes.push(n); if(n.left) traverse(n.left); if(n.right) traverse(n.right); }
+    traverse(root); return nodes;
+}
+
+function generateTree(depth) {
+    if (depth === 0 || (Math.random() < 0.3 && depth < MAX_DEPTH)) {
+        const r = Math.random();
+        if (r < 0.5) return new Node('x');
+        if (r < 0.8) return new Node(Math.floor(Math.random() * 5) + 1);
+        return new Node(Math.floor(Math.random() * 10) - 5);
+    }
+    const op = OPS[Math.floor(Math.random() * OPS.length)];
+    return new Node(op, generateTree(depth - 1), generateTree(depth - 1));
+}
+
+function crossover(p1, p2) {
+    const child = p1.clone();
+    const nodes1 = getAllNodes(child); if(!nodes1.length) return child;
+    const t = nodes1[Math.floor(Math.random()*nodes1.length)];
+    const sub = getAllNodes(p2.clone())[Math.floor(Math.random()*getAllNodes(p2).length)]; 
+    if(sub) { t.value = sub.value; t.left = sub.left; t.right = sub.right; }
+    return child;
+}
+
+function mutate(ind) {
+    const child = ind.clone();
+    const nodes = getAllNodes(child); if(!nodes.length) return child;
+    const t = nodes[Math.floor(Math.random()*nodes.length)];
+    const n = generateTree(2);
+    t.value = n.value; t.left = n.left; t.right = n.right;
+    return child;
+}
+
+function calculateFitness(tree) {
+    let err = 0;
+    for (let p of targetData) {
+        let v = tree.eval(p.x);
+        if (!isFinite(v)) v = 1e9;
+        let d = v - p.y;
+        err += d * d;
+    }
+    return err / targetData.length;
+}
+
+function getParams() {
+    return {
+        popSize: parseInt(document.getElementById('popSizeInput').value) || 200,
+        mutRate: parseFloat(document.getElementById('mutRateInput').value) || 0.2
+    };
+}
+
+function initPopulation() {
+    const { popSize } = getParams();
+    population = [];
+    for (let i = 0; i < popSize; i++) population.push(generateTree(Math.floor(Math.random() * MAX_DEPTH) + 2));
+    generation = 0;
+}
+
+function evolveOneGeneration() {
+    const { popSize, mutRate } = getParams();
+    
+    // Evaluate
+    let pool = population.map(ind => ({ ind, fit: calculateFitness(ind) }));
+    
+    // Offspring
+    const offspring = [];
+    const tournament = () => {
+        let best = null;
+        for(let k=0; k<5; k++) {
+            let r = pool[Math.floor(Math.random() * pool.length)];
+            if(!best || r.fit < best.fit) best = r;
+        }
+        return best.ind;
+    };
+
+    const numChildren = Math.floor(popSize * 0.8); 
+    for(let i=0; i<numChildren; i++){
+        if(Math.random() < mutRate) offspring.push(mutate(tournament()));
+        else offspring.push(crossover(tournament(), tournament()));
+    }
+
+    const offspringWithFit = offspring.map(ind => ({ ind, fit: calculateFitness(ind) }));
+    let combinedPool = pool.concat(offspringWithFit);
+    combinedPool.sort((a, b) => a.fit - b.fit);
+    
+    if (combinedPool.length > popSize) combinedPool = combinedPool.slice(0, popSize);
+    
+    population = combinedPool.map(w => w.ind);
+    bestIndividual = combinedPool[0];
+    generation++;
+    return bestIndividual;
+}
+
+async function runBatch(steps = 10) {
+    if (isRunning) return;
+    if (!prepareTarget()) return;
+    if (generation === 0 && population.length === 0) initPopulation();
+    
+    isRunning = true;
+    for (let i = 0; i < steps; i++) {
+        const best = evolveOneGeneration();
+        updateUI(best);
+        drawChart(best.ind);
+        await new Promise(r => setTimeout(r, 20));
+    }
+    isRunning = false;
+}
+
+function prepareTarget() {
+    const expr = document.getElementById('targetFn').value;
+    const jsExpr = expr.replace(/\^/g, '**'); 
+    targetData = [];
+    try {
+        const f = new Function('x', `return ${jsExpr}`);
+        if (isNaN(f(1))) throw new Error("NaN");
+        for (let x = RANGE.min; x <= RANGE.max; x += RANGE.step) targetData.push({ x: x, y: f(x) });
+    } catch (e) { alert("Error: " + e.message); return false; }
+    return true;
+}
+
+function updateUI(best) {
+    document.getElementById('genDisplay').innerText = generation;
+    document.getElementById('fitnessDisplay').innerText = best.fit.toFixed(5);
+    document.getElementById('beautifulDisplay').value = best.ind.toBeautifulString();
+}
+
+function drawChart(tree) {
+    const cvs = document.getElementById('plotCanvas');
+    if (cvs.width !== cvs.offsetWidth) { cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight; }
+    const ctx = cvs.getContext('2d'); const w = cvs.width; const h = cvs.height;
+    ctx.fillStyle = '#1e1e1e'; ctx.fillRect(0,0,w,h);
+
+    let allY = targetData.map(p => p.y);
+    const pred = targetData.map(p => tree.eval(p.x));
+    const valid = pred.filter(y => isFinite(y) && Math.abs(y)<500);
+    if(valid.length) allY = allY.concat(valid);
+    
+    let yMin=Math.min(...allY), yMax=Math.max(...allY), rng=yMax-yMin||1;
+    const pad=40;
+    const mx=(x)=>((x-RANGE.min)/(RANGE.max-RANGE.min))*(w-2*pad)+pad;
+    const my=(y)=>h-pad-((y-yMin)/rng)*(h-2*pad);
+    
+    ctx.strokeStyle='#333'; ctx.beginPath();
+    ctx.moveTo(0,my(0)); ctx.lineTo(w,my(0));
+    ctx.moveTo(mx(0),0); ctx.lineTo(mx(0),h); ctx.stroke();
+    
+    ctx.strokeStyle='#007acc'; ctx.lineWidth=4; ctx.setLineDash([5,5]); ctx.beginPath();
+    targetData.forEach((p,i)=>{ const x=mx(p.x),y=my(p.y); i==0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.stroke(); ctx.setLineDash([]);
+    
+    ctx.strokeStyle='#ff4d4d'; ctx.lineWidth=2; ctx.beginPath();
+    let s=false;
+    targetData.forEach((p,i)=>{
+        let v=pred[i]; if(!isFinite(v)||Math.abs(v)>yMax*2){ s=false; return; }
+        const x=mx(p.x); let y=my(v); if(y<0)y=-10; if(y>h)y=h+10;
+        if(!s){ ctx.moveTo(x,y); s=true; } else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+}
+
+function resetSim() {
+    generation=0; population=[]; bestIndividual=null;
+    document.getElementById('genDisplay').innerText="0";
+    document.getElementById('fitnessDisplay').innerText="---";
+    document.getElementById('beautifulDisplay').value="...";
+    const cvs=document.getElementById('plotCanvas');
+    cvs.getContext('2d').clearRect(0,0,cvs.width,cvs.height);
+}
+
+// =======================================================
+//   VISUALIZER LOGIC (DRAGGABLE CANVAS)
+// =======================================================
+
+// GLOBAL STATE FOR VISUALIZER
+let cameraOffset = { x: 0, y: 0 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let treeCtx = null;
+let treeCanvas = null;
+
+// The recursive drawing function
+function drawTreeRecursive(node, ctx, x, y, dx, dy) {
+    if (!node) return;
+    
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2;
+    
+    if (node.left) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + 15); 
+        ctx.lineTo(x - dx, y + dy - 15);
+        ctx.stroke();
+        drawTreeRecursive(node.left, ctx, x - dx, y + dy, dx / 2, dy);
+    }
+    if (node.right) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + 15);
+        ctx.lineTo(x + dx, y + dy - 15);
+        ctx.stroke();
+        drawTreeRecursive(node.right, ctx, x + dx, y + dy, dx / 2, dy);
+    }
+    
+    // Bubble
+    ctx.beginPath();
+    ctx.arc(x, y, 15, 0, 2 * Math.PI);
+    
+    if (OPS.includes(node.value)) ctx.fillStyle = '#ff4d4d'; 
+    else if (node.value === 'x') ctx.fillStyle = '#007acc'; 
+    else ctx.fillStyle = '#4caf50'; 
+    
+    ctx.fill(); ctx.stroke();
+    
+    // Text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let txt = typeof node.value === 'number' ? Math.round(node.value) : node.value;
+    ctx.fillText(txt, x, y);
+}
+
+// Function to redraw the entire scene based on current offset
+function redrawVisualizer() {
+    if (!treeCanvas || !treeCtx || !bestIndividual) return;
+    
+    const w = treeCanvas.width;
+    const h = treeCanvas.height;
+    
+    // Clear
+    treeCtx.clearRect(0, 0, w, h);
+    
+    treeCtx.save();
+    // Apply camera translation
+    treeCtx.translate(cameraOffset.x, cameraOffset.y);
+    
+    // Layout Calculation
+    // We start drawing the root at (w/2, 50) relative to the camera origin
+    // Initial Spread (dx) should be large for deep trees
+    const depth = bestIndividual.ind.getDepth();
+    const startY = 50;
+    const levelHeight = 60;
+    // The deeper the tree, the wider the initial spread must be to avoid overlap
+    const startDX = Math.pow(2, depth-2) * 30; 
+    
+    drawTreeRecursive(bestIndividual.ind, treeCtx, w/2, startY, startDX, levelHeight);
+    
+    treeCtx.restore();
+}
+
+function showTreeModal() {
+    if (!bestIndividual) { alert("Please run the evolution first!"); return; }
+    
+    const modal = document.getElementById('treeModal');
+    modal.style.display = 'block';
+    
+    treeCanvas = document.getElementById('treeCanvas');
+    treeCanvas.width = treeCanvas.offsetWidth;
+    treeCanvas.height = treeCanvas.offsetHeight;
+    treeCtx = treeCanvas.getContext('2d');
+    
+    // Reset Camera to Center initially
+    cameraOffset = { x: 0, y: 0 };
+    
+    // Initial Draw
+    redrawVisualizer();
+    
+    // ATTACH EVENTS (Only once)
+    treeCanvas.onmousedown = (e) => {
+        isDragging = true;
+        // Record where we clicked relative to the current camera offset
+        dragStart.x = e.clientX - cameraOffset.x;
+        dragStart.y = e.clientY - cameraOffset.y;
+    };
+    
+    treeCanvas.onmousemove = (e) => {
+        if (!isDragging) return;
+        // Update camera offset
+        cameraOffset.x = e.clientX - dragStart.x;
+        cameraOffset.y = e.clientY - dragStart.y;
+        redrawVisualizer();
+    };
+    
+    treeCanvas.onmouseup = () => { isDragging = false; };
+    treeCanvas.onmouseleave = () => { isDragging = false; };
+}
+
+function closeTreeModal() {
+    document.getElementById('treeModal').style.display = 'none';
+}
+</script>
+</body>
+</html>
