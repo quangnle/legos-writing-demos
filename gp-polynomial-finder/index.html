@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GP Polynomial Regression - Draggable Tree</title>
+    <title>GP Polynomial Regression - Full Demo</title>
     <style>
         /* --- GIAO DIỆN CHUNG --- */
         body { font-family: 'Segoe UI', sans-serif; background: #1e1e1e; color: #eee; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: scroll; }
@@ -54,8 +54,8 @@
             background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
         }
         .modal-content {
-            background-color: #252526; margin: 3% auto; padding: 10px; border: 1px solid #555; border-radius: 8px;
-            width: 90%; height: 85%; display: flex; flex-direction: column; position: relative;
+            background-color: #252526; margin: 2% auto; padding: 15px; border: 1px solid #555; border-radius: 8px;
+            width: 90%; height: 90%; display: flex; flex-direction: column; position: relative;
         }
         .close-btn { 
             position: absolute; right: 15px; top: 10px;
@@ -63,18 +63,26 @@
         }
         .close-btn:hover { color: #fff; }
         
-        /* Canvas Draggable Style */
-        #treeCanvas { 
-            background: #111; width: 100%; height: 100%; 
-            border-radius: 4px; border: 1px solid #333; 
-            cursor: grab; /* Icon bàn tay mở */
-        }
-        #treeCanvas:active {
-            cursor: grabbing; /* Icon bàn tay nắm khi kéo */
+        /* Raw Text inside Modal */
+        .modal-raw-text {
+            background: #111; color: #888;
+            padding: 10px; margin-bottom: 10px; margin-right: 30px; /* Space for close btn */
+            border-radius: 4px; border: 1px solid #444;
+            font-family: 'Consolas', monospace; font-size: 0.95em;
+            white-space: nowrap; overflow-x: auto;
+            scrollbar-width: thin; scrollbar-color: #555 #111;
         }
 
+        /* Canvas Draggable Style */
+        #treeCanvas { 
+            background: #111; width: 100%; flex: 1; /* Take remaining height */
+            border-radius: 4px; border: 1px solid #333; 
+            cursor: grab; 
+        }
+        #treeCanvas:active { cursor: grabbing; }
+
         .modal-instructions {
-            position: absolute; bottom: 20px; left: 20px;
+            position: absolute; bottom: 25px; left: 25px;
             background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px;
             color: #aaa; font-size: 0.9em; pointer-events: none;
         }
@@ -127,7 +135,7 @@
             </div>
             
             <div style="font-size: 0.8em; color: #888;">
-                <strong>Note:</strong> Open "Show Tree Structure" and <strong>drag</strong> the canvas to explore large trees.
+                <strong>Note:</strong> Open "Show Tree Structure" to verify the raw LISP structure.
             </div>
         </div>
     </div>
@@ -135,8 +143,10 @@
     <div id="treeModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeTreeModal()">&times;</span>
-            <h2 style="margin: 0 0 10px 10px; color:#e0a800;">Structure Visualizer</h2>
+            <h2 style="margin: 0 0 10px 0; color:#e0a800;">Structure Visualizer</h2>
             
+            <div id="modalRawText" class="modal-raw-text">Raw: ...</div>
+
             <canvas id="treeCanvas"></canvas>
             
             <div class="modal-instructions">
@@ -215,6 +225,10 @@ class Node {
             case '*': return l * r;
         }
         return 0;
+    }
+    toString() {
+        if (!this.left) return typeof this.value === 'number' ? this.value.toFixed(1) : this.value;
+        return `(${this.left.toString()} ${this.value} ${this.right.toString()})`;
     }
     clone() { return new Node(this.value, this.left ? this.left.clone() : null, this.right ? this.right.clone() : null); }
     toBeautifulString() {
@@ -414,17 +428,15 @@ function resetSim() {
 }
 
 // =======================================================
-//   VISUALIZER LOGIC (DRAGGABLE CANVAS)
+//   VISUALIZER LOGIC (DRAGGABLE)
 // =======================================================
 
-// GLOBAL STATE FOR VISUALIZER
 let cameraOffset = { x: 0, y: 0 };
 let isDragging = false;
 let dragStart = { x: 0, y: 0 };
 let treeCtx = null;
 let treeCanvas = null;
 
-// The recursive drawing function
 function drawTreeRecursive(node, ctx, x, y, dx, dy) {
     if (!node) return;
     
@@ -446,7 +458,6 @@ function drawTreeRecursive(node, ctx, x, y, dx, dy) {
         drawTreeRecursive(node.right, ctx, x + dx, y + dy, dx / 2, dy);
     }
     
-    // Bubble
     ctx.beginPath();
     ctx.arc(x, y, 15, 0, 2 * Math.PI);
     
@@ -456,7 +467,6 @@ function drawTreeRecursive(node, ctx, x, y, dx, dy) {
     
     ctx.fill(); ctx.stroke();
     
-    // Text
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
@@ -465,31 +475,20 @@ function drawTreeRecursive(node, ctx, x, y, dx, dy) {
     ctx.fillText(txt, x, y);
 }
 
-// Function to redraw the entire scene based on current offset
 function redrawVisualizer() {
     if (!treeCanvas || !treeCtx || !bestIndividual) return;
-    
-    const w = treeCanvas.width;
-    const h = treeCanvas.height;
-    
-    // Clear
+    const w = treeCanvas.width; const h = treeCanvas.height;
     treeCtx.clearRect(0, 0, w, h);
     
     treeCtx.save();
-    // Apply camera translation
     treeCtx.translate(cameraOffset.x, cameraOffset.y);
     
-    // Layout Calculation
-    // We start drawing the root at (w/2, 50) relative to the camera origin
-    // Initial Spread (dx) should be large for deep trees
     const depth = bestIndividual.ind.getDepth();
     const startY = 50;
     const levelHeight = 60;
-    // The deeper the tree, the wider the initial spread must be to avoid overlap
     const startDX = Math.pow(2, depth-2) * 30; 
     
     drawTreeRecursive(bestIndividual.ind, treeCtx, w/2, startY, startDX, levelHeight);
-    
     treeCtx.restore();
 }
 
@@ -499,28 +498,25 @@ function showTreeModal() {
     const modal = document.getElementById('treeModal');
     modal.style.display = 'block';
     
+    // UPDATE RAW TEXT
+    document.getElementById('modalRawText').innerText = "Raw: " + bestIndividual.ind.toString();
+
     treeCanvas = document.getElementById('treeCanvas');
     treeCanvas.width = treeCanvas.offsetWidth;
     treeCanvas.height = treeCanvas.offsetHeight;
     treeCtx = treeCanvas.getContext('2d');
     
-    // Reset Camera to Center initially
     cameraOffset = { x: 0, y: 0 };
-    
-    // Initial Draw
     redrawVisualizer();
     
-    // ATTACH EVENTS (Only once)
     treeCanvas.onmousedown = (e) => {
         isDragging = true;
-        // Record where we clicked relative to the current camera offset
         dragStart.x = e.clientX - cameraOffset.x;
         dragStart.y = e.clientY - cameraOffset.y;
     };
     
     treeCanvas.onmousemove = (e) => {
         if (!isDragging) return;
-        // Update camera offset
         cameraOffset.x = e.clientX - dragStart.x;
         cameraOffset.y = e.clientY - dragStart.y;
         redrawVisualizer();
