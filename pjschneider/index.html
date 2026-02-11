@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schneider Curve Fitting - G1 Continuity Fixed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f8fafc; font-family: sans-serif; }
+        canvas { background-color: white; border: 1px solid #cbd5e1; cursor: crosshair; touch-action: none; }
+        .step-active { color: #2563eb; font-weight: bold; border-left: 4px solid #2563eb; padding-left: 8px; }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-5xl mx-auto">
+        <h1 class="text-2xl font-bold mb-2 text-slate-800">Mô phỏng Schneider: Ràng buộc Tiếp tuyến G1</h1>
+        <p class="text-sm text-slate-500 mb-4">Các điểm dữ liệu đã được làm đậm để dễ quan sát quá trình thu thập và xử lý.</p>
+        
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <canvas id="canvas" width="800" height="600" class="w-full rounded-lg shadow-inner"></canvas>
+                <div class="mt-4 flex gap-2">
+                    <button id="btn-step" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition-colors font-semibold">
+                        Tiếp theo (Play One Step)
+                    </button>
+                    <button id="btn-reset" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded shadow transition-colors">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="w-full md:w-80 bg-white p-4 rounded-lg shadow-md border border-slate-200">
+                <h2 class="font-bold text-lg mb-2 text-blue-600">Trạng thái</h2>
+                <div id="status-text" class="text-sm text-slate-600 mb-4 italic min-h-[50px]">Vẽ ít nhất 3 điểm p_i bằng cách click chuột.</div>
+                
+                <h3 class="font-bold text-sm uppercase tracking-wider text-slate-400 mb-2">Quy trình chuẩn</h3>
+                <ul id="step-list" class="space-y-2 text-sm">
+                    <li id="step-0" class="text-slate-400">1. Thu thập dữ liệu</li>
+                    <li id="step-1" class="text-slate-400">2. Tính Chord-Length</li>
+                    <li id="step-2" class="text-slate-400">3. Fit Alpha lần 1</li>
+                    <li id="step-3" class="text-slate-400">4. Tối ưu hóa t_i (Newton)</li>
+                    <li id="step-4" class="text-slate-400">5. Fit Alpha tối ưu</li>
+                    <li id="step-5" class="text-slate-400">6. Kiểm tra & Chia tách (nếu cần)</li>
+                </ul>
+
+                <div class="mt-6 p-3 bg-indigo-50 rounded text-xs text-indigo-900 border border-indigo-100">
+                    <strong>Ghi chú:</strong><br>
+                    - Các điểm <span class="text-slate-600 font-bold">màu xám đậm</span> là dữ liệu gốc.<br>
+                    - Điểm <span class="text-blue-600 font-bold">màu xanh dương</span> là điểm đang được xử lý trong đoạn hiện tại.
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/** LỚP VECTOR **/
+class Vec {
+    constructor(x, y) { this.x = x; this.y = y; }
+    add(v) { return new Vec(this.x + v.x, this.y + v.y); }
+    sub(v) { return new Vec(this.x - v.x, this.y - v.y); }
+    mul(s) { return new Vec(this.x * s, this.y * s); }
+    div(s) { return new Vec(this.x / s, this.y / s); }
+    dot(v) { return this.x * v.x + this.y * v.y; }
+    lenSq() { return this.x * this.x + this.y * this.y; }
+    len() { return Math.sqrt(this.lenSq()); }
+    normalize() { let l = this.len(); return l === 0 ? new Vec(0,0) : this.div(l); }
+    dist(v) { return this.sub(v).len(); }
+}
+
+/** TOÁN HỌC BÉZIER **/
+function B0(t) { let tmp = 1 - t; return tmp * tmp * tmp; }
+function B1(t) { let tmp = 1 - t; return 3 * t * tmp * tmp; }
+function B2(t) { let tmp = 1 - t; return 3 * t * t * tmp; }
+function B3(t) { return t * t * t; }
+function dB0(t) { return -3 * (1 - t) * (1 - t); }
+function dB1(t) { return 3 * (1 - t) * (1 - 3 * t); }
+function dB2(t) { return 3 * t * (2 - 3 * t); }
+function dB3(t) { return 3 * t * t; }
+function d2B0(t) { return 6 * (1 - t); }
+function d2B1(t) { return -18 + 24 * t; }
+function d2B2(t) { return 18 - 24 * t; }
+function d2B3(t) { return 6 * t; }
+
+function evaluateBezier(cp, t) {
+    return cp[0].mul(B0(t)).add(cp[1].mul(B1(t))).add(cp[2].mul(B2(t))).add(cp[3].mul(B3(t)));
+}
+function evaluateBezierDeriv1(cp, t) {
+    return cp[0].mul(dB0(t)).add(cp[1].mul(dB1(t))).add(cp[2].mul(dB2(t))).add(cp[3].mul(dB3(t)));
+}
+function evaluateBezierDeriv2(cp, t) {
+    return cp[0].mul(d2B0(t)).add(cp[1].mul(d2B1(t))).add(cp[2].mul(d2B2(t))).add(cp[3].mul(d2B3(t)));
+}
+
+/** QUẢN LÝ TRẠNG THÁI **/
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const btnStep = document.getElementById('btn-step');
+const btnReset = document.getElementById('btn-reset');
+const statusText = document.getElementById('status-text');
+
+let rawPoints = [];
+let jobs = []; 
+let currentJob = null;
+let finishedBeziers = [];
+let state = "IDLE"; 
+let errorThreshold = 10.0;
+
+function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    render();
+}
+window.addEventListener('resize', resize);
+resize();
+
+canvas.addEventListener('mousedown', (e) => {
+    if (state !== "IDLE") return;
+    const rect = canvas.getBoundingClientRect();
+    rawPoints.push(new Vec(e.clientX - rect.left, e.clientY - rect.top));
+    render();
+});
+
+btnReset.onclick = () => {
+    rawPoints = []; jobs = []; currentJob = null; finishedBeziers = [];
+    state = "IDLE"; updateStepList(0);
+    statusText.innerText = "Vẽ đường cong bằng cách click các điểm p_i.";
+    render();
+};
+
+btnStep.onclick = () => {
+    if (rawPoints.length < 2) return;
+    if (state === "IDLE") {
+        let tanL = rawPoints[1].sub(rawPoints[0]).normalize();
+        let tanR = rawPoints[rawPoints.length-2].sub(rawPoints[rawPoints.length-1]).normalize();
+        jobs.push({ points: [...rawPoints], tanL, tanR });
+        nextJob();
+    } else if (state === "CHORD_LEN") runFit();
+    else if (state === "FIT_1") runNewton();
+    else if (state === "REPARAM") runFitRefined();
+    else if (state === "FIT_2") runCheckSplit();
+    else if (state === "SPLIT") nextJob();
+};
+
+function updateStepList(index) {
+    for (let i = 0; i <= 5; i++) {
+        const el = document.getElementById('step-' + i);
+        if (i === index) el.classList.add('step-active');
+        else el.classList.remove('step-active');
+    }
+}
+
+function nextJob() {
+    if (jobs.length > 0) {
+        currentJob = jobs.shift();
+        runChordLen();
+    } else {
+        state = "IDLE";
+        statusText.innerText = "Đã hoàn thành tất cả!";
+        updateStepList(0);
+    }
+    render();
+}
+
+/** THUẬT TOÁN **/
+
+function runChordLen() {
+    state = "CHORD_LEN"; updateStepList(1);
+    statusText.innerText = "Tính toán tham số u.";
+    let pts = currentJob.points;
+    let u = [0];
+    for (let i = 1; i < pts.length; i++) u[i] = u[i-1] + pts[i].dist(pts[i-1]);
+    let total = u[u.length-1];
+    for (let i = 0; i < u.length; i++) u[i] = total === 0 ? 0 : u[i] / total;
+    currentJob.u = u;
+    render();
+}
+
+function runFit() {
+    state = "FIT_1"; updateStepList(2);
+    statusText.innerText = "Giải Alpha lần 1.";
+    solveAlpha();
+    render();
+}
+
+function runNewton() {
+    state = "REPARAM"; updateStepList(3);
+    statusText.innerText = "Tinh chỉnh t_i bằng Newton-Raphson.";
+    let pts = currentJob.points, u = currentJob.u, cp = currentJob.bezier;
+    for (let iter = 0; iter < 5; iter++) {
+        for (let i = 0; i < pts.length; i++) {
+            let t = u[i];
+            let q = evaluateBezier(cp, t), q1 = evaluateBezierDeriv1(cp, t), q2 = evaluateBezierDeriv2(cp, t);
+            let diff = q.sub(pts[i]);
+            let den = q1.lenSq() + diff.dot(q2);
+            if (Math.abs(den) > 1e-10) u[i] = t - diff.dot(q1) / den;
+            u[i] = Math.max(0, Math.min(1, u[i]));
+        }
+    }
+    render();
+}
+
+function runFitRefined() {
+    state = "FIT_2"; updateStepList(4);
+    statusText.innerText = "Giải lại Alpha tối ưu.";
+    solveAlpha();
+    render();
+}
+
+function solveAlpha() {
+    let pts = currentJob.points, u = currentJob.u, tanL = currentJob.tanL, tanR = currentJob.tanR;
+    let C11 = 0, C12 = 0, C21 = 0, C22 = 0, X1 = 0, X2 = 0;
+    for (let i = 0; i < pts.length; i++) {
+        let b0 = B0(u[i]), b1 = B1(u[i]), b2 = B2(u[i]), b3 = B3(u[i]);
+        let a1 = tanL.mul(b1), a2 = tanR.mul(b2);
+        C11 += a1.dot(a1); C12 += a1.dot(a2); C21 += a1.dot(a2); C22 += a2.dot(a2);
+        let v0 = pts[0], v3 = pts[pts.length-1];
+        let tmp = pts[i].sub( v0.mul(b0 + b1).add(v3.mul(b2 + b3)) );
+        X1 += tmp.dot(a1); X2 += tmp.dot(a2);
+    }
+    let det = C11 * C22 - C12 * C21;
+    let alpha1, alpha2;
+    if (Math.abs(det) < 1e-10) { alpha1 = alpha2 = pts[0].dist(pts[pts.length-1]) / 3.0; }
+    else { alpha1 = (X1 * C22 - X2 * C12) / det; alpha2 = (C11 * X2 - C21 * X1) / det; }
+    if (alpha1 < 1e-6 || alpha2 < 1e-6) alpha1 = alpha2 = pts[0].dist(pts[pts.length-1]) / 3.0;
+    currentJob.alpha1 = alpha1; currentJob.alpha2 = alpha2;
+    currentJob.bezier = [pts[0], pts[0].add(tanL.mul(alpha1)), pts[pts.length-1].add(tanR.mul(alpha2)), pts[pts.length-1]];
+}
+
+function runCheckSplit() {
+    state = "SPLIT"; updateStepList(5);
+    let pts = currentJob.points, u = currentJob.u, cp = currentJob.bezier;
+    let maxDist = 0, splitIdx = 0;
+    for (let i = 0; i < pts.length; i++) {
+        let d = pts[i].dist(evaluateBezier(cp, u[i]));
+        if (d > maxDist) { maxDist = d; splitIdx = i; }
+    }
+    currentJob.maxDist = maxDist; currentJob.splitIdx = splitIdx;
+
+    if (maxDist <= errorThreshold) {
+        statusText.innerText = "Sai số " + maxDist.toFixed(1) + " <= " + errorThreshold + ". Chấp nhận đoạn này.";
+        finishedBeziers.push(currentJob.bezier);
+        currentJob.splitIdx = -1; 
+    } else {
+        let tanCenter = pts[splitIdx+1].sub(pts[splitIdx-1]).normalize();
+        currentJob.tanCenter = tanCenter; 
+        statusText.innerText = "Sai số lớn. Xác định Center Tangent (tím) và chia đôi.";
+        jobs.unshift({ points: pts.slice(splitIdx), tanL: tanCenter, tanR: currentJob.tanR });
+        jobs.unshift({ points: pts.slice(0, splitIdx + 1), tanL: currentJob.tanL, tanR: tanCenter.mul(-1) });
+    }
+    render();
+}
+
+/** RENDER **/
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Vẽ điểm thu thập dữ liệu (đã làm đậm hơn)
+    rawPoints.forEach(p => {
+        ctx.fillStyle = "#475569"; // Màu xám đá đậm (Slate 600)
+        ctx.beginPath(); 
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); // Tăng kích thước từ 2 lên 3
+        ctx.fill();
+    });
+
+    // Vẽ các đường đã hoàn thành
+    finishedBeziers.forEach(cp => {
+        ctx.strokeStyle = "#3b82f6"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(cp[0].x, cp[0].y);
+        ctx.bezierCurveTo(cp[1].x, cp[1].y, cp[2].x, cp[2].y, cp[3].x, cp[3].y); ctx.stroke();
+    });
+
+    if (!currentJob) return;
+
+    // Vẽ tiếp tuyến đỏ
+    const drawVector = (start, dir, color, dash = [4,4], len = 60) => {
+        const end = start.add(dir.mul(len));
+        ctx.strokeStyle = color; ctx.setLineDash(dash); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+        ctx.setLineDash([]);
+    };
+    drawVector(currentJob.points[0], currentJob.tanL, "#ef4444");
+    drawVector(currentJob.points[currentJob.points.length-1], currentJob.tanR, "#ef4444");
+
+    // Đánh dấu các điểm đang trong job hiện tại bằng màu xanh dương đậm để nổi bật
+    currentJob.points.forEach(p => {
+        ctx.fillStyle = "#2563eb"; 
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+    });
+
+    if (currentJob.bezier) {
+        let cp = currentJob.bezier;
+        ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
+        currentJob.points.forEach((p, i) => {
+            let tp = evaluateBezier(cp, currentJob.u[i]);
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(tp.x, tp.y); ctx.stroke();
+        });
+        ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cp[0].x, cp[0].y); ctx.lineTo(cp[1].x, cp[1].y); ctx.lineTo(cp[2].x, cp[2].y); ctx.lineTo(cp[3].x, cp[3].y); ctx.stroke();
+        
+        ctx.strokeStyle = (state === "REPARAM") ? "#94a3b8" : "#f59e0b"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(cp[0].x, cp[0].y);
+        ctx.bezierCurveTo(cp[1].x, cp[1].y, cp[2].x, cp[2].y, cp[3].x, cp[3].y); ctx.stroke();
+    }
+
+    if (state === "SPLIT" && currentJob.splitIdx !== -1 && currentJob.maxDist > errorThreshold) {
+        let p = currentJob.points[currentJob.splitIdx];
+        drawVector(p, currentJob.tanCenter, "#8b5cf6", [], 80);
+        drawVector(p, currentJob.tanCenter.mul(-1), "#8b5cf6", [2,2], 80);
+        ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "black"; ctx.font = "bold 11px sans-serif"; 
+        ctx.fillText("CHIA TẠI ĐÂY", p.x - 35, p.y + 25);
+    }
+}
+</script>
+</body>
+</html>
