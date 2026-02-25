@@ -4,21 +4,176 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lagrange Interpolation Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <style>
+        :root {
+            --bg-primary: #0f1419;
+            --bg-card: #1a2332;
+            --bg-input: #252f3f;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text);
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+        }
+
+        #points {
+            width: 100%;
+            min-height: 140px;
+            padding: 1rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        #points:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        #points::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        #result {
+            min-height: 60px;
+            padding: 1.25rem;
+            background: var(--bg-input);
+            border-radius: 8px;
+            border: 1px dashed var(--border);
+            font-size: 1.1rem;
+            overflow-x: auto;
+        }
+
+        #result:empty::before {
+            content: 'Kết quả sẽ hiển thị ở đây...';
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .katex-display {
+            margin: 0;
+            padding: 0.5rem 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .katex {
+            font-size: 1.15em;
+        }
+
+        .hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+    </style>
 </head>
 <body>
-    <h1>Lagrange Interpolation Demo</h1>
-    <div>
-        <p>Points</p>
+    <div class="container">
+        <h1>Lagrange Interpolation</h1>
+        <p class="subtitle">Nhập các điểm (x, y) để tìm đa thức nội suy Lagrange đi qua chúng</p>
+
+        <div class="card">
+            <label class="card-title" for="points">Điểm dữ liệu</label>
+            <textarea id="points" placeholder="1 2&#10;2 5&#10;3 10&#10;-1 0"></textarea>
+            <p class="hint">Mỗi dòng: x y (cách nhau bằng dấu cách). Ví dụ: 1 2, 2 5, 3 10</p>
+        </div>
+
+        <button class="btn" onclick="interpolate()">Interpolate</button>
+
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-title">Kết quả</div>
+            <div id="result"></div>
+        </div>
     </div>
-    <div><textarea id="points" placeholder="x1 y1 \n x2 y2 \n..." rows="8"></textarea></div>
-    <button onclick="interpolate()">Interpolate</button>
-    <div>
-        <p>Result</p>
-        <div id="result"></div>
-    </div>  
-    <script src="polynomial.js"></script>  
-    <script>        
-        function ell_i(idx, points){
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="polynomial.js"></script>
+    <script>
+        function ell_i(idx, points) {
             let result = [1];
             let divisor = 1;
             for (let i = 0; i < points.length; i++) {
@@ -27,27 +182,69 @@
                     divisor *= points[idx][0] - points[i][0];
                 }
             }
-            return result.map(c => c / divisor); 
+            return result.map(c => c / divisor);
         }
 
-        function lagrange(points){
+        function lagrange(points) {
             let result = [0];
             for (let i = 0; i < points.length; i++) {
-                // result += ell_i(i, points) * points[i][1]
                 result = polyAdd(result, polyMul(ell_i(i, points), [points[i][1]]));
             }
             return result;
-        }        
+        }
 
-        function polyStr(p){
-            return p.map((c, i) => c + (i > 0 ? `x^${i}` : '')).join(' + ');
+        function polyToLatex(p) {
+            const terms = [];
+            for (let i = 0; i < p.length; i++) {
+                const c = p[i];
+                if (c === 0) continue;
+
+                const sign = c < 0 ? '-' : (terms.length > 0 ? '+' : '');
+                const absC = Math.abs(c);
+
+                if (i === 0) {
+                    terms.push(sign + formatCoeff(absC));
+                } else if (absC === 1) {
+                    terms.push(sign + (i === 1 ? 'x' : `x^{${i}}`));
+                } else {
+                    terms.push(sign + formatCoeff(absC) + (i === 1 ? 'x' : `x^{${i}}`));
+                }
+            }
+            return terms.length ? terms.join(' ') : '0';
+        }
+
+        function formatCoeff(n) {
+            if (Number.isInteger(n)) return String(n);
+            const str = n.toFixed(4).replace(/\.?0+$/, '');
+            return str.includes('.') ? str : String(n);
         }
 
         function interpolate() {
-            const points = document.getElementById('points').value.split('\n').map(p => p.split(' ').map(Number));
-            const result = lagrange(points);
-            document.getElementById('result').innerText = `p(x) = ${polyStr(result)}`;
+            const input = document.getElementById('points').value.trim();
+            const lines = input.split('\n').filter(l => l.trim());
+            const points = lines.map(p => p.split(/\s+/).map(Number)).filter(p => p.length >= 2 && !p.some(isNaN));
+
+            const resultEl = document.getElementById('result');
+            resultEl.innerHTML = '';
+
+            if (points.length < 2) {
+                resultEl.textContent = 'Vui lòng nhập ít nhất 2 điểm (mỗi điểm có x và y).';
+                resultEl.style.color = '#f87171';
+                return;
+            }
+
+            resultEl.style.color = '';
+            const coeffs = lagrange(points);
+            const latex = `p(x) = ${polyToLatex(coeffs)}`;
+
+            const span = document.createElement('span');
+            resultEl.appendChild(span);
+            katex.render(latex, span, {
+                throwOnError: false,
+                displayMode: true,
+                output: 'html'
+            });
         }
-    </script>    
+    </script>
 </body>
 </html>
