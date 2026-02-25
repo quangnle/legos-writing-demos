@@ -132,6 +132,63 @@
             font-style: italic;
         }
 
+        #steps {
+            width: 100%;
+            min-height: 200px;
+            max-height: 500px;
+            padding: 1.25rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95rem;
+            overflow-y: auto;
+            line-height: 1.7;
+        }
+
+        #steps:empty::before {
+            content: 'Giải thích từng bước sẽ hiển thị ở đây sau khi Interpolate...';
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .step-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .step-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-header {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .step-formula {
+            margin: 0.5rem 0;
+            padding: 0.5rem 0;
+        }
+
+        .step-formula .katex {
+            font-size: 1.05em;
+        }
+
+        .step-formula .katex-display {
+            margin: 0.5rem 0;
+        }
+
+        .step-line {
+            margin: 0.25rem 0;
+            color: var(--text-muted);
+        }
+
+        .step-line .katex {
+            font-size: 0.95em;
+        }
+
         .katex-display {
             margin: 0;
             padding: 0.5rem 0;
@@ -166,6 +223,11 @@
         <div class="card" style="margin-top: 1.5rem;">
             <div class="card-title">Kết quả</div>
             <div id="result"></div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-title">Giải thích từng bước</div>
+            <div id="steps"></div>
         </div>
     </div>
 
@@ -219,6 +281,87 @@
             return str.includes('.') ? str : String(n);
         }
 
+        function renderStepsExplanation(points, coeffs) {
+            const stepsEl = document.getElementById('steps');
+            stepsEl.innerHTML = '';
+            const katexOpt = { throwOnError: false, output: 'html' };
+
+            const sect = (title) => {
+                const div = document.createElement('div');
+                div.className = 'step-section';
+                div.innerHTML = `<div class="step-header">${title}</div>`;
+                stepsEl.appendChild(div);
+                return div;
+            };
+
+            const line = (parent, text, latex) => {
+                const p = document.createElement('div');
+                p.className = 'step-line';
+                if (latex) {
+                    p.appendChild(document.createTextNode(text));
+                    const span = document.createElement('span');
+                    p.appendChild(span);
+                    katex.render(latex, span, { ...katexOpt, displayMode: false });
+                } else {
+                    p.textContent = text;
+                }
+                parent.appendChild(p);
+            };
+
+            const formula = (parent, latex, display = true) => {
+                const div = document.createElement('div');
+                div.className = 'step-formula';
+                parent.appendChild(div);
+                katex.render(latex, div, { ...katexOpt, displayMode: display });
+            };
+
+            const s1 = sect('Công thức Lagrange');
+            formula(s1, 'p(x) = \\sum_{i=0}^{n-1} y_i \\cdot \\ell_i(x)', true);
+
+            const s2 = sect('Định nghĩa ℓᵢ');
+            formula(s2, '\\ell_i(x) = \\prod_{j \\neq i} \\frac{x - x_j}{x_i - x_j}', true);
+
+            const ellPolys = [];
+            for (let i = 0; i < points.length; i++) {
+                const xi = points[i][0], yi = points[i][1];
+                const si = sect(`ℓ${i}(x) — điểm (${xi}, ${yi})`);
+
+                const numerParts = [];
+                let divisor = 1;
+                for (let j = 0; j < points.length; j++) {
+                    if (j !== i) {
+                        const xj = points[j][0];
+                        numerParts.push(xj >= 0 ? `(x - ${xj})` : `(x + ${-xj})`);
+                        divisor *= xi - points[j][0];
+                    }
+                }
+                const numerLatex = numerParts.join(' \\cdot ');
+                line(si, 'Tử số: ', numerLatex);
+                line(si, `Mẫu số: ${divisor}`);
+                const fracNumer = numerParts.join(' \\cdot ');
+                formula(si, `\\ell_${i}(x) = \\frac{${fracNumer}}{${divisor}}`, true);
+
+                const ell = ell_i(i, points);
+                formula(si, `\\ell_${i}(x) = ${polyToLatex(ell)}`, true);
+                ellPolys.push({ yi, ell, idx: i });
+            }
+
+            const s3 = sect('Kết hợp');
+            const sumLatex = ellPolys.map(({ yi, idx }) => `${yi} \\cdot \\ell_${idx}(x)`).join(' + ');
+            formula(s3, `p(x) = ${sumLatex}`, true);
+
+            const terms = ellPolys.map(({ yi, ell }) => {
+                const scaled = ell.map(c => c * yi);
+                return polyToLatex(scaled);
+            }).filter(t => t !== '0');
+            const addLatex = terms.map(t => `(${t})`).join(' + ');
+            line(s3, 'Cộng các đa thức:');
+            formula(s3, addLatex, true);
+
+            const s4 = sect('Kết quả cuối');
+            formula(s4, `p(x) = ${polyToLatex(coeffs)}`, true);
+        }
+
         function interpolate() {
             const input = document.getElementById('points').value.trim();
             const lines = input.split('\n').filter(l => l.trim());
@@ -230,11 +373,13 @@
             if (points.length < 2) {
                 resultEl.textContent = 'Vui lòng nhập ít nhất 2 điểm (mỗi điểm có x và y).';
                 resultEl.style.color = '#f87171';
+                document.getElementById('steps').innerHTML = '';
                 return;
             }
 
             resultEl.style.color = '';
             const coeffs = lagrange(points);
+            renderStepsExplanation(points, coeffs);
             const latex = `p(x) = ${polyToLatex(coeffs)}`;
 
             const span = document.createElement('span');
