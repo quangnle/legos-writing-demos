@@ -5,28 +5,347 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proof of work demo</title>
     <style>
+        :root {
+            --color-bg: #0f1419;
+            --color-surface: #1a2332;
+            --color-surface-elevated: #243044;
+            --color-border: #2d3d52;
+            --color-text: #e6edf3;
+            --color-text-muted: #8b9cb3;
+            --color-primary: #58a6ff;
+            --color-primary-hover: #79b8ff;
+            --color-success: #3fb950;
+            --color-pending: #d29922;
+            --color-error: #f85149;
+            --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --font-mono: 'Consolas', 'Monaco', monospace;
+            --radius: 8px;
+            --radius-sm: 4px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
-            font-family: Arial, sans-serif;
-            font-size: small;
+            font-family: var(--font-sans);
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--color-text);
+            background: var(--color-bg);
+            margin: 0;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .layout {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .tx-row {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .tx-row { grid-template-columns: 1fr; }
+        }
+
+        .section {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+        }
+
+        .section h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-text-muted);
+        }
+
+        /* Form */
+        .tx-form {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .form-group label {
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+        }
+
+        input, button {
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"] {
+            padding: 0.4rem 0.5rem;
+            background: var(--color-surface-elevated);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            color: var(--color-text);
+            width: 72px;
+        }
+
+        input[type="number"] {
+            padding: 0.4rem 0.5rem;
+            background: var(--color-surface-elevated);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            color: var(--color-text);
+            width: 52px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background: var(--color-primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: var(--color-primary-hover);
+        }
+
+        /* Transactions list */
+        .tx-list-wrapper {
+            height: 220px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .tx-list-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tx-list-wrapper::-webkit-scrollbar-track {
+            background: var(--color-surface-elevated);
+            border-radius: 3px;
+        }
+
+        .tx-list-wrapper::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 3px;
+        }
+
+        .tx-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tx-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--color-surface-elevated);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--color-border);
+            font-size: 0.9rem;
+        }
+
+        .tx-list li.verified {
+            border-left-color: var(--color-success);
+        }
+
+        .tx-list li .status {
+            font-size: 1rem;
+        }
+
+        .tx-list li .status.verified { color: var(--color-success); }
+        .tx-list li .status.pending { color: var(--color-error); }
+
+        /* Mining section */
+        .mining-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .mining-blocks {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 1rem;
+            list-style: none;
+            margin: 0;
+            padding: 0.5rem 0;
+            overflow-x: auto;
+            min-height: 200px;
+        }
+
+        .mining-blocks::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .mining-blocks::-webkit-scrollbar-track {
+            background: var(--color-surface-elevated);
+            border-radius: 3px;
+        }
+
+        .mining-blocks::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 3px;
+        }
+
+        /* Block card */
+        .block-card {
+            flex: 0 0 280px;
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--color-border);
+            background: var(--color-surface-elevated);
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .block-card.pending {
+            border-color: var(--color-pending);
+            background: rgba(210, 153, 34, 0.08);
+        }
+
+        .block-card.mined {
+            border-color: var(--color-success);
+            background: rgba(63, 185, 80, 0.08);
+        }
+
+        .block-card h3 {
+            margin: 0 0 0.75rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .block-card .field {
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .block-card .field-label {
+            color: var(--color-text-muted);
+            display: block;
+            margin-bottom: 0.15rem;
+        }
+
+        .block-card .hash {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            word-break: break-all;
+            color: var(--color-text-muted);
+        }
+
+        .block-card .txs-in-block {
+            list-style: none;
+            margin: 0.25rem 0;
+            padding: 0;
+            font-size: 0.8rem;
+        }
+
+        .block-card .txs-in-block li {
+            padding: 0.2rem 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .block-card .txs-in-block li:last-child {
+            border-bottom: none;
+        }
+
+        .block-card .mine-btn {
+            margin-top: 0.75rem;
+        }
+
+        .block-card .mined-badge {
+            display: inline-block;
+            margin-top: 0.75rem;
+            color: var(--color-success);
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
-    <h1>Proof of work demo</h1>
-    <div>
-        From <input type="text" id="from" value="Alice">
-        To <input type="text" id="to" value="Bob">
-        Value <input type="number" id="value" value="100">
-        <button onclick="createTx()">Create transaction</button>
-    </div>
-    <div>
-        <h2>Transactions</h2>
-        <ul id="transactions"></ul>
-    </div>
-    <div>
-        <h2>Mining</h2>
-        <button onclick="createANewBlock()">Create a new block</button>
-        <ul id="mining-blocks" style="display: flex; flex-wrap: nowrap; list-style-type: none; padding: 0; overflow-x: auto;"></ul>
+    <div class="container">
+        <header class="header">
+            <h1>Proof of work demo</h1>
+        </header>
+
+        <div class="layout">
+            <div class="tx-row">
+                <section class="section">
+                    <h2>New transaction</h2>
+                    <div class="tx-form">
+                        <div class="form-group">
+                            <label for="from">From</label>
+                            <input type="text" id="from" value="Alice">
+                        </div>
+                        <div class="form-group">
+                            <label for="to">To</label>
+                            <input type="text" id="to" value="Bob">
+                        </div>
+                        <div class="form-group">
+                            <label for="value">Value</label>
+                            <input type="number" id="value" value="100">
+                        </div>
+                        <button onclick="createTx()">Create transaction</button>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>Transactions</h2>
+                    <div class="tx-list-wrapper">
+                        <ul id="transactions" class="tx-list"></ul>
+                    </div>
+                </section>
+            </div>
+
+            <section class="section mining-section">
+                <div class="mining-header">
+                    <h2>Mining</h2>
+                    <button onclick="createANewBlock()">Create a new block</button>
+                </div>
+                <ul id="mining-blocks" class="mining-blocks"></ul>
+            </section>
+        </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
     <script>
@@ -69,7 +388,9 @@
             transactions.forEach(tx => {
                 const li = document.createElement('li');
                 li.id = `tx-${tx.id}`;
-                li.innerHTML = `${tx.id}: ${tx.from} ===> ${tx.to} : ${tx.value} ${tx.verified ? '<span style="color:green;">&#10004;</span>' : '<span style="color:red;">&#10008;</span>'}`;
+                if (tx.verified) li.classList.add('verified');
+                const statusClass = tx.verified ? 'verified' : 'pending';
+                li.innerHTML = `<span class="status ${statusClass}">${tx.verified ? '&#10004;' : '&#10008;'}</span> ${tx.id}: ${tx.from} &rarr; ${tx.to} : ${tx.value}`;
                 txs.appendChild(li);
             });
         }
@@ -118,25 +439,27 @@
         function generateBlockContent(block){
             const li = document.createElement('li');
             li.id = `block-${block.id}`;
-            li.style.border = '1px solid';
-            li.style.backgroundColor = 'pink';
-            li.style.margin = '5px';
-            li.style.padding = '5px';
-            let blockTemplate = `
-            <div>
-                <h3> <b>Block</b> ${block.id} </h3>
-                <div> <b>Block Hash</b>: ${block.hash}</div>
-                <div> <b>Previous Hash</b>: ${block.prevHash}</div>
-                <div> <b>Transactions:</b> 
-                    <ul>
-                    ${block.transactions.map(tx => `<li>${tx.id}: ${tx.from} -> ${tx.to} : ${tx.value}</li>`).join('')}
+            li.className = 'block-card ' + (block.hash.startsWith('0000') ? 'mined' : 'pending');
+            const blockTemplate = `
+                <h3>Block ${block.id}</h3>
+                <div class="field">
+                    <span class="field-label">Block Hash</span>
+                    <div class="hash">${block.hash}</div>
+                </div>
+                <div class="field">
+                    <span class="field-label">Previous Hash</span>
+                    <div class="hash">${block.prevHash}</div>
+                </div>
+                <div class="field">
+                    <span class="field-label">Transactions</span>
+                    <ul class="txs-in-block">
+                    ${block.transactions.map(tx => `<li>${tx.id}: ${tx.from} &rarr; ${tx.to} : ${tx.value}</li>`).join('')}
                     </ul>
                 </div>
-                <div> <b>Nonce</b>: ${block.nonce}</div>
-                <div> <button onclick="mineABlock(${block.id})">Mine</button> </div>
-            </div>`;
-            
-            li.innerHTML = blockTemplate;                            
+                <div class="field">Nonce: ${block.nonce}</div>
+                ${!block.hash.startsWith('0000') ? `<button class="mine-btn" onclick="mineABlock(${block.id})">Mine</button>` : '<span class="mined-badge">&#10004; Mined</span>'}
+            `;
+            li.innerHTML = blockTemplate;
             return li;
         }
 
@@ -145,12 +468,8 @@
             ul.innerHTML = '';
             blocks.forEach(block => {
                 const li = generateBlockContent(block);
-                let verified = false;
-                verifyABlock(block).then(result => {
-                    verified = result;
-                    if(verified){
-                        li.style.backgroundColor = 'lightgreen';            
-                    }
+                verifyABlock(block).then(verified => {
+                    if (verified) li.classList.add('mined');
                 });
                 ul.appendChild(li);
             });
@@ -175,12 +494,10 @@
             block.hash = hash;
             block.transactions.forEach(tx => tx.verified = true);
 
-            // update block's nonce and hash
             const li = document.getElementById(`block-${block.id}`);
-            li.innerHTML = generateBlockContent(block).innerHTML;    
-            // update background color
-            li.style.backgroundColor = 'lightgreen';
-            
+            li.innerHTML = generateBlockContent(block).innerHTML;
+            li.className = 'block-card mined';
+
             // update transactions
             renderTransactions();
         }
