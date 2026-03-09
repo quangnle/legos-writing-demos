@@ -4,56 +4,216 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merkle Tree Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
+        :root {
+            --bg: #0c0c0f;
+            --surface: #16161a;
+            --surface-alt: #1e1e24;
+            --border: #2a2a32;
+            --accent: #22c55e;
+            --accent-hover: #4ade80;
+            --leaf: #22c55e;
+            --leaf-bg: rgba(34, 197, 94, 0.2);
+            --selected: #6366f1;
+            --selected-bg: rgba(99, 102, 241, 0.25);
+            --highlight: #fbbf24;
+            --highlight-bg: rgba(251, 191, 36, 0.2);
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
         }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            margin: 0;
+            padding: 2rem;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 960px; margin: 0 auto; }
+
         header {
-            background: #333;
-            color: #fff;
-            padding-top: 10px;
-            min-height: 40px;
-            border-bottom: #333 solid 3px;
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
         }
         header h1 {
             margin: 0;
-            padding: 0;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 40%, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        input {
-            font-size: 12px;
+        header p {
+            margin: 0.75rem 0 0;
+            color: var(--text-muted);
+            font-size: 1rem;
         }
+        header p b { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-weight: 500; }
+
+        .control-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+        .control-card label {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+        .control-card select {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-alt);
+            color: var(--text);
+            cursor: pointer;
+        }
+        .control-card select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .path-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .path-card h3 {
+            margin: 0 0 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .path-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text);
+            word-break: break-all;
+        }
+        .path-value.empty { color: var(--text-muted); }
+
+        .canvas-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: center;
+            overflow: auto;
+            cursor: grab;
+        }
+        .canvas-wrapper:active {
+            cursor: grabbing;
+        }
+        .canvas-wrapper canvas {
+            border-radius: 8px;
+            display: block;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+        }
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .legend .swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+        .legend .swatch.leaf { background: var(--leaf); }
+        .legend .swatch.internal { background: var(--surface-alt); border: 1px solid var(--border); }
+        .legend .swatch.selected { background: var(--selected); }
+        .legend .swatch.highlight { background: var(--highlight); }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Merkle Tree Demo</h1>
-    </header>
-    <div>
-        <p>Number of leaves 
+    <div class="container">
+        <header>
+            <h1>Merkle Tree Demo</h1>
+            <p>Click on a leaf node to see its <b>Merkle path</b>. Drag to pan the view.</p>
+        </header>
+
+        <div class="control-card">
+            <label for="nLeaves">Number of leaves</label>
             <select id="nLeaves" onchange="leavesChanged()">
-            <option value="8">8</option>
-            <option value="12">12</option>
-            <option value="16" selected>16</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+                <option value="16" selected>16</option>
+                <option value="24">24</option>
             </select>
-        </p>
+        </div>
+
+        <div class="path-card">
+            <h3>Merkle Path</h3>
+            <div id="pathDisplay" class="path-value empty">Click on a leaf node to get its Merkle path</div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <div id="sketch-holder"></div>
+        </div>
+
+        <div class="legend">
+            <span><span class="swatch leaf"></span> Leaf</span>
+            <span><span class="swatch internal"></span> Internal</span>
+            <span><span class="swatch selected"></span> Selected</span>
+            <span><span class="swatch highlight"></span> Path</span>
+        </div>
     </div>
+
+    <script>
+        MERKLE_THEME = {
+            bg: [12, 12, 15],
+            surface: [22, 22, 26],
+            surfaceAlt: [30, 30, 36],
+            border: [42, 42, 50],
+            leaf: [34, 197, 94],
+            selected: [99, 102, 241],
+            highlight: [251, 191, 36],
+            text: [244, 244, 245],
+            textMuted: [161, 161, 170]
+        };
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="murmur.js"></script>
     <script src="merkle-tree.js"></script>
-    <script src="treenode.js"></script>    
+    <script src="treenode.js"></script>
     <script src="sketch.js"></script>
-    <script>        
+    <script>
         function leavesChanged() {
-            let nLeaves = document.getElementById("nLeaves").value;
+            const nLeaves = parseInt(document.getElementById("nLeaves").value, 10);
             const leaves = generateLeaves(nLeaves);
             tree = new MerkleTree(leaves);
+            if (typeof viewOffset !== 'undefined') viewOffset.x = viewOffset.y = 0;
+            document.getElementById("pathDisplay").textContent = "Click on a leaf node to get its Merkle path";
+            document.getElementById("pathDisplay").className = "path-value empty";
         }
     </script>
 </body>

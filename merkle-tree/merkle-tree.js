@@ -26,10 +26,10 @@ class MerkleTree {
     }
 
     draw (x, y) {
-        this.root.draw(x, y);        
+        this.root.draw(x, y, true);
     }
 
-    getMerkePath (leafNode) {
+    getMerklePath (leafNode) {
         const path = [];
         let current = leafNode;
         while (current.parent != null) {
@@ -73,10 +73,11 @@ class MerkleTree {
             this.leaves[i].selected = false;
         }
 
-        // check if any leaf is clicked        
+        const halfW = 14, halfH = 28;
         for (let i = 0; i < this.leaves.length; i++) {
-            if (x > this.leaves[i].x - 22 && x < this.leaves[i].x + 22 && y > this.leaves[i].y - 10 && y < this.leaves[i].y + 10) {                
-                this.leaves[i].selected = true;
+            const n = this.leaves[i];
+            if (x >= n.x - halfW && x <= n.x + halfW && y >= n.y - halfH && y <= n.y + halfH) {
+                n.selected = true;
             }
         }
     }
