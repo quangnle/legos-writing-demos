@@ -3,89 +3,361 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Demo for An Interactive Zero Knowledge Proof Scheme</title>
+    <title>Interactive Zero Knowledge Proof Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <style>
+        :root {
+            --bg: #0f0f12;
+            --surface: #1a1a20;
+            --surface-alt: #22222a;
+            --border: #2e2e38;
+            --accent: #7c3aed;
+            --accent-hover: #8b5cf6;
+            --prover: #06b6d4;
+            --verifier: #10b981;
+            --text: #e4e4e7;
+            --text-muted: #a1a1aa;
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
             margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
+            padding: 2rem;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
         }
         header {
-            background: #333;
-            color: #fff;
-            padding-top: 10px;
-            min-height: 70px;
-            border-bottom: #333 solid 3px;
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
         }
         header h1 {
             margin: 0;
-            padding: 0;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fff 40%, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        table {            
-            border:#333 solid 1px;
-            width: 700px;            
+        header p {
+            margin: 0.5rem 0 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
         }
-        th {
-            background-color: #333;
-            color: #fff;
-            padding: 10px;
-            text-align: center;
+        .params-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
         }
+        .params-card label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .params-card input {
+            width: 72px;
+            padding: 0.4rem 0.6rem;
+            margin: 0 0.25rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface-alt);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+        .params-card input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .protocol-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto auto auto auto auto;
+            gap: 1rem 1.5rem;
+        }
+        .protocol-grid .col-header {
+            padding: 0.5rem 0;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .protocol-grid .col-header.prover { color: var(--prover); }
+        .protocol-grid .col-header.verifier { color: var(--verifier); }
+        @media (max-width: 700px) {
+            .protocol-grid { grid-template-columns: 1fr; grid-template-rows: unset; }
+        }
+        .step-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .step-block.prover { border-left: 3px solid var(--prover); }
+        .step-block.verifier { border-left: 3px solid var(--verifier); }
+        .step-block[data-row="1"] { grid-row: 2; grid-column: 1; }
+        .step-block[data-row="2"] { grid-row: 3; grid-column: 1; }
+        .step-block[data-row="3"] { grid-row: 4; grid-column: 2; }
+        .step-block[data-row="4"] { grid-row: 5; grid-column: 1; }
+        .step-block[data-row="5"] { grid-row: 6; grid-column: 2; }
+        @media (max-width: 700px) {
+            .step-block[data-row] { grid-row: unset; grid-column: unset; }
+        }
+        .step-block .step-body { padding: 1.25rem; }
+        .step {
+            margin-bottom: 1.25rem;
+        }
+        .step:last-child { margin-bottom: 0; }
+        .step-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        .inline-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .inline-group input {
+            width: 64px;
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface-alt);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+        .inline-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        button {
+            padding: 0.45rem 0.9rem;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        button:hover { transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-prover {
+            background: rgba(6, 182, 212, 0.2);
+            color: var(--prover);
+        }
+        .btn-prover:hover { background: rgba(6, 182, 212, 0.35); }
+        .btn-verifier {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--verifier);
+        }
+        .btn-verifier:hover { background: rgba(16, 185, 129, 0.35); }
+        .result {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--prover);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+        .verifier .result { color: var(--verifier); background: rgba(16, 185, 129, 0.1); }
+        .formula {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+        .formula .katex {
+            font-size: 1em;
+        }
+        .formula .katex .mord.texttt {
+            color: var(--prover);
+        }
+        .verifier .formula .katex .mord.texttt {
+            color: var(--verifier);
+        }
+        .status-bar {
+            margin-top: 1.5rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: none;
+        }
+        .status-bar.visible {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-bar.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: var(--verifier);
+        }
+        .status-bar.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #f87171;
+        }
+        .status-bar::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        .status-bar.success::before { background: var(--verifier); }
+        .status-bar.error::before { background: #f87171; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Simple Demo for An Interactive Zero Knowledge Proof Scheme</h1>
-    </header>
-    <table>
-        <tr>
-            <th>Prover</th>
-            <th>Verifier</th>
-        </tr>
-        <tr>
-            <td colspan="2">
-                g= <input type="number" id="inpG" style="width: 50px;">, p= <input type="number" id="inpP" style="width: 50px;"> (must be prime)
-            </td>            
-        </tr>
-        <tr>
-            <td>
-                Secret w = <input type="number" id="inpW" style="width: 50px;"> <button onclick="calculateY()">Calculate y</button>
-                <br>
-                y = g^w mod p = <span id="y"></span>
-                <br><br>
-                Random x = <input type="number" id="inpX" style="width: 50px;"> <button onclick="calculateT()">Calculate t</button>
-                <br>                                
-                t = g^x mod p = <span id="t"></span>
-            </td>
-            <td></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td>
-                Random c = <input type="number" id="inpC" style="width: 50px;"> <button onclick="challenge()">Challenge</button>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                r = x - c * w = <span id="r"></span>
-            </td>
-            <td>
-                <button onclick="verify()">Verify</button>
-                <br><br>
-                g^r mod p= <span id="gr"></span>
-                <br>
-                y^c mod p= <span id="yc"></span>
-                <br>
-                v = g^r.y^c mod p = <span id="v"></span>
-            </td>
-        </tr>
-    </table>
+    <div class="container">
+        <header>
+            <h1>Interactive Zero Knowledge Proof</h1>
+            <p>Schnorr-style proof of knowledge: Prove you know w without revealing it</p>
+        </header>
+
+        <div class="params-card">
+            <label>Parameters (public)</label>
+            <div class="inline-group" style="margin-top: 0.5rem;">
+                g = <input type="number" id="inpG" value="2">
+                p = <input type="number" id="inpP" value="23" placeholder="must be prime">
+            </div>
+        </div>
+
+        <div class="protocol-grid">
+            <div class="col-header prover">Prover</div>
+            <div class="col-header verifier">Verifier</div>
+
+            <div class="step-block prover" data-row="1">
+                <div class="step-body">
+                    <div class="step-title">1. Commit secret</div>
+                    <div class="inline-group">
+                        Secret w = <input type="number" id="inpW" value="7">
+                        <button class="btn-prover" onclick="calculateY()">Calculate y</button>
+                    </div>
+                    <div class="formula"><span id="formula-y"></span><span id="y" class="result" style="display:none"></span></div>
+                </div>
+            </div>
+
+            <div class="step-block prover" data-row="2">
+                <div class="step-body">
+                    <div class="step-title">2. Random commitment</div>
+                    <div class="inline-group">
+                        Random x = <input type="number" id="inpX" value="12">
+                        <button class="btn-prover" onclick="calculateT()">Calculate t</button>
+                    </div>
+                    <div class="formula"><span id="formula-t"></span><span id="t" class="result" style="display:none"></span></div>
+                </div>
+            </div>
+
+            <div class="step-block verifier" data-row="3">
+                <div class="step-body">
+                    <div class="step-title">2. Send challenge</div>
+                    <div class="inline-group">
+                        Random c = <input type="number" id="inpC" value="3">
+                        <button class="btn-verifier" onclick="challenge()">Challenge</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-block prover" data-row="4">
+                <div class="step-body">
+                    <div class="step-title">3. Response</div>
+                    <div class="formula"><span id="formula-r"></span><span id="r" class="result" style="display:none"></span></div>
+                </div>
+            </div>
+
+            <div class="step-block verifier" data-row="5">
+                <div class="step-body">
+                    <div class="step-title">3. Verify proof</div>
+                    <div class="inline-group" style="margin-bottom: 0.75rem;">
+                        <button class="btn-primary" onclick="verify()">Verify</button>
+                    </div>
+                    <div class="formula"><span id="formula-gr"></span><span id="gr" class="result" style="display:none"></span></div>
+                    <div class="formula"><span id="formula-yc"></span><span id="yc" class="result" style="display:none"></span></div>
+                    <div class="formula" style="margin-top: 0.25rem;"><span id="formula-v"></span><span id="v" class="result" style="display:none"></span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusBar" class="status-bar" role="status"></div>
+    </div>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script>
+        function renderFormula(id, latex) {
+            const el = document.getElementById(id);
+            if (el && typeof katex !== 'undefined') {
+                try {
+                    katex.render(latex, el, { throwOnError: false, displayMode: false });
+                } catch (e) {}
+            }
+        }
+        function renderAllFormulas() {
+            const y = document.getElementById('y').innerText;
+            const t = document.getElementById('t').innerText;
+            const r = document.getElementById('r').innerText;
+            const gr = document.getElementById('gr').innerText;
+            const yc = document.getElementById('yc').innerText;
+            const v = document.getElementById('v').innerText;
+            renderFormula('formula-y', `y = g^w \\bmod p = \\texttt{${y || '?'}}`);
+            renderFormula('formula-t', `t = g^x \\bmod p = \\texttt{${t || '?'}}`);
+            renderFormula('formula-r', `r = x - c \\cdot w = \\texttt{${r || '?'}}`);
+            renderFormula('formula-gr', `g^r \\bmod p = \\texttt{${gr || '?'}}`);
+            renderFormula('formula-yc', `y^c \\bmod p = \\texttt{${yc || '?'}}`);
+            renderFormula('formula-v', `v = g^r \\cdot y^c \\bmod p = \\texttt{${v || '?'}}`);
+        }
+    </script>
     <script>        
+        function isPrime(n) {
+            if (!Number.isInteger(n) || n < 2) return false;
+            if (n === 2) return true;
+            if (n % 2 === 0) return false;
+            for (let i = 3; i * i <= n; i += 2) {
+                if (n % i === 0) return false;
+            }
+            return true;
+        }
+        function showStatusError(msg) {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = msg;
+            statusBar.className = 'status-bar error visible';
+        }
+        function validateParams() {
+            let p = parseInt(document.getElementById('inpP').value, 10);
+            if (isNaN(p) || p < 2) {
+                showStatusError('p must be a positive integer ≥ 2.');
+                return null;
+            }
+            if (!isPrime(p)) {
+                showStatusError('p = ' + p + ' is not prime. Please enter a prime number.');
+                return null;
+            }
+            return p;
+        }
         function modPow(base, exponent, modulus) {
             if (modulus === 1) return 0;
             let result = 1;
@@ -101,46 +373,57 @@
         }
 
         function calculateY() {
-            let g = parseInt(document.getElementById('inpG').value);
-            let p = parseInt(document.getElementById('inpP').value);
-            let w = parseInt(document.getElementById('inpW').value);
+            let p = validateParams();
+            if (p === null) return;
+            let g = parseInt(document.getElementById('inpG').value, 10);
+            let w = parseInt(document.getElementById('inpW').value, 10);
             let y = modPow(g, w, p);
             document.getElementById('y').innerText = y;
+            renderAllFormulas();
         }
 
         function calculateT() {
-            let g = parseInt(document.getElementById('inpG').value);
-            let p = parseInt(document.getElementById('inpP').value);
-            let x = parseInt(document.getElementById('inpX').value);
+            let p = validateParams();
+            if (p === null) return;
+            let g = parseInt(document.getElementById('inpG').value, 10);
+            let x = parseInt(document.getElementById('inpX').value, 10);
             let t = modPow(g, x, p);
             document.getElementById('t').innerText = t;
+            renderAllFormulas();
         }
 
         function challenge() {
-            let p = parseInt(document.getElementById('inpP').value);
-            let w = parseInt(document.getElementById('inpW').value);
-            let x = parseInt(document.getElementById('inpX').value);
-            let c = parseInt(document.getElementById('inpC').value);
+            let p = validateParams();
+            if (p === null) return;
+            let w = parseInt(document.getElementById('inpW').value, 10);
+            let x = parseInt(document.getElementById('inpX').value, 10);
+            let c = parseInt(document.getElementById('inpC').value, 10);
             let r = x - c*w;
-            st = '';
+            let st = '';
             st += r;
             if (r < 0) {
                 r = ((p-2)*(-r)) % (p-1);
                 st += ' = ' + r;
             }
             document.getElementById('r').innerText = st;
+            renderAllFormulas();
         }
 
         function verify() {
-            let g = parseInt(document.getElementById('inpG').value);
-            let p = parseInt(document.getElementById('inpP').value);
-            let w = parseInt(document.getElementById('inpW').value);
-            let y = parseInt(document.getElementById('y').innerText);
-            let t = parseInt(document.getElementById('t').innerText);
-            let x = parseInt(document.getElementById('inpX').value);
-            let c = parseInt(document.getElementById('inpC').value);
-            
-            
+            let yVal = document.getElementById('y').innerText;
+            let tVal = document.getElementById('t').innerText;
+            if (!yVal || !tVal) {
+                showStatusError('Please Calculate y and t first.');
+                return;
+            }
+            let p = validateParams();
+            if (p === null) return;
+            let g = parseInt(document.getElementById('inpG').value, 10);
+            let w = parseInt(document.getElementById('inpW').value, 10);
+            let y = parseInt(yVal, 10);
+            let t = parseInt(tVal, 10);
+            let x = parseInt(document.getElementById('inpX').value, 10);
+            let c = parseInt(document.getElementById('inpC').value, 10);
             let r = x - c*w;
             if (r < 0) {
                 r = ((p-2)*(-r)) % (p-1);
@@ -148,16 +431,24 @@
 
             document.getElementById('gr').innerText = modPow(g, r, p);
             document.getElementById('yc').innerText = modPow(y, c, p);
-
             let v = (modPow(g, r, p) * modPow(y, c, p)) % p;
-            document.getElementById('v').innerText = v; 
+            document.getElementById('v').innerText = v;
+            renderAllFormulas();
 
+            const statusBar = document.getElementById('statusBar');
+            statusBar.classList.remove('success', 'error');
             if (v === t) {
-                alert('The proof is verified!');
+                statusBar.textContent = 'Proof verified successfully!';
+                statusBar.classList.add('success', 'visible');
             } else {
-                alert('The proof is not verified!');
+                statusBar.textContent = 'Proof verification failed.';
+                statusBar.classList.add('error', 'visible');
             }
         }
+
+        window.addEventListener('load', function() {
+            if (typeof katex !== 'undefined') renderAllFormulas();
+        });
     </script>
 </body>
 </html>
