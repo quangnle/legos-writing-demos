@@ -4,80 +4,234 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diffie-Hellman Key Exchange</title>
-    <link rel="stylesheet" href="../css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <style>
+        :root {
+            --bg: #0c0c0f;
+            --surface: #16161a;
+            --surface-alt: #1e1e24;
+            --border: #2a2a32;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.15);
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            margin: 0;
+            padding: 2rem;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 40%, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p {
+            margin: 0.75rem 0 0;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card h2 {
+            margin: 0 0 1.25rem;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .dh-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        .dh-table th,
+        .dh-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .dh-table th {
+            background: var(--surface-alt);
+            color: var(--text-muted);
+            font-weight: 600;
+            width: 50%;
+        }
+        .dh-table td {
+            background: var(--surface);
+        }
+        .dh-table .section-row td {
+            background: var(--surface-alt);
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .dh-table input[type="number"] {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            padding: 0.5rem 0.75rem;
+            width: 80px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--text);
+        }
+        .dh-table input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .dh-table .result {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--success);
+            font-weight: 600;
+        }
+        .dh-table button {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: var(--accent);
+            color: white;
+            transition: background 0.2s;
+        }
+        .dh-table button:hover {
+            background: var(--accent-hover);
+        }
+        .dh-table .math-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+        .katex { font-size: 1em !important; }
+    </style>
 </head>
 <body>
-    <h1>Diffie-Hellman Key Exchange</h1>
-    <p>1 - Diffie-Hellman on prime field</p>
-    <table border="1px" cellpadding="0px" cellspacing="1px">
-        <tr>
-            <th>Alice</th>
-            <th>Bob</th>            
-        </tr>
-        <tr>
-            <td colspan="2"><b>Public share</b></td>            
-        </tr>
-        <tr>            
-            <td>\(\mathbb F_p, p=\)<input type="number" id="Fp" value="43"></td>
-            <td>\(g=\)<input type="number" id="generator" value="7"></td>
-        </tr>
-        <tr>
-            <td colspan="2"><b>Secret</b></td>            
-        </tr>
-        <tr>
-            <td>Secret \(a=\)<input type="number" id="sa" placeholder="1"></td>
-            <td>Secret \(b=\)<input type="number" id="sb" placeholder="2"></td>
-        </tr>
-        <tr>
-            <td colspan="2"><button onclick="proceed()">Proceed</button></td>
-        </tr>     
-        <tr>
-            <td>\(x=g^a \mod p=\) <span id="ga"></span></td>
-            <td>\(y=g^b \ mod p=\) <span id="gb"></span></td>
-        </tr>
-        <tr>
-            <td colspan="2"><b>Shared secret</b></td>
-        </tr>
-        <tr>
-            <td colspan="2">\(k=g^{ab} \mod p = \) <span id="k"></span></td>
-        </tr>        
-    </table>
+    <div class="container">
+        <header>
+            <h1>Diffie-Hellman Key Exchange</h1>
+            <p>Interactive demo: prime field & elliptic curve</p>
+        </header>
 
-    <p>2 - Diffie-Hellman on elliptic curve</p>
-    <table border="1px" cellpadding="0px" cellspacing="1px">
-        <tr>
-            <th>Alice</th>
-            <th>Bob</th>            
-        </tr>
-        <tr>
-            <td colspan="2"><b>Public share</b></td>            
-        </tr>
-        <tr>            
-            <td>Elliptic curve\(y^2 = x^3+x+7\) and \(\mathbb F_p, p=83\)</td>
-            <td>Generator \(G(0, 16)\)</td>
-        </tr>
-        <tr>
-            <td colspan="2"><b>Secret</b></td>            
-        </tr>
-        <tr>
-            <td>Secret \(a=\)<input type="number" id="sA" placeholder="1"></td>
-            <td>Secret \(b=\)<input type="number" id="sB" placeholder="2"></td>
-        </tr>
-        <tr>
-            <td colspan="2"><button onclick="proceed_ec()">Proceed</button></td>
-        </tr>     
-        <tr>
-            <td>\(A=aG=\) <span id="gA"></span></td>
-            <td>\(B=bG=\) <span id="gB"></span></td>
-        </tr>
-        <tr>
-            <td colspan="2"><b>Shared secret</b></td>
-        </tr>
-        <tr>
-            <td colspan="2">\(K= abG = \) <span id="K"></span></td>
-        </tr>        
-    </table>
+        <div class="card">
+            <h2>1. Diffie-Hellman on Prime Field</h2>
+            <table class="dh-table">
+                <tr>
+                    <th>Alice</th>
+                    <th>Bob</th>
+                </tr>
+                <tr class="section-row">
+                    <td colspan="2">Public share</td>
+                </tr>
+                <tr>
+                    <td class="math-cell">\(\mathbb{F}_p\), \(p=\) <input type="number" id="Fp" value="43"></td>
+                    <td class="math-cell">\(g=\) <input type="number" id="generator" value="7"></td>
+                </tr>
+                <tr class="section-row">
+                    <td colspan="2">Secret</td>
+                </tr>
+                <tr>
+                    <td class="math-cell">Secret \(a=\) <input type="number" id="sa" placeholder="1"></td>
+                    <td class="math-cell">Secret \(b=\) <input type="number" id="sb" placeholder="2"></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: center;"><button onclick="proceed()">Proceed</button></td>
+                </tr>
+                <tr>
+                    <td class="math-cell">\(x = g^a \bmod p =\) <span id="ga" class="result">—</span></td>
+                    <td class="math-cell">\(y = g^b \bmod p =\) <span id="gb" class="result">—</span></td>
+                </tr>
+                <tr class="section-row">
+                    <td colspan="2">Shared secret</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="math-cell">\(k = g^{ab} \bmod p =\) <span id="k" class="result">—</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>2. Diffie-Hellman on Elliptic Curve</h2>
+            <table class="dh-table">
+                <tr>
+                    <th>Alice</th>
+                    <th>Bob</th>
+                </tr>
+                <tr class="section-row">
+                    <td colspan="2">Public share</td>
+                </tr>
+                <tr>
+                    <td class="math-cell">Curve \(y^2 = x^3 + x + 7\), \(\mathbb{F}_p\) with \(p = 83\)</td>
+                    <td class="math-cell">Generator \(G(0, 16)\)</td>
+                </tr>
+                <tr class="section-row">
+                    <td colspan="2">Secret</td>
+                </tr>
+                <tr>
+                    <td class="math-cell">Secret \(a=\) <input type="number" id="sA" placeholder="1"></td>
+                    <td class="math-cell">Secret \(b=\) <input type="number" id="sB" placeholder="2"></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: center;"><button onclick="proceed_ec()">Proceed</button></td>
+                </tr>
+                <tr>
+                    <td class="math-cell">\(A = aG =\) <span id="gA" class="result">—</span></td>
+                    <td class="math-cell">\(B = bG =\) <span id="gB" class="result">—</span></td>
+                </tr>
+                <tr class="section-row">
+                    <td colspan="2">Shared secret</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="math-cell">\(K = abG =\) <span id="K" class="result">—</span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script src="discrete-ec.js"></script>
+    <script src="index.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: "\\(", right: "\\)", display: false },
+                    { left: "\\[", right: "\\]", display: true }
+                ],
+                throwOnError: false
+            });
+        });
+
         function modPow(base, exponent, modulus) {
             if (modulus === 1) return 0;
             var result = 1;
@@ -100,27 +254,23 @@
             var ga = modPow(generator, sa, Fp);
             var gb = modPow(generator, sb, Fp);
             var k = modPow(gb, sa, Fp);
-            document.getElementById("ga").innerHTML = ga;
-            document.getElementById("gb").innerHTML = gb;
-            document.getElementById("k").innerHTML = k;
+            document.getElementById("ga").textContent = ga;
+            document.getElementById("gb").textContent = gb;
+            document.getElementById("k").textContent = k;
         }
 
-        function proceed_ec(){
+        function proceed_ec() {
             const ec = new DiscreteEC(83, 1, 7);
             const generator = [0, 16];
             var sa = document.getElementById("sA").value * 1;
             var sb = document.getElementById("sB").value * 1;
             var ga = ec.multiply(generator, sa);
             var gb = ec.multiply(generator, sb);
-            var k = ec.multiply(gb, sa);            
-            document.getElementById("gA").innerHTML = `(${ga[0]}, ${ga[1]})`;
-            document.getElementById("gB").innerHTML = `(${gb[0]}, ${gb[1]})`;
-            document.getElementById("K").innerHTML = `(${k[0]}, ${k[1]})`;
+            var k = ec.multiply(gb, sa);
+            document.getElementById("gA").textContent = "(" + ga[0] + ", " + ga[1] + ")";
+            document.getElementById("gB").textContent = "(" + gb[0] + ", " + gb[1] + ")";
+            document.getElementById("K").textContent = "(" + k[0] + ", " + k[1] + ")";
         }
     </script>
-    <script src="discrete-ec.js"></script>    
-    <script src="index.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script"></script>
 </body>
 </html>
