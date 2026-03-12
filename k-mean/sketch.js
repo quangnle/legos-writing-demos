@@ -1,16 +1,25 @@
-const samples = [];
+window.samples = window.samples || [];
+const samples = window.samples;
 const sampleSize = 300;
 let clusters = [];
 
+const CLUSTER_COLORS = [
+    "#ef4444", "#22c55e", "#3b82f6", "#eab308",
+    "#ec4899", "#06b6d4", "#f97316", "#8b5cf6",
+    "#84cc16", "#14b8a6"
+];
+
 function setup() {
-    createCanvas(700, 600);
+    const cnv = createCanvas(700, 600);
+    cnv.parent('canvas-container');
+    samples.length = 0; // reset nếu gọi lại
     for (let i = 0; i < sampleSize; i++) {
         let x = random(width);
         let y = random(height);
         let sample = createVector(x, y);
         samples.push(sample);
     }
-
+    window.samples = samples;
     clusters = createClusters(samples, 1);
 }
 
@@ -78,21 +87,32 @@ function clusterIt() {
     clusters = createClusters(samples, numClusters);
 }
 
+const CANVAS_BG = [22, 22, 26];  // #16161a
+
 function draw() {
-    background(255);
-    fill(255);
-    rect(0, 0, width, height);
-    const colors = ["#f00", "#0f0", "#00f", "#ff0", "#f0f", "#0ff", "#000", "#fff", "#888", "#444"];
+    background(CANVAS_BG[0], CANVAS_BG[1], CANVAS_BG[2]);
+    noStroke();
+
     for (let i = 0; i < clusters.length; i++) {
         let cluster = clusters[i];
-        fill(colors[i]);
+        fill(CLUSTER_COLORS[i]);
         for (let point of cluster.points) {
-            ellipse(point.x, point.y, 8, 8);
+            ellipse(point.x, point.y, 10, 10);
         }
+        // Draw centroid
+        let c = cluster.centroid;
+        stroke(CLUSTER_COLORS[i]);
+        strokeWeight(2);
+        noFill();
+        ellipse(c.x, c.y, 20, 20);
+        line(c.x - 8, c.y, c.x + 8, c.y);
+        line(c.x, c.y - 8, c.x, c.y + 8);
+        noStroke();
     }
 }
 
 function mousePressed() {
+    if (mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height) return;
     let sample = createVector(mouseX, mouseY);
     let bestDist = Infinity;
     let bestCluster = null;
@@ -103,6 +123,8 @@ function mousePressed() {
             bestCluster = cluster;
         }
     }
-    bestCluster.points.push(sample);
-    samples.push(sample);
+    if (bestCluster) {
+        bestCluster.points.push(sample);
+        samples.push(sample);
+    }
 }
