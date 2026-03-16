@@ -6,7 +6,9 @@ function setup() {
   // processor.run();
 }
 
+const CANVAS_BG = [22, 22, 26];
+
 function draw() {
-    background(220);
+    background(CANVAS_BG[0], CANVAS_BG[1], CANVAS_BG[2]);
     processor.draw();
 }

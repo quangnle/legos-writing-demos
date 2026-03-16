@@ -3,27 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gale - Shapley Algorithm Demo</title>
+    <title>Gale-Shapley Algorithm Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0c0f;
+            --surface: #16161a;
+            --surface-alt: #1e1e24;
+            --border: #2a2a32;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            margin: 0;
+            padding: 2rem;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 40%, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p {
+            margin: 0.75rem 0 0;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+        header p b {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card h3 {
+            margin: 0 0 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+        .control-row button {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .control-row button.primary {
+            background: var(--accent);
+            color: white;
+        }
+        .control-row button.primary:hover {
+            background: var(--accent-hover);
+        }
+        .control-row button.secondary {
+            background: var(--surface-alt);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .control-row button.secondary:hover {
+            background: var(--border);
+        }
+        .control-row button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .control-row button.reset-highlight {
+            background: #22c55e;
+            color: white;
+            border-color: #22c55e;
+        }
+        .control-row button.reset-highlight:hover {
+            background: #16a34a;
+            border-color: #16a34a;
+        }
+
+        #canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            background: var(--surface-alt);
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+        #canvas-wrapper canvas {
+            border-radius: 6px;
+            display: block;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .output-card textarea {
+            width: 100%;
+            min-height: 200px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-alt);
+            color: var(--text);
+            resize: vertical;
+        }
+        .output-card textarea::placeholder {
+            color: var(--text-muted);
+        }
+        .output-card textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+    </style>
 </head>
 <body>
-    <h1>Gale - Shapley Algorithm Demo</h1>    
+    <div class="container">
+        <header>
+            <h1>Gale-Shapley Algorithm Demo</h1>
+            <p>Stable marriage problem: <b>male-optimal</b> deferred acceptance</p>
+        </header>
+
+        <div class="card">
+            <div class="control-row">
+                <button id="btn-propose" class="primary" onclick="next()">Propose Next Round</button>
+                <button id="btn-reset" class="secondary" onclick="resetDemo()">Reset</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Matching Visualization</h3>
+            <div id="canvas-wrapper">
+                <div id="canvas-container"></div>
+            </div>
+        </div>
+
+        <div class="card output-card">
+            <h3>Algorithm Log</h3>
+            <textarea id="content" cols="80" rows="12" readonly placeholder="Click 'Propose Next Round' to run the algorithm step by step..."></textarea>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="person.js"></script>
     <script src="processor.js"></script>
-    <script src="sketch.js"></script>    
     <script>
         const processor = new Processor();
+        function updateButtonStates() {
+            const allStable = processor.males && processor.males.every(m => m.partner != null);
+            const btnPropose = document.getElementById('btn-propose');
+            const btnReset = document.getElementById('btn-reset');
+            btnPropose.disabled = allStable;
+            btnReset.classList.toggle('reset-highlight', allStable);
+        }
         function next() {
             processor.proposeOnce();
             document.getElementById('content').value = processor.content;
+            updateButtonStates();
+        }
+        function resetDemo() {
+            processor.content = '';
+            processor.generate(5);
+            document.getElementById('content').value = '';
+            updateButtonStates();
         }
     </script>
-    <div id="canvas-container"></div>
-    <div>
-        <button onclick="next()">Propose Next Round</button>
-    </div>
-    <div>
-        <textarea cols="80" rows="12" id="content"></textarea>
-    </div>
+    <script src="sketch.js"></script>
 </body>
 </html>

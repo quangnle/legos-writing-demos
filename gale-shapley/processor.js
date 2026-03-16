@@ -19,14 +19,17 @@ class Processor {
         return result;
     }
 
+    static MALE_NAMES = ['Andy', 'Bob', 'Cody', 'Dave', 'Erik'];
+    static FEMALE_NAMES = ['Amy', 'Beth', 'Carol', 'Dianna', 'Emy'];
+
     generate(n){
         this.n = n;
         // generate n persons for each gender
         this.males = [];
         this.females = [];
         for (let i = 0; i < n; i++){
-            const male = new Person('M' + i, 'male');
-            const female = new Person('F' + i, 'female');
+            const male = new Person(Processor.MALE_NAMES[i], 'male');
+            const female = new Person(Processor.FEMALE_NAMES[i], 'female');
             this.males.push(male);
             this.females.push(female);
         }    
@@ -122,10 +125,16 @@ class Processor {
         }
         
         // draw the connections
+        const allStable = this.males.every(m => m.partner != null);
         for (let i = 0; i < this.n; i++){
             if (this.males[i].partner != null){
-                // draw the line
-                stroke(0);
+                if (allStable) {
+                    stroke(34, 197, 94);  // green
+                    strokeWeight(4);
+                } else {
+                    stroke(99, 102, 241); // purple
+                    strokeWeight(2);
+                }
                 line(this.males[i].x, this.males[i].y, this.males[i].partner.x, this.males[i].partner.y);
             }
         }
