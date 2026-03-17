@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dRNG Demo - Scalable Distributed Random Number Generation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>dRNG Demo</h1>
+            <p>Scalable Distributed Random Number Generation — El-Gamal homomorphic encryption & VRF</p>
+        </header>
+
+        <div class="formula-intro">
+            <span class="katex-wrap">Curve: \(y^2 = x^3 + x + 7 \pmod{83}\)</span>
+        </div>
+
+        <!-- Step 1: Init -->
+        <div class="card accordion-item" data-step="1">
+            <div class="accordion-header" aria-expanded="true">
+                <h2>Step 1: Session setup (Requester)</h2>
+                <span class="accordion-icon" aria-hidden="true">▼</span>
+            </div>
+            <div class="accordion-content">
+            <p class="formula">\(Y = xG\) — Click to select point G (generator), then click to select point Y (public key)</p>
+            <div id="canvas-wrapper" class="canvas-wrapper">
+                <div id="canvas-container"></div>
+            </div>
+            <div class="control-row">
+                <label>G (generator):</label>
+                <span id="g-display">Not selected</span>
+                <label>Y (PK):</label>
+                <span id="y-display">Not selected</span>
+                <label>x (SK):</label>
+                <span id="x-display">—</span>
+                <label>Order:</label>
+                <span id="order-display">—</span>
+            </div>
+            <div class="control-row">
+                <label for="nonce">Nonce:</label>
+                <input type="text" id="nonce" value="12345" placeholder="nonce">
+                <label for="tau">\(\tau\) (threshold):</label>
+                <input type="number" id="tau" value="20" min="0" placeholder="τ">
+            </div>
+            <div class="control-row">
+                <span id="t-display" class="muted"></span>
+            </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Contributors -->
+        <div class="card accordion-item collapsed" data-step="2">
+            <div class="accordion-header" aria-expanded="false">
+                <h2>Step 2: Select contributors (VRF + PoE)</h2>
+                <span class="accordion-icon" aria-hidden="true">▼</span>
+            </div>
+            <div class="accordion-content">
+            <p class="formula">\(T = \mathtt{nonce}^{\mathtt{encode}(Y)} \bmod p\), \(y_i = \mathtt{nonce}^{\mathtt{sk}_i} \bmod N\), Eligible if \(y_i < \tau\)</p>
+            <div class="control-row">
+                <button type="button" class="btn-secondary" id="btn-add-node">Add node</button>
+            </div>
+            <div id="nodes-list" class="nodes-list"></div>
+            <div class="control-row">
+                <button type="button" class="btn-primary" id="btn-compute-vrf">Compute \(y_i, \pi_i\)</button>
+                <button type="button" class="btn-secondary" id="btn-verify-poe">Verify PoE</button>
+            </div>
+            <div id="poe-output" class="output-box"></div>
+            <div id="contributors-list" class="contributors-list muted"></div>
+            </div>
+        </div>
+
+        <!-- Step 3: Contribution -->
+        <div class="card accordion-item collapsed" data-step="3">
+            <div class="accordion-header" aria-expanded="false">
+                <h2>Step 3: Contribute ciphertext</h2>
+                <span class="accordion-icon" aria-hidden="true">▼</span>
+            </div>
+            <div class="accordion-content">
+            <p class="formula">\(M_i = x_i G\), \(E(M_i) = (C_i, D_i) = (k_i G, k_i Y + M_i)\)</p>
+            <p class="muted">Use the curve from Step 1 to select points (press "Select x_i" or "Select k_i" then click on the curve).</p>
+            <div id="step3-layout" class="step3-layout contrib-step3-layout">
+                <div id="eligible-nodes-list" class="contrib-eligible-list">
+                    <div class="contrib-list-label">Eligible nodes</div>
+                    <div id="eligible-nodes-items" class="contrib-eligible-nodes"></div>
+                </div>
+                <div id="contrib-panel" class="contrib-controls-panel">
+                    <div id="contrib-no-selection" class="contrib-placeholder muted">Select a node to contribute</div>
+                    <div id="contrib-selected" class="contrib-selected" style="display:none">
+                        <div class="control-row">
+                            <label>\(x_i\) → \(M_i\):</label>
+                            <span id="xi-display">—</span>
+                            <button type="button" class="btn-secondary" id="btn-select-xi">Select x_i</button>
+                        </div>
+                        <div class="control-row">
+                            <label>\(k_i\) → \(C_i\):</label>
+                            <span id="ki-display">—</span>
+                            <button type="button" class="btn-secondary" id="btn-select-ki">Select k_i</button>
+                        </div>
+                        <div class="control-row">
+                            <button type="button" class="btn-primary" id="btn-contribute">Contribute (\(C_i, D_i\))</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="contributions-output" class="output-box"></div>
+            </div>
+        </div>
+
+        <!-- Step 4: Tally -->
+        <div class="card accordion-item collapsed" data-step="4">
+            <div class="accordion-header" aria-expanded="false">
+                <h2>Step 4: Homomorphic aggregation</h2>
+                <span class="accordion-icon" aria-hidden="true">▼</span>
+            </div>
+            <div class="accordion-content">
+            <p class="formula">\(C = \sum_i C_i\), \(D = \sum_i D_i\), \(M = D - xC = \sum_i M_i\)</p>
+            <div class="control-row">
+                <button type="button" class="btn-primary" id="btn-tally">Aggregate</button>
+            </div>
+            <div id="tally-output" class="output-box"></div>
+            <div id="m-beacon" class="beacon-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="ec-utils.js"></script>
+    <script src="protocol.js"></script>
+    <script src="drng-app.js"></script>
+    <script src="sketch.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initDrng();
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const item = header.closest('.accordion-item');
+                    const expanded = header.getAttribute('aria-expanded') === 'true';
+                    item.classList.toggle('collapsed', expanded);
+                    header.setAttribute('aria-expanded', !expanded);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
