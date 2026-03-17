@@ -5,41 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Convert an Expression to Rank 1 Constraint System</title>
     <style>
+        * { box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
             color: #333;
         }
-        input[type="text"] {
-            width: 300px;
-            padding: 10px;
-            margin-bottom: 10px;
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        h1 {
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 16px 20px;
+            margin: 0;
+        }
+        .section {
+            padding: 20px;
+        }
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .exp-input {
+            flex: 1;
+            max-width: 400px;
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .exp-input:focus {
+            outline: none;
+            border-color: #28a745;
+            box-shadow: 0 0 0 2px rgba(40,167,69,0.2);
         }
         button {
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #28a745;
+            color: #fff;
             border: none;
+            border-radius: 6px;
             cursor: pointer;
+            transition: background 0.2s;
         }
         button:hover {
-            background-color: #218838;
+            background: #218838;
         }
         textarea {
-            width: 700px;
-            height: 200px;
-            padding: 10px;
-            margin-top: 10px;
-            font-family: monospace;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            width: 100%;
+            min-height: 280px;
+            padding: 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            resize: vertical;
+            background: #fafafa;
         }
     </style>
 </head>
 <body>
-    <h1>Expression to Rank 1 Constraint System</h1>
-    <div><input type="text" id="exp" placeholder="z=x^3+y+5"><button onclick="convert()">Convert</button></div>
-    <div><textarea id="result" readonly></textarea></div>
+    <div class="container">
+        <h1>Expression to Rank 1 Constraint System</h1>
+        <div class="section">
+            <div class="row">
+                <input type="text" class="exp-input" id="exp" placeholder="z=x^3+y+5">
+                <button onclick="convert()">Convert</button>
+            </div>
+            <textarea id="result" readonly></textarea>
+        </div>
+    </div>
     <script src="index.js"></script>    
     <script>
         function convert() {
