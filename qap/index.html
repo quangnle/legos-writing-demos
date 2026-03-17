@@ -164,6 +164,7 @@
             <div id="witnessContainer" class="witness-inputs"></div>
             <div class="witness-placeholder" id="witnessPlaceholder">Nhập biểu thức và bấm "Generate R1CS" để tạo các ô nhập witness.</div>
             <div class="row" style="margin-top: 12px;">
+                <button onclick="autoFillWitness()">Auto Fill Values</button>
                 <button onclick="generateQAP()">Generate QAP (prime order p = 47)</button>
             </div>
         </div>
@@ -205,6 +206,53 @@
                 `;
                 container.appendChild(item);
             });
+        }
+        function autoFillWitness() {
+            const exp = document.getElementById('exp').value;
+            const firstInput = document.getElementById('witness_0');
+            if (!firstInput) {
+                alert('Vui lòng bấm "Generate R1CS" trước.');
+                return;
+            }
+            try {
+                const lro = exp2LROmatrices(exp);
+                const prime = 47;
+                const defaultInputs = [1, 2, 3, 4, 5];
+                let inputIdx = 0;
+                const values = { '1': 1 };
+
+                function mod(n) { return ((n % prime) + prime) % prime; }
+                function getVal(token) {
+                    token = String(token).trim();
+                    if (token in values) return values[token];
+                    if (!isNaN(token)) return mod(parseInt(token));
+                    values[token] = defaultInputs[inputIdx] ?? 1;
+                    inputIdx++;
+                    return values[token];
+                }
+
+                for (const eq of lro.equations) {
+                    const [lhs, rhs] = eq.split('=').map(s => s.trim());
+                    let val;
+                    if (rhs.includes('+')) {
+                        const [a, b] = rhs.split('+').map(s => s.trim());
+                        val = mod(getVal(a) + getVal(b));
+                    } else if (rhs.includes('*')) {
+                        const [a, b] = rhs.split('*').map(s => s.trim());
+                        val = mod(getVal(a) * getVal(b));
+                    } else {
+                        val = getVal(rhs);
+                    }
+                    values[lhs] = val;
+                }
+
+                lro.variables.forEach((v, i) => {
+                    const inp = document.getElementById(`witness_${i}`);
+                    if (inp) inp.value = String(values[v] ?? 0);
+                });
+            } catch (e) {
+                alert('Lỗi: ' + e.message);
+            }
         }
         function generateQAP() {
             const exp = document.getElementById('exp').value;
