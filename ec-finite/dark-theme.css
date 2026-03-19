@@ -1,0 +1,63 @@
+/* Dark theme for EC-Finite demo */
+body {
+    background-color: #1a1a2e;
+    color: #e8e8e8;
+}
+
+header {
+    background: #16213e;
+    border-bottom-color: #0f3460;
+}
+
+header h1 {
+    color: #e94560;
+}
+
+p, label {
+    color: #b8b8b8;
+}
+
+input[type="number"],
+textarea {
+    background-color: #1a1a2e;
+    color: #e8e8e8;
+    border: 1px solid #394867;
+    border-radius: 6px;
+}
+
+input[type="number"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: #e94560;
+    box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2);
+}
+
+button {
+    background: #e94560;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+}
+
+#canvas-container canvas {
+    border: 1px solid #394867;
+    background-color: #16213e !important;
+    border-radius: 8px;
+}
+
+div canvas {
+    border-color: #394867;
+}
+
+/* MathJax text color for dark theme */
+.MathJax, .mjx-chtml {
+    color: #e8e8e8 !important;
+}

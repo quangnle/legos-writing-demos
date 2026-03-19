@@ -9,12 +9,12 @@ let selectedIndex = -1; // Chỉ số của điểm được chọn
 function setup() {
     const cvs = createCanvas(350, 350);
     cvs.parent('canvas-container');
-    background(255);
+    background(30, 30, 46); // Dark theme background
     //noLoop();
 }
 
 function draw() {
-    background(255);
+    background(30, 30, 46);
     drawNumberPlane(ec.p-1, ec.p-1);
     drawEllipticCurve();
 }
@@ -29,7 +29,7 @@ function drawNumberPlane(xMax, yMax) {
     
     xStep = Math.floor((width - leftMargin) / xMax);
     yStep = Math.floor((height - bottomMargin) / yMax);
-    stroke(200);
+    stroke(57, 72, 103); // #394867 dark theme grid
     strokeWeight(1);
     for (let x = 0; x <= xMax; x += step) {
         const xPos = x * xStep + leftMargin;
@@ -37,7 +37,7 @@ function drawNumberPlane(xMax, yMax) {
         strokeWeight(0.5);
         textAlign(CENTER, CENTER);
         textSize(8);
-        fill(0);
+        fill(184, 184, 184); // #b8b8b8 dark theme text
         text(x, xPos, height - bottomMargin + 10);
     }
     for (let y = 0; y <= yMax; y += step) {
@@ -46,7 +46,7 @@ function drawNumberPlane(xMax, yMax) {
         strokeWeight(0.5);
         textAlign(RIGHT, CENTER);
         textSize(8);
-        fill(0);
+        fill(184, 184, 184); // #b8b8b8 dark theme text
         text(y, leftMargin - 2, yPos);
     }
 }
@@ -54,7 +54,7 @@ function drawNumberPlane(xMax, yMax) {
 /* vẽ đường cong elliptic với các điểm đã cho */
 function drawEllipticCurve() {    
     const points = ec.points;
-    fill(0, 255, 0);
+    fill(80, 200, 120); // Lighter green for dark bg
     for (const p of points) {
         let x = p.x * xStep;
         let y = p.y * yStep;
@@ -63,7 +63,7 @@ function drawEllipticCurve() {
 
     // vẽ điểm được hover chuột
     if (hoveringIndex !== -1) {
-        drawECPoint(hoveringIndex, color(100, 100, 100), true); // Vẽ điểm được hover
+        drawECPoint(hoveringIndex, color(180, 180, 180), true); // Vẽ điểm được hover
     }
 
     // vẽ điểm được chọn
@@ -80,9 +80,9 @@ function drawECPoint(index, color, drawLabel = false) {
     fill(color);
     ellipse(x + leftMargin, height - y - bottomMargin, 5);        
     if (drawLabel) {
-        stroke(0);
+        stroke(184, 184, 184);
         strokeWeight(0.5);
-        fill(0);
+        fill(184, 184, 184);
         textAlign(LEFT, CENTER);
         textSize(8);
         let xText = x + leftMargin > (width - 35) ? x + leftMargin - 30 : x + leftMargin + 5;
