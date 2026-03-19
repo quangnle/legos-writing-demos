@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLP — Nhận dạng chữ số 0-9</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0c0f;
+            --surface: #16161a;
+            --surface-alt: #1e1e24;
+            --border: #2a2a32;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            margin: 0;
+            padding: 2rem;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 40%, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p { margin: 0.75rem 0 0; color: var(--text-muted); font-size: 1.05rem; }
+
+        .data-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .data-panel h3 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; color: var(--text-muted); text-align: center; }
+        .data-panel-center { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem; }
+        .digit-sample {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .digit-sample canvas {
+            display: block;
+            border-radius: 6px;
+            background: var(--surface-alt);
+            image-rendering: pixelated;
+        }
+        .digit-sample .label { font-size: 0.85rem; color: var(--text-muted); }
+        .digit-sample .pred { font-size: 0.9rem; font-weight: 600; }
+        .digit-sample .pred.correct { color: #22c55e; }
+        .digit-sample .pred.wrong { color: #ef4444; }
+
+        .draw-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .draw-panel h3 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; color: var(--text-muted); text-align: center; }
+        .draw-panel-center { display: flex; justify-content: center; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem; }
+        .draw-area { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+        .draw-preview { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+        .draw-preview .label { font-size: 0.85rem; color: var(--text-muted); }
+        #drawCanvas {
+            display: block;
+            border-radius: 8px;
+            background: #fff;
+            cursor: crosshair;
+            image-rendering: pixelated;
+        }
+        .draw-buttons { display: flex; gap: 0.5rem; }
+        .btn-clear { background: var(--surface-alt) !important; color: var(--text) !important; border: 1px solid var(--border) !important; }
+        .btn-clear:hover { background: var(--border) !important; }
+        .draw-buttons button {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-alt);
+            color: var(--text);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .draw-buttons button:hover { background: var(--border); }
+        .draw-buttons button.btn-predict { background: var(--accent); color: white; border-color: var(--accent); }
+        .draw-buttons button.btn-predict:hover { background: var(--accent-hover); }
+        .draw-result {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-height: 2rem;
+        }
+        .draw-area { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+        .draw-preview { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+        .draw-buttons { flex-direction: row !important; }
+        .btn-clear { background: var(--surface-alt) !important; }
+
+        .network-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .network-panel h3 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; color: var(--text-muted); }
+        #networkDiagram { display: block; border-radius: 8px; background: var(--surface-alt); }
+        .network-diagram-wrap { display: flex; justify-content: center; }
+        .layer-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem; }
+        .layer-controls label { font-size: 0.9rem; color: var(--text-muted); }
+        .layer-controls select {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.9rem;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+        }
+
+        .train-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .train-controls label { font-size: 0.9rem; color: var(--text-muted); }
+        .train-controls input[type="number"] {
+            width: 70px;
+            padding: 0.4rem 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+        }
+        .btn-train {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-train:hover { background: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MLP — Nhận dạng chữ số 0-9</h1>
+            <p>8×8 pixels → hidden layer → 10 classes (UCI digits)</p>
+        </header>
+
+        <div class="draw-panel">
+            <h3>Vẽ thử — kéo chuột vẽ chữ số 0–9, nhấn Dự đoán</h3>
+            <div class="draw-panel-center">
+                <div class="draw-area">
+                    <canvas id="drawCanvas" width="128" height="128"></canvas>
+                    <div class="draw-buttons">
+                        <button type="button" class="btn-train btn-predict" id="btnPredict">Dự đoán</button>
+                        <button type="button" class="btn-clear" id="btnClearDraw">Xóa</button>
+                    </div>
+                    <div class="draw-result" id="drawResult"></div>
+                </div>
+                <div class="draw-preview">
+                    <span class="label">8×8 đưa vào mạng:</span>
+                    <canvas id="preview8x8" width="64" height="64"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-panel">
+            <h3>Mẫu dữ liệu & dự đoán</h3>
+            <div class="data-panel-center" id="digitSamples"></div>
+        </div>
+
+        <div class="network-panel">
+            <h3>Neural network (64 → hidden → 10)</h3>
+            <div class="network-diagram-wrap">
+                <canvas id="networkDiagram" width="700" height="280"></canvas>
+            </div>
+            <div class="layer-controls">
+                <label>Hidden neurons:</label>
+                <select id="hiddenNeurons">
+                    <option value="16">16</option>
+                    <option value="24">24</option>
+                    <option value="32" selected>32</option>
+                    <option value="48">48</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="train-controls">
+            <label>Learning rate:</label>
+            <input type="number" id="learningRate" value="0.02" step="0.01" min="0.001" max="0.5">
+            <label>Epochs:</label>
+            <input type="number" id="trainEpochs" value="100" min="1" max="500">
+            <button class="btn-train" id="btnTrain">Train</button>
+        </div>
+    </div>
+
+    <script src="digits-data.js"></script>
+    <script>
+        const GRAD_CLIP = 2;
+        const PIXEL_MAX = 16;
+
+        let digits = [];  // { pixels: number[], label: number }
+        let layers = [64, 32, 10];
+        let weights = [];
+        let biases = [];
+
+        function loadData() {
+            digits = DIGITS_DATA.map(d => ({
+                pixels: d.p.map(v => (typeof v === 'number' ? v : parseFloat(v)) / PIXEL_MAX),
+                label: d.l
+            }));
+        }
+
+        function relu(x) { return Math.max(0, x); }
+        function reluDeriv(x) { return x > 0 ? 1 : 0; }
+
+        function softmax(arr) {
+            const max = Math.max(...arr);
+            const exp = arr.map(z => Math.exp(z - max));
+            const sum = exp.reduce((a, b) => a + b, 0);
+            return exp.map(e => e / sum);
+        }
+
+        function xavier(nin, nout) {
+            const scale = Math.sqrt(2 / (nin + nout));
+            return (Math.random() - 0.5) * 2 * scale;
+        }
+
+        function createNetwork() {
+            weights = [];
+            biases = [];
+            for (let l = 0; l < layers.length - 1; l++) {
+                const rows = layers[l], cols = layers[l + 1];
+                const W = [];
+                for (let i = 0; i < rows; i++) {
+                    W[i] = [];
+                    for (let j = 0; j < cols; j++) W[i][j] = xavier(rows, cols);
+                }
+                weights.push(W);
+                biases.push(Array.from({ length: cols }, () => xavier(1, cols)));
+            }
+        }
+
+        function forward(pixels) {
+            let a = pixels.slice();
+            const activations = [a.slice()];
+            const preActivations = [];
+
+            for (let l = 0; l < weights.length; l++) {
+                const W = weights[l], b = biases[l];
+                const z = [];
+                for (let j = 0; j < W[0].length; j++) {
+                    let sum = b[j];
+                    for (let i = 0; i < W.length; i++) sum += W[i][j] * a[i];
+                    z.push(sum);
+                }
+                preActivations.push(z.slice());
+                a = l === weights.length - 1 ? softmax(z) : z.map(relu);
+                activations.push(a.slice());
+            }
+            return { activations, preActivations };
+        }
+
+        function clipGrad(g) {
+            const norm = Math.sqrt(g.reduce((s, v) => s + v * v, 0));
+            if (norm > GRAD_CLIP && norm > 1e-8) {
+                const scale = GRAD_CLIP / norm;
+                return g.map(v => v * scale);
+            }
+            return g;
+        }
+
+        function backwardAndUpdate(pixels, yTrue, lr) {
+            const { activations, preActivations } = forward(pixels);
+            const oneHot = Array(10).fill(0);
+            oneHot[yTrue] = 1;
+
+            const L = weights.length;
+            let dA = activations[L].map((a, k) => a - oneHot[k]);
+            dA = clipGrad(dA);
+
+            for (let l = L - 1; l >= 0; l--) {
+                const W = weights[l], b = biases[l], z = preActivations[l], aPrev = activations[l];
+                const nOut = W[0].length, nIn = W.length;
+
+                const dZ = l === L - 1 ? dA.slice() : dA.map((da, j) => da * reluDeriv(z[j]));
+                const dZc = clipGrad(dZ);
+
+                for (let j = 0; j < nOut; j++) {
+                    biases[l][j] -= lr * dZc[j];
+                    for (let i = 0; i < nIn; i++) {
+                        weights[l][i][j] -= lr * dZc[j] * aPrev[i];
+                    }
+                }
+
+                if (l > 0) {
+                    dA = [];
+                    for (let i = 0; i < nIn; i++) {
+                        let sum = 0;
+                        for (let j = 0; j < nOut; j++) sum += W[i][j] * dZc[j];
+                        dA.push(sum);
+                    }
+                    dA = clipGrad(dA);
+                }
+            }
+        }
+
+        function trainNEpochs(n, lr) {
+            for (let ep = 0; ep < n; ep++) {
+                for (const d of digits) {
+                    backwardAndUpdate(d.pixels, d.label, lr);
+                }
+            }
+        }
+
+        function drawDigit8x8(ctx, pixels, scale) {
+            const s = scale || 4;
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const v = pixels[i * 8 + j];
+                    const norm = (typeof v === 'number' ? v : v * PIXEL_MAX) / PIXEL_MAX;
+                    const g = Math.round(255 - norm * 255);
+                    ctx.fillStyle = `rgb(${g},${g},${g})`;
+                    ctx.fillRect(j * s, i * s, s, s);
+                }
+            }
+        }
+
+        function renderDigitSamples() {
+            const container = document.getElementById('digitSamples');
+            container.innerHTML = '';
+            const show = [];
+            for (let c = 0; c < 10; c++) {
+                const d = digits.find(x => x.label === c);
+                if (d) show.push(d);
+            }
+            if (show.length === 0) return;
+
+            show.forEach((d, i) => {
+                const { activations } = forward(d.pixels);
+                const out = activations[activations.length - 1];
+                const pred = out.indexOf(Math.max(...out));
+                const correct = pred === d.label;
+
+                const wrap = document.createElement('div');
+                wrap.className = 'digit-sample';
+                const cvs = document.createElement('canvas');
+                cvs.width = 32;
+                cvs.height = 32;
+                const ctx = cvs.getContext('2d');
+                drawDigit8x8(ctx, d.pixels.map(p => p * PIXEL_MAX), 4);
+                const label = document.createElement('span');
+                label.className = 'label';
+                label.textContent = `Nhãn: ${d.label}`;
+                const predSpan = document.createElement('span');
+                predSpan.className = 'pred ' + (correct ? 'correct' : 'wrong');
+                predSpan.textContent = `Dự đoán: ${pred}`;
+                wrap.appendChild(cvs);
+                wrap.appendChild(label);
+                wrap.appendChild(predSpan);
+                container.appendChild(wrap);
+            });
+        }
+
+        function drawNetworkDiagram() {
+            const cvs = document.getElementById('networkDiagram');
+            if (!cvs || !cvs.getContext) return;
+            const ctx = cvs.getContext('2d');
+            const w = cvs.width, h = cvs.height;
+            ctx.fillStyle = '#1e1e24';
+            ctx.fillRect(0, 0, w, h);
+
+            const nInput = 64, nHidden = layers[1], nOutput = 10;
+            const colW = w / 4;
+
+            // Input: 8x8 grid
+            const gridSize = Math.min(60, (h * 0.35) / 8);
+            const gridX = colW * 0.5 - gridSize * 4;
+            const gridY = h / 2 - gridSize * 4;
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(gridX, gridY, gridSize * 8, gridSize * 8);
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '10px Outfit';
+            ctx.textAlign = 'center';
+            ctx.fillText('8×8', gridX + gridSize * 4, gridY - 6);
+
+            // Hidden layer
+            const hiddenY = (row, total) => (row + 1) * (h / (total + 1));
+            const hiddenX = colW * 2;
+            const nodeR = 8;
+            for (let i = 0; i < nHidden; i++) {
+                const y = hiddenY(i, nHidden);
+                ctx.beginPath();
+                ctx.arc(hiddenX, y, nodeR, 0, Math.PI * 2);
+                ctx.fillStyle = '#6366f1';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+            }
+            ctx.fillStyle = '#a1a1aa';
+            ctx.fillText('hidden', hiddenX, h - 10);
+
+            // Output layer
+            const outX = colW * 3;
+            for (let i = 0; i < nOutput; i++) {
+                const y = hiddenY(i, nOutput);
+                ctx.beginPath();
+                ctx.arc(outX, y, nodeR, 0, Math.PI * 2);
+                ctx.fillStyle = '#22c55e';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+                ctx.fillStyle = '#0c0c0f';
+                ctx.font = '9px Outfit';
+                ctx.fillText(i, outX, y + 3);
+            }
+            ctx.fillStyle = '#a1a1aa';
+            ctx.fillText('0-9', outX, h - 10);
+
+            // Edges (no weights)
+            ctx.strokeStyle = '#3f3f46';
+            ctx.lineWidth = 0.5;
+            const gridCx = gridX + gridSize * 4, gridCy = gridY + gridSize * 4;
+            for (let i = 0; i < Math.min(8, nHidden); i++) {
+                const hy = hiddenY(i, nHidden);
+                ctx.beginPath();
+                ctx.moveTo(gridCx + gridSize * 4, gridCy);
+                ctx.lineTo(hiddenX - nodeR, hy);
+                ctx.stroke();
+            }
+            for (let i = 0; i < nHidden; i++) {
+                const hy = hiddenY(i, nHidden);
+                for (let j = 0; j < nOutput; j++) {
+                    const oy = hiddenY(j, nOutput);
+                    ctx.beginPath();
+                    ctx.moveTo(hiddenX + nodeR, hy);
+                    ctx.lineTo(outX - nodeR, oy);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function syncLayersFromDropdown() {
+            const n = parseInt(document.getElementById('hiddenNeurons').value) || 32;
+            layers = [64, n, 10];
+        }
+
+        function getPixelsFromDrawCanvas() {
+            const cvs = document.getElementById('drawCanvas');
+            if (!cvs) return null;
+            const ctx = cvs.getContext('2d');
+            const img = ctx.getImageData(0, 0, 128, 128);
+            const data = img.data;
+            const pixels = new Array(64);
+            const block = 16;
+            // i = row (vertical), j = col (horizontal). Map draw canvas (px, py) to 8x8 row-major [row*8+col]
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    let sum = 0;
+                    for (let di = 0; di < block; di++) {
+                        for (let dj = 0; dj < block; dj++) {
+                            const px = j * block + dj;  // horizontal in draw canvas
+                            const py = i * block + di;  // vertical in draw canvas
+                            const idx = (py * 128 + px) * 4;
+                            const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                            sum += 255 - gray;
+                        }
+                    }
+                    const norm = Math.min(1, Math.max(0, sum / (block * block * 255)));
+                    pixels[i * 8 + j] = norm;  // row-major: block(i,j) = row i top, col j left
+                }
+            }
+            return pixels;
+        }
+
+        function updatePreview8x8(pixels) {
+            const prev = document.getElementById('preview8x8');
+            if (!prev || !pixels) return;
+            const ctx = prev.getContext('2d');
+            drawDigit8x8(ctx, pixels.map(p => p * PIXEL_MAX), 8);
+        }
+
+        function setupDrawCanvas() {
+            const cvs = document.getElementById('drawCanvas');
+            if (!cvs) return;
+            const ctx = cvs.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 128, 128);
+
+            let isDrawing = false;
+            const brush = 4;
+
+            function getPos(e) {
+                const rect = cvs.getBoundingClientRect();
+                const scaleX = 128 / rect.width;
+                const scaleY = 128 / rect.height;
+                return {
+                    x: Math.floor((e.clientX - rect.left) * scaleX),
+                    y: Math.floor((e.clientY - rect.top) * scaleY)
+                };
+            }
+
+            function drawAt(x, y) {
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(x, y, brush, 0, Math.PI * 2);
+                ctx.fill();
+                updatePreview8x8(getPixelsFromDrawCanvas());
+            }
+
+            cvs.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const { x, y } = getPos(e);
+                drawAt(x, y);
+            });
+            cvs.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                const { x, y } = getPos(e);
+                drawAt(x, y);
+            });
+            cvs.addEventListener('mouseup', () => { isDrawing = false; });
+            cvs.addEventListener('mouseleave', () => { isDrawing = false; });
+
+            document.getElementById('btnClearDraw').addEventListener('click', () => {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 128, 128);
+                updatePreview8x8(getPixelsFromDrawCanvas());
+                document.getElementById('drawResult').textContent = '';
+            });
+
+            document.getElementById('btnPredict').addEventListener('click', () => {
+                const pixels = getPixelsFromDrawCanvas();
+                if (!pixels || weights.length === 0) return;
+                const { activations } = forward(pixels);
+                const out = activations[activations.length - 1];
+                const pred = out.indexOf(Math.max(...out));
+                const conf = (out[pred] * 100).toFixed(1);
+                document.getElementById('drawResult').textContent = `Dự đoán: ${pred} (độ tin cậy: ${conf}%)`;
+            });
+        }
+
+        function init() {
+            loadData();
+            syncLayersFromDropdown();
+            createNetwork();
+            renderDigitSamples();
+            drawNetworkDiagram();
+            setupDrawCanvas();
+
+            document.getElementById('hiddenNeurons').addEventListener('change', () => {
+                syncLayersFromDropdown();
+                createNetwork();
+                renderDigitSamples();
+                drawNetworkDiagram();
+            });
+
+            document.getElementById('btnTrain').addEventListener('click', () => {
+                const n = parseInt(document.getElementById('trainEpochs').value) || 100;
+                const lr = parseFloat(document.getElementById('learningRate').value) || 0.02;
+                trainNEpochs(n, lr);
+                renderDigitSamples();
+                drawNetworkDiagram();
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
