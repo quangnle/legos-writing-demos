@@ -429,7 +429,7 @@
             const xL = 30, yX = 45, yY = 115, yB = 185;
             const joinX = 115;
             const neuronX = 165;
-            const neuronW = 100;
+            const neuronW = 120;
             const neuronH = 90;
             const outX = 320;
 
@@ -494,7 +494,7 @@
             ctx.font = '16px JetBrains Mono';
             ctx.fillText('∑', neuronX + neuronW / 4, ny + 28);
             ctx.font = monoSm;
-            ctx.fillText(z !== null ? ('z=' + z.toFixed(3)) : 'z=—', neuronX + neuronW / 4, ny + 52);
+            ctx.fillText(z !== null ? ('z=' + z.toFixed(3)) : 'z = —', neuronX + neuronW / 4, ny + 52);
             ctx.fillText('σ(z)', neuronX + neuronW * 3 / 4, ny + 22);
             ctx.fillText(out !== null ? out.toFixed(3) : '—', neuronX + neuronW * 3 / 4, ny + 52);
 
