@@ -7,7 +7,7 @@ let hoveringIndex = -1; // Chỉ số của điểm đang hover
 let selectedIndex = -1; // Chỉ số của điểm được chọn
 
 function setup() {
-    const cvs = createCanvas(700, 700);
+    const cvs = createCanvas(600, 600);
     cvs.parent('canvas-container');
     background(30, 30, 46); // Dark theme background
 }
