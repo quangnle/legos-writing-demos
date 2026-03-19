@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perceptron Classification Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0c0f;
+            --surface: #16161a;
+            --surface-alt: #1e1e24;
+            --border: #2a2a32;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            margin: 0;
+            padding: 2rem;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 40%, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p {
+            margin: 0.75rem 0 0;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+
+        .main-layout {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            align-items: flex-start;
+        }
+
+        .left-panel {
+            flex: 1;
+            min-width: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            overflow: hidden;
+        }
+        .left-panel h3 {
+            margin: 0 0 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        #dataCanvas {
+            display: block;
+            border-radius: 8px;
+            background: var(--surface-alt);
+            cursor: crosshair;
+        }
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+        }
+        .right-panel {
+            flex: 1;
+            min-width: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+        .right-panel h3 {
+            margin: 0 0 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .perceptron-canvas-wrap {
+            display: flex;
+            justify-content: center;
+        }
+        #perceptronCanvas {
+            display: block;
+            border-radius: 8px;
+            background: var(--surface-alt);
+        }
+        .btn-train {
+            width: 100%;
+            margin-top: 1rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-train:hover {
+            background: var(--accent-hover);
+        }
+        .btn-regenerate {
+            margin-top: 0.5rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface-alt);
+            color: var(--text);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-regenerate:hover {
+            background: var(--border);
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .control-row label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            min-width: 100px;
+        }
+        .control-row input[type="number"] {
+            width: 80px;
+            padding: 0.4rem 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+        }
+        .train-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .train-row .control-row {
+            margin-bottom: 0;
+        }
+        .train-row .control-row label {
+            min-width: auto;
+        }
+        .train-row .btn-train {
+            margin-top: 0;
+            width: auto;
+            flex: 1;
+        }
+
+        .log-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            overflow: hidden;
+        }
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+        .log-section h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .btn-clear {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface-alt);
+            color: var(--text);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-clear:hover {
+            background: var(--border);
+        }
+        #logTextarea {
+            width: 100%;
+            height: 180px;
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            resize: vertical;
+        }
+        #logTextarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Perceptron Classification Demo</h1>
+            <p>Click a data point to see forward pass • Train (Backprop) to update weights</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="left-panel">
+                <h3>Data space (click a point)</h3>
+                <div class="canvas-container">
+                    <canvas id="dataCanvas" width="500" height="400"></canvas>
+                </div>
+                <div class="control-row">
+                    <button class="btn-regenerate" onclick="regenerateData()">Regenerate data</button>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <h3>Perceptron</h3>
+                <div class="perceptron-canvas-wrap">
+                    <canvas id="perceptronCanvas" width="380" height="260"></canvas>
+                </div>
+                <div class="train-row">
+                    <div class="control-row">
+                        <label>Learning rate:</label>
+                        <input type="number" id="learningRate" value="0.5" step="0.1" min="0.01" max="2">
+                    </div>
+                    <button class="btn-train" onclick="trainOneEpoch()">Train (Backprop)</button>
+                    <button class="btn-train btn-train-10" onclick="train10Times()">Train 10 times</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-section">
+            <div class="log-header">
+                <h3>Computation log</h3>
+                <button class="btn-clear" onclick="clearLog()">Clear log</button>
+            </div>
+            <textarea id="logTextarea" readonly placeholder="Click a point, then Train to see logs..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants ---
+        const CANVAS_W = 500;
+        const CANVAS_H = 400;
+        const MARGIN = 20;
+        const NUM_POINTS = 50;
+        const POINT_RADIUS = 6;
+        const CLASS_COLORS = { 0: '#22c55e', 1: '#f97316' }; // circle=green, square=orange
+
+        // --- State ---
+        let points = [];
+        let perceptron = { w1: 0, w2: 0, b: 0 };
+        let selectedPointIndex = -1;
+        let epochCount = 0;
+
+        // --- Data generation (linearly separable) ---
+        function generateLinearlySeparablePoints(n) {
+            const pts = [];
+            const m = (Math.random() - 0.5) * 2;
+            const c = 0.25 + Math.random() * 0.5;
+
+            const half = Math.floor(n / 2);
+            const maxTries = 500;
+            for (let i = 0; i < half; i++) {
+                let x, y;
+                for (let t = 0; t < maxTries; t++) {
+                    x = 0.1 + Math.random() * 0.8;
+                    y = 0.1 + Math.random() * 0.8;
+                    if (y < m * x + c) break;
+                }
+                pts.push({ x: x ?? 0.3, y: y ?? 0.3, class: 0 });
+            }
+            for (let i = half; i < n; i++) {
+                let x, y;
+                for (let t = 0; t < maxTries; t++) {
+                    x = 0.1 + Math.random() * 0.8;
+                    y = 0.1 + Math.random() * 0.8;
+                    if (y >= m * x + c) break;
+                }
+                pts.push({ x: x ?? 0.6, y: y ?? 0.6, class: 1 });
+            }
+            return pts;
+        }
+
+        // --- Perceptron math ---
+        function sigmoid(z) {
+            return 1 / (1 + Math.exp(-Math.max(-20, Math.min(20, z))));
+        }
+
+        function forward(x, y) {
+            const z = perceptron.w1 * x + perceptron.w2 * y + perceptron.b;
+            const out = sigmoid(z);
+            return { z, out };
+        }
+
+        function initWeights() {
+            perceptron.w1 = (Math.random() - 0.5) * 2;
+            perceptron.w2 = (Math.random() - 0.5) * 2;
+            perceptron.b = (Math.random() - 0.5) * 2;
+        }
+
+        // --- Canvas to normalized coords ---
+        function canvasToNorm(cx, cy) {
+            const px = (cx - MARGIN) / (CANVAS_W - 2 * MARGIN);
+            const py = (cy - MARGIN) / (CANVAS_H - 2 * MARGIN);
+            return { x: Math.max(0, Math.min(1, px)), y: Math.max(0, Math.min(1, py)) };
+        }
+
+        function normToCanvas(x, y) {
+            const cx = MARGIN + x * (CANVAS_W - 2 * MARGIN);
+            const cy = MARGIN + y * (CANVAS_H - 2 * MARGIN);
+            return { cx, cy };
+        }
+
+        // --- Draw data canvas ---
+        function drawDataCanvas() {
+            const ctx = document.getElementById('dataCanvas').getContext('2d');
+
+            ctx.fillStyle = '#1e1e24';
+            ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+            const { w1, w2, b } = perceptron;
+            const p1 = {}, p2 = {};
+            if (Math.abs(w2) > 1e-6) {
+                const x1 = 0, x2 = 1;
+                const y1 = -(w1 * x1 + b) / w2;
+                const y2 = -(w1 * x2 + b) / w2;
+                Object.assign(p1, normToCanvas(x1, y1));
+                Object.assign(p2, normToCanvas(x2, y2));
+            } else if (Math.abs(w1) > 1e-6) {
+                const y1 = 0, y2 = 1;
+                const x1 = -(w2 * y1 + b) / w1;
+                const x2 = -(w2 * y2 + b) / w1;
+                Object.assign(p1, normToCanvas(x1, y1));
+                Object.assign(p2, normToCanvas(x2, y2));
+            }
+            if (Math.abs(w1) > 1e-6 || Math.abs(w2) > 1e-6) {
+                ctx.strokeStyle = '#6366f1';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(p1.cx, p1.cy);
+                ctx.lineTo(p2.cx, p2.cy);
+                ctx.stroke();
+            }
+
+            points.forEach((p, i) => {
+                const { cx, cy } = normToCanvas(p.x, p.y);
+                const col = CLASS_COLORS[p.class];
+                ctx.fillStyle = col;
+                ctx.strokeStyle = i === selectedPointIndex ? '#fff' : 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = i === selectedPointIndex ? 3 : 1;
+                ctx.beginPath();
+                if (p.class === 0) {
+                    ctx.arc(cx, cy, POINT_RADIUS, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    const r = POINT_RADIUS;
+                    ctx.rect(cx - r, cy - r, r * 2, r * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // --- Draw perceptron diagram ---
+        // Layout: x    w1  \   [Σ | σ(z)] --- output
+        //         y    w2  ---
+        //         b    wb  /
+        function drawPerceptronDiagram(activeInputs = null) {
+            const cvs = document.getElementById('perceptronCanvas');
+            const ctx = cvs.getContext('2d');
+            const w = cvs.width;
+            const h = cvs.height;
+
+            ctx.fillStyle = '#1e1e24';
+            ctx.fillRect(0, 0, w, h);
+
+            const mono = '11px JetBrains Mono';
+            const monoSm = '10px JetBrains Mono';
+            ctx.font = mono;
+            ctx.textAlign = 'center';
+
+            const vx = activeInputs ? activeInputs.x.toFixed(3) : '—';
+            const vy = activeInputs ? activeInputs.y.toFixed(3) : '—';
+            const { w1, w2, b } = perceptron;
+            const z = activeInputs ? forward(activeInputs.x, activeInputs.y).z : null;
+            const out = activeInputs ? forward(activeInputs.x, activeInputs.y).out : null;
+
+            // Input nodes: [x], [y], [b]
+            const boxSize = 32;
+            const xL = 30, yX = 45, yY = 115, yB = 185;
+            const joinX = 115;
+            const neuronX = 165;
+            const neuronW = 100;
+            const neuronH = 90;
+            const outX = 320;
+
+            // Draw connections: x--w1--\, y--w2---, b--wb--/
+            // y nối vào mép trái neuron, không đi qua giữa để tránh đè lên text
+            ctx.strokeStyle = '#a1a1aa';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(xL + boxSize, yX);
+            ctx.lineTo(joinX, yX);
+            ctx.lineTo(neuronX, 60);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(xL + boxSize, yY);
+            ctx.lineTo(joinX, yY);
+            ctx.lineTo(neuronX, 95);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(xL + boxSize, yB);
+            ctx.lineTo(joinX, yB);
+            ctx.lineTo(neuronX, 130);
+            ctx.stroke();
+
+            // Weight labels: chỉ giá trị, dịch phải 15px
+            ctx.fillStyle = '#6366f1';
+            ctx.font = monoSm;
+            ctx.fillText(w1.toFixed(2), 92, yX - 6);
+            ctx.fillText(w2.toFixed(2), 92, yY - 6);
+            ctx.fillText(b.toFixed(2), 92, yB - 6);
+            ctx.fillStyle = '#f4f4f5';
+
+            // Input boxes: label trên top, value bên trong
+            function drawInputBox(x, y, label, value) {
+                ctx.fillStyle = label === 'b' ? '#6366f1' : '#22c55e';
+                ctx.fillRect(x, y - boxSize / 2, boxSize, boxSize);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y - boxSize / 2, boxSize, boxSize);
+                ctx.font = mono;
+                ctx.fillStyle = '#f4f4f5';
+                ctx.fillText(label, x + boxSize / 2, y - boxSize / 2 - 8);
+                ctx.font = monoSm;
+                ctx.fillStyle = '#f4f4f5';
+                ctx.fillText(value, x + boxSize / 2, y + 4);
+            }
+            drawInputBox(xL, yX, 'x', vx);
+            drawInputBox(xL, yY, 'y', vy);
+            drawInputBox(xL, yB, 'b', '1');
+
+            // Neuron: [tổng tuyến tính | sigmoid(output)]
+            const ny = 95 - neuronH / 2;
+            ctx.strokeStyle = '#818cf8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(neuronX, ny, neuronW, neuronH);
+            ctx.strokeStyle = '#4b5563';
+            ctx.beginPath();
+            ctx.moveTo(neuronX + neuronW / 2, ny);
+            ctx.lineTo(neuronX + neuronW / 2, ny + neuronH);
+            ctx.stroke();
+
+            ctx.fillStyle = '#f4f4f5';
+            ctx.font = '16px JetBrains Mono';
+            ctx.fillText('∑', neuronX + neuronW / 4, ny + 28);
+            ctx.font = monoSm;
+            ctx.fillText(z !== null ? ('z=' + z.toFixed(3)) : 'z=—', neuronX + neuronW / 4, ny + 52);
+            ctx.fillText('σ(z)', neuronX + neuronW * 3 / 4, ny + 22);
+            ctx.fillText(out !== null ? out.toFixed(3) : '—', neuronX + neuronW * 3 / 4, ny + 52);
+
+            // Connection neuron -> output
+            ctx.strokeStyle = '#a1a1aa';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(neuronX + neuronW, 95);
+            ctx.lineTo(outX - 28, 95);
+            ctx.stroke();
+
+            // Output circle
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(outX, 95, 26, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = '#0c0c0f';
+            ctx.font = mono;
+            ctx.fillText('output', outX, 92);
+            ctx.font = monoSm;
+            ctx.fillStyle = '#f4f4f5';
+            ctx.fillText(out !== null ? out.toFixed(3) : '—', outX, 108);
+        }
+
+        // --- Log ---
+        function appendLog(text) {
+            const ta = document.getElementById('logTextarea');
+            ta.value += text + '\n';
+            ta.scrollTop = ta.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('logTextarea').value = '';
+        }
+
+        // --- Click handling ---
+        function hitTest(cx, cy) {
+            for (let i = points.length - 1; i >= 0; i--) {
+                const p = points[i];
+                const { cx: px, cy: py } = normToCanvas(p.x, p.y);
+                const dx = cx - px;
+                const dy = cy - py;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist <= POINT_RADIUS + 5) return i;
+            }
+            return -1;
+        }
+
+        function onDataCanvasClick(e) {
+            const rect = e.target.getBoundingClientRect();
+            const scaleX = CANVAS_W / rect.width;
+            const scaleY = CANVAS_H / rect.height;
+            const cx = (e.clientX - rect.left) * scaleX;
+            const cy = (e.clientY - rect.top) * scaleY;
+
+            const idx = hitTest(cx, cy);
+            selectedPointIndex = idx;
+
+            if (idx >= 0) {
+                const p = points[idx];
+                const { z, out } = forward(p.x, p.y);
+                appendLog(`--- Point #${idx} (x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}) true y=${p.class} ---`);
+                appendLog(`z = ${perceptron.w1.toFixed(3)}*${p.x.toFixed(3)} + ${perceptron.w2.toFixed(3)}*${p.y.toFixed(3)} + ${perceptron.b.toFixed(3)} = ${z.toFixed(4)}`);
+                appendLog(`ŷ = σ(z) = ${out.toFixed(4)}`);
+            }
+
+            drawDataCanvas();
+            drawPerceptronDiagram(idx >= 0 ? { x: points[idx].x, y: points[idx].y } : null);
+        }
+
+        // --- Train (one epoch, backprop) ---
+        function trainOneEpoch(silent = false) {
+            const lr = parseFloat(document.getElementById('learningRate').value) || 0.5;
+            epochCount++;
+            if (!silent) appendLog(`\n=== Epoch ${epochCount} ===`);
+
+            let totalLoss = 0;
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const { out } = forward(p.x, p.y);
+                const y = p.class;
+                const err = out - y;
+
+                const dw1 = err * p.x;
+                const dw2 = err * p.y;
+                const db = err;
+
+                const oldW1 = perceptron.w1, oldW2 = perceptron.w2, oldB = perceptron.b;
+                perceptron.w1 -= lr * dw1;
+                perceptron.w2 -= lr * dw2;
+                perceptron.b -= lr * db;
+
+                const loss = -(y * Math.log(out + 1e-8) + (1 - y) * Math.log(1 - out + 1e-8));
+                totalLoss += loss;
+
+                if (!silent) {
+                    appendLog(`Sample #${i}: (x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}) true y=${y}`);
+                    appendLog(`  z=${(oldW1*p.x+oldW2*p.y+oldB).toFixed(4)} ŷ=${out.toFixed(4)} | ∂L/∂w1=${dw1.toFixed(4)} ∂L/∂w2=${dw2.toFixed(4)} ∂L/∂b=${db.toFixed(4)}`);
+                    appendLog(`  w1: ${oldW1.toFixed(3)}→${perceptron.w1.toFixed(3)} w2: ${oldW2.toFixed(3)}→${perceptron.w2.toFixed(3)} b: ${oldB.toFixed(3)}→${perceptron.b.toFixed(3)}`);
+                }
+            }
+
+            if (!silent) appendLog(`--- Avg loss: ${(totalLoss / points.length).toFixed(4)} ---`);
+
+            drawDataCanvas();
+            const sel = selectedPointIndex >= 0 ? { x: points[selectedPointIndex].x, y: points[selectedPointIndex].y } : null;
+            drawPerceptronDiagram(sel);
+        }
+
+        function train10Times() {
+            for (let i = 0; i < 10; i++) trainOneEpoch(true);
+        }
+
+        // --- Regenerate ---
+        function regenerateData() {
+            points = generateLinearlySeparablePoints(NUM_POINTS);
+            initWeights();
+            selectedPointIndex = -1;
+            epochCount = 0;
+            clearLog();
+            appendLog('Data regenerated. Weights randomized. Click a point, then Train.');
+            drawDataCanvas();
+            drawPerceptronDiagram(null);
+        }
+
+        // --- Init ---
+        function init() {
+            points = generateLinearlySeparablePoints(NUM_POINTS);
+            initWeights();
+            document.getElementById('dataCanvas').addEventListener('click', onDataCanvasClick);
+            drawDataCanvas();
+            drawPerceptronDiagram(null);
+            appendLog('Ready. Click a data point to see forward pass, then Train (Backprop) to update weights.');
+        }
+
+        init();
+    </script>
+</body>
+</html>
