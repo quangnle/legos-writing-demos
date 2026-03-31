@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minh họa Giả thuyết Riemann (RH)</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="zeros.js"></script>
+    <script src="riemann.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Riemann Hypothesis Visualizer</h1>
+        <p>Minh họa mối liên hệ giữa các số nguyên tố và nghiệm không tầm thường của hàm zeta.</p>
+    </header>
+
+    <div class="card">
+        <div class="controls">
+            <div class="form-group">
+                <label for="n-max">Lên đến n (N):</label>
+                <input type="number" id="n-max" value="100" min="10" max="1000">
+            </div>
+            <div class="form-group">
+                <label for="zeros-count">Số lượng nghiệm zeta (ρ):</label>
+                <input type="number" id="zeros-count" value="100" min="0" max="1000">
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+                <button id="calculate-btn">Tính toán & Vẽ đồ thị</button>
+            </div>
+        </div>
+
+        <div class="formula-display">
+            <strong>Công thức Riemann:</strong><br>
+            <i>J(x) = li(x) - ∑<sub>ρ</sub> li(x<sup>ρ</sup>) - ln(2) + ∫<sub>x</sub><sup>∞</sup> dt / (t(t²-1)ln t)</i><br>
+            <span style="font-size: 0.9rem; color: var(--text-muted);">(Trong đó ρ là các nghiệm không tầm thường của ζ(s))</span>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="rhChart"></canvas>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 Riemann Hypothesis Demo - Built with Premium Math Engine
+    </footer>
+</div>
+
+<script>
+    const ctx = document.getElementById('rhChart').getContext('2d');
+    let rhChart;
+
+    function initChart() {
+        rhChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'π(x) Thực tế (Số lượng SNT ≤ x)',
+                        data: [],
+                        borderColor: '#fbbf24',
+                        backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                        borderWidth: 2,
+                        stepped: true,
+                        fill: false,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'J(x) Thực tế (Mật độ lũy thừa SNT)',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        stepped: true,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Xấp xỉ Riemann J(x)',
+                        data: [],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Xấp xỉ Riemann π(x)',
+                        data: [],
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: { display: true, text: 'x', color: '#94a3b8' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Số lượng / Giá trị', color: '#94a3b8' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#f3f4f6' } }
+                }
+            }
+        });
+    }
+
+    function calculate() {
+        const nMax = parseInt(document.getElementById('n-max').value);
+        const zeroCount = parseInt(document.getElementById('zeros-count').value);
+        const btn = document.getElementById('calculate-btn');
+        btn.disabled = true;
+        btn.innerText = 'Đang tính...';
+
+        // Use setTimeout to avoid blocking UI during heavy math
+        setTimeout(() => {
+            const primes = sieve(nMax);
+            const xValues = [];
+            const piData = [];
+            const jActualData = [];
+            const jRiemannData = [];
+
+            const piRiemannData = [];
+
+            const step = Math.max(0.1, nMax / 400); // 400 points for much smoother curves
+            for (let x = 2; x <= nMax; x += step) {
+                xValues.push(x.toFixed(1));
+                piData.push({x: x, y: piActual(x, primes)});
+                jActualData.push({x: x, y: jActual(x, primes)});
+                jRiemannData.push({x: x, y: jRiemann(x, zeroCount)});
+                piRiemannData.push({x: x, y: piRiemann(x, zeroCount)});
+            }
+
+            rhChart.data.datasets[0].data = piData;
+            rhChart.data.datasets[1].data = jActualData;
+            rhChart.data.datasets[2].data = jRiemannData;
+            rhChart.data.datasets[3].data = piRiemannData;
+            rhChart.update();
+
+            btn.disabled = false;
+            btn.innerText = 'Tính toán & Vẽ đồ thị';
+        }, 100);
+    }
+
+    document.getElementById('calculate-btn').addEventListener('click', calculate);
+
+    initChart();
+    calculate();
+</script>
+
+</body>
+</html>
