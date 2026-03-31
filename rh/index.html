@@ -6,6 +6,9 @@
     <title>Minh họa Giả thuyết Riemann (RH)</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
     <script src="zeros.js"></script>
     <script src="riemann.js"></script>
 </head>
@@ -34,8 +37,8 @@
 
         <div class="formula-display">
             <strong>Công thức Riemann:</strong><br>
-            <i>J(x) = li(x) - ∑<sub>ρ</sub> li(x<sup>ρ</sup>) - ln(2) + ∫<sub>x</sub><sup>∞</sup> dt / (t(t²-1)ln t)</i><br>
-            <span style="font-size: 0.9rem; color: var(--text-muted);">(Trong đó ρ là các nghiệm không tầm thường của ζ(s))</span>
+            $$J(x) = li(x) - \sum_{\rho} li(x^{\rho}) - \ln(2) + \int_{x}^{\infty} \frac{dt}{t(t^2-1)\ln t}$$
+            <p style="font-size: 0.9rem; color: var(--text-muted); text-align: center;">(Trong đó $\rho$ là các nghiệm không tầm thường của $\zeta(s)$)</p>
         </div>
 
         <div class="chart-container">

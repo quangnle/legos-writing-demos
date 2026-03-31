@@ -26,4 +26,16 @@ class Complex {
             (this.im * c.re - this.re * c.im) / denom
         );
     }
+
+    magSq() {
+        return this.re * this.re + this.im * this.im;
+    }
+
+    mag() {
+        return Math.sqrt(this.magSq());
+    }
+
+    clone() {
+        return new Complex(this.re, this.im);
+    }
 }
