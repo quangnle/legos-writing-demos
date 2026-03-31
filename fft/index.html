@@ -1,41 +1,507 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fast Fourier Transform Demo</title>
+    <title>FFT — Nhân đa thức</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+    <style>
+        :root {
+            color-scheme: dark;
+            --gs-bg: #121418;
+            --gs-panel: #1a1e26;
+            --gs-elev: #222830;
+            --gs-blue: #5b9cff;
+            --gs-pink: #ff9ec7;
+            --gs-blue-soft: rgba(91, 156, 255, 0.14);
+            --gs-pink-soft: rgba(255, 158, 199, 0.12);
+            --gs-ink: #e8eaef;
+            --gs-muted: #9aa3b2;
+            --gs-header: #0d0f12;
+            --gs-border: rgba(255, 255, 255, 0.08);
+            --radius: 10px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--gs-bg);
+            color: var(--gs-ink);
+            line-height: 1.55;
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            background: var(--gs-header);
+            color: var(--gs-ink);
+            padding: 1rem 1.25rem;
+            box-shadow: var(--shadow);
+            border-bottom: 1px solid var(--gs-border);
+        }
+
+        .top-bar h1 {
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 650;
+            letter-spacing: -0.02em;
+        }
+
+        .top-bar p {
+            margin: 0.35rem 0 0;
+            font-size: 0.9rem;
+            opacity: 0.88;
+            max-width: 52rem;
+        }
+
+        .wrap {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem 2.5rem;
+        }
+
+        .intro {
+            background: var(--gs-panel);
+            border-radius: var(--radius);
+            padding: 1rem 1.15rem;
+            margin-bottom: 1.25rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gs-border);
+        }
+
+        .intro .katex,
+        .card .katex,
+        .result-block .katex {
+            color: var(--gs-ink);
+        }
+
+        .katex .frac-line,
+        .katex .overline .overline-line,
+        .katex .underline .underline-line {
+            border-color: var(--gs-ink);
+        }
+
+        .katex .hline {
+            border-color: var(--gs-muted);
+        }
+
+        .intro .katex {
+            font-size: 1.05em;
+        }
+
+        .grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        @media (min-width: 720px) {
+            .grid-inputs {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background: var(--gs-elev);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.15rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gs-border);
+        }
+
+        .card--p {
+            border-left: 4px solid var(--gs-blue);
+            background: linear-gradient(135deg, var(--gs-elev) 0%, var(--gs-blue-soft) 100%);
+        }
+
+        .card--q {
+            border-left: 4px solid var(--gs-pink);
+            background: linear-gradient(135deg, var(--gs-elev) 0%, var(--gs-pink-soft) 100%);
+        }
+
+        .card h2 {
+            margin: 0 0 0.5rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--gs-muted);
+        }
+
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+            color: var(--gs-muted);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.55rem 0.65rem;
+            border: 1px solid var(--gs-border);
+            border-radius: 6px;
+            font-family: ui-monospace, "Cascadia Code", monospace;
+            font-size: 0.95rem;
+            background: var(--gs-header);
+            color: var(--gs-ink);
+        }
+
+        input[type="text"]:focus {
+            outline: 2px solid var(--gs-blue);
+            outline-offset: 1px;
+        }
+
+        .hint {
+            font-size: 0.78rem;
+            color: var(--gs-muted);
+            margin-top: 0.35rem;
+        }
+
+        .hint code {
+            background: var(--gs-header);
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid var(--gs-border);
+        }
+
+        .preview {
+            margin-top: 0.65rem;
+            padding: 0.5rem 0.6rem;
+            background: var(--gs-header);
+            border-radius: 6px;
+            min-height: 2.2rem;
+            border: 1px dashed var(--gs-border);
+            overflow-x: auto;
+        }
+
+        .preview .katex {
+            font-size: 1.08em;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            align-items: center;
+            margin-top: 0.25rem;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            padding: 0.55rem 1.1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.08s ease, filter 0.15s ease;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--gs-blue);
+            color: #0d1117;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.08);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--gs-ink);
+            border: 1px solid var(--gs-border);
+        }
+
+        .btn-ghost:hover {
+            background: var(--gs-panel);
+        }
+
+        .results {
+            margin-top: 1rem;
+        }
+
+        .results h2 {
+            font-size: 1rem;
+            margin: 0 0 0.65rem;
+            color: var(--gs-ink);
+        }
+
+        .result-block {
+            margin-bottom: 1rem;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius);
+            background: var(--gs-elev);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gs-border);
+        }
+
+        .result-block h3 {
+            margin: 0 0 0.45rem;
+            font-size: 0.88rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--gs-muted);
+        }
+
+        .result-block .katex-display {
+            margin: 0.5rem 0;
+        }
+
+        .mono-list {
+            font-family: ui-monospace, "Cascadia Code", monospace;
+            font-size: 0.82rem;
+            background: var(--gs-header);
+            color: var(--gs-ink);
+            padding: 0.65rem 0.75rem;
+            border-radius: 6px;
+            max-height: 180px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid var(--gs-border);
+        }
+
+        .meta {
+            font-size: 0.8rem;
+            color: var(--gs-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .err {
+            color: #ff8a8a;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+    </style>
 </head>
 <body>
-    <h1>Fast Fourier Transform Demo</h1>
-    <div>p1 <input id="p1" type="text"></div>
-    <div>p2 <input id="p2" type="text"></div>
-    <button onclick="multiply()">Multiply</button>
-    <div>
-        <p>Result</p>
-        <div id="result"></div>
+    <header class="top-bar">
+        <h1>Fast Fourier Transform — nhân hai đa thức</h1>        
+    </header>
+
+    <div class="wrap">
+        <div class="grid grid-inputs" id="card-math">
+            <div class="card card--p">
+                <h2>Đa thức P</h2>
+                <label for="p1">Hệ số \(a_d,\ldots,a_0\) (cao \(\rightarrow\) thấp)</label>
+                <input id="p1" type="text" value="9 5 3 1 1" placeholder="ví dụ: 1 2 1" autocomplete="off">
+                <p class="hint">Ví dụ: <code>1 2 1</code> là \(x^2 + 2x + 1\) (bậc 2 xuống hằng số).</p>
+                <div class="preview" id="preview-p" aria-live="polite"></div>
+            </div>
+            <div class="card card--q">
+                <h2>Đa thức Q</h2>
+                <label for="p2">Hệ số \(b_{d'},\ldots,b_0\) (cao \(\rightarrow\) thấp)</label>
+                <input id="p2" type="text" value="4 3 2 1" placeholder="ví dụ: 1 1" autocomplete="off">
+                <p class="hint">Nhập hệ số cách nhau bằng khoảng trắng.</p>
+                <div class="preview" id="preview-q" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 1rem;">
+            <div class="actions">
+                <button type="button" class="btn-primary" id="btn-mul">Nhân (FFT)</button>
+            </div>
+            <div id="error" class="err" role="alert" hidden></div>
+        </div>
+
+        <section class="results" id="results" hidden>
+            <h2>Kết quả</h2>
+            <div class="result-block">
+                <h3>Thông tin pad</h3>
+                <p class="meta" id="meta-n"></p>
+            </div>
+            <div class="result-block">
+                <h3>Tích \(P\cdot Q\)</h3>
+                <div id="katex-product"></div>
+                <p class="hint" style="margin-top:0.5rem">Hệ số tích (cao \(\rightarrow\) thấp):</p>
+                <div class="mono-list" id="coeff-product"></div>
+            </div>
+            <div class="result-block">
+                <h3>\(\mathrm{FFT}(P)\) — giá trị tại các bậc của \(\omega_n\)</h3>
+                <div class="mono-list" id="fft-p"></div>
+            </div>
+            <div class="result-block">
+                <h3>\(\mathrm{FFT}(Q)\)</h3>
+                <div class="mono-list" id="fft-q"></div>
+            </div>
+        </section>
     </div>
+
     <script src="complex.js"></script>
     <script src="fft.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
     <script>
-        function multiply() {
-            const p1 = document.getElementById('p1').value;
-            const p2 = document.getElementById('p2').value;
-            const p1Arr = p1.split(' ').map(Number);
-            const p2Arr = p2.split(' ').map(Number);            
-            const p = polyMul(p1Arr, p2Arr);
-            
-            const n = 2**Math.ceil(Math.log2(p1.length + p2.length));
-            const y1 = p1Arr.concat(Array(n - p1.length).fill(0)).map(c => new ComplexNumber(c, 0))
-            const p1Fft = fft(y1);
-            const y2 = p2Arr.concat(Array(n - p2.length).fill(0)).map(c => new ComplexNumber(c, 0))
-            const p2Fft = fft(y2);
-            
-            document.getElementById('result').innerText = `Result: \n${p.join('\n')}`;
-            document.getElementById('result').innerText += '\n\n';
-            document.getElementById('result').innerText += `Polynomial 1's FFT: \n${p1Fft.join('\n')}`;
-            document.getElementById('result').innerText += '\n\n';
-            document.getElementById('result').innerText += `Polynomial 2's FFT: \n${p2Fft.join('\n')}`;
+        const katexDelims = {
+            delimiters: [
+                { left: '\\(', right: '\\)', display: false },
+                { left: '\\[', right: '\\]', display: true }
+            ],
+            throwOnError: false
+        };
+
+        function parseCoeffs(raw) {
+            const parts = raw.trim().split(/\s+/).filter(Boolean);
+            if (parts.length === 0) return null;
+            const nums = parts.map(Number);
+            if (nums.some(n => Number.isNaN(n))) return null;
+            return nums;
         }
+
+        /** Bỏ các hệ số 0 ở bậc cao (đầu chuỗi người dùng). */
+        function trimLeadingHighDegree(arr) {
+            const a = arr.slice();
+            while (a.length > 1 && Math.abs(a[0]) < 1e-9) a.shift();
+            return a;
+        }
+
+        /** Người dùng nhập cao → thấp; FFT cần a_0 … a_d. */
+        function userToInternal(userHighFirst) {
+            const t = trimLeadingHighDegree(userHighFirst);
+            return t.slice().reverse();
+        }
+
+        /** Kết quả nội bộ thấp → cao → hiển thị lại cao → thấp. */
+        function internalToUser(internalLowFirst) {
+            return trimPoly(internalLowFirst).slice().reverse();
+        }
+
+        function trimPoly(c) {
+            let end = c.length;
+            while (end > 1 && Math.abs(c[end - 1]) < 1e-9) end--;
+            return c.slice(0, end);
+        }
+
+        function realCoeffsFromComplex(arr) {
+            return arr.map(z => {
+                const r = z.re;
+                return Math.abs(z.im) < 1e-8 ? r : z;
+            });
+        }
+
+        function formatCoeffLine(c) {
+            if (typeof c === 'number') {
+                const x = Math.abs(c - Math.round(c)) < 1e-6 ? Math.round(c) : Number(c.toFixed(6));
+                return String(x);
+            }
+            return String(c);
+        }
+
+        function formatCoefTex(absCoef) {
+            if (Math.abs(absCoef - Math.round(absCoef)) < 1e-6) return String(Math.round(absCoef));
+            return absCoef.toFixed(6).replace(/\.?0+$/, '');
+        }
+
+        /** coeffs nội bộ: a_0 … a_d; LaTeX ghi bậc cao trước (x^d + … + a_0). */
+        function polyToLatex(coeffs) {
+            const c = coeffs.map(x => (typeof x === 'number' ? x : x.re));
+            let end = c.length;
+            while (end > 1 && Math.abs(c[end - 1]) < 1e-9) end--;
+            const c2 = c.slice(0, end);
+            if (c2.length === 0 || (c2.length === 1 && Math.abs(c2[0]) < 1e-9)) return '0';
+            const chunks = [];
+            for (let i = c2.length - 1; i >= 0; i--) {
+                const a = c2[i];
+                if (Math.abs(a) < 1e-9) continue;
+                const neg = a < 0;
+                const ac = Math.abs(a);
+                const cs = formatCoefTex(ac);
+                let monomial;
+                if (i === 0) monomial = cs;
+                else if (i === 1) monomial = cs === '1' ? 'x' : cs + 'x';
+                else monomial = cs === '1' ? 'x^{' + i + '}' : cs + 'x^{' + i + '}';
+                chunks.push({ neg, monomial });
+            }
+            if (chunks.length === 0) return '0';
+            let s = '';
+            for (let k = 0; k < chunks.length; k++) {
+                const { neg, monomial } = chunks[k];
+                if (k === 0) s += (neg ? '-' : '') + monomial;
+                else s += (neg ? ' - ' : ' + ') + monomial;
+            }
+            return s;
+        }
+
+        function renderPolyInto(el, coeffs, displayMode) {
+            const tex = polyToLatex(coeffs);
+            el.innerHTML = katex.renderToString(tex, {
+                throwOnError: false,
+                displayMode: displayMode || false,
+                trust: false,
+                strict: 'warn'
+            });
+        }
+
+        function refreshPreviews() {
+            const e1 = document.getElementById('error');
+            e1.hidden = true;
+            const a = parseCoeffs(document.getElementById('p1').value);
+            const b = parseCoeffs(document.getElementById('p2').value);
+            const pp = document.getElementById('preview-p');
+            const pq = document.getElementById('preview-q');
+            if (a) renderPolyInto(pp, userToInternal(a), false);
+            else pp.textContent = '—';
+            if (b) renderPolyInto(pq, userToInternal(b), false);
+            else pq.textContent = '—';
+        }
+
+        function multiply() {
+            const errEl = document.getElementById('error');
+            errEl.hidden = true;
+            const raw1 = document.getElementById('p1').value;
+            const raw2 = document.getElementById('p2').value;
+            const u1 = parseCoeffs(raw1);
+            const u2 = parseCoeffs(raw2);
+            if (!u1 || !u2) {
+                errEl.textContent = 'Hệ số không hợp lệ: chỉ dùng số và khoảng trắng.';
+                errEl.hidden = false;
+                return;
+            }
+
+            const p1Arr = userToInternal(u1);
+            const p2Arr = userToInternal(u2);
+            const p = polyMul(p1Arr, p2Arr);
+            const reals = realCoeffsFromComplex(p).map(x => typeof x === 'number' ? x : x.re);
+
+            const n = 2 ** Math.ceil(Math.log2(p1Arr.length + p2Arr.length));
+            const y1 = p1Arr.concat(Array(n - p1Arr.length).fill(0)).map(c => new ComplexNumber(c, 0));
+            const y2 = p2Arr.concat(Array(n - p2Arr.length).fill(0)).map(c => new ComplexNumber(c, 0));
+            const p1Fft = fft(y1);
+            const p2Fft = fft(y2);
+
+            document.getElementById('meta-n').textContent =
+                `Bậc \\(\\deg P \\le ${p1Arr.length - 1}\\), \\(\\deg Q \\le ${p2Arr.length - 1}\\). Pad \\(n = ${n}\\) (lũy thừa của 2, \\(n \\ge \\deg P + \\deg Q + 1\\)).`;
+
+            renderPolyInto(document.getElementById('katex-product'), reals, true);
+            document.getElementById('coeff-product').textContent = internalToUser(reals).map(formatCoeffLine).join(' ');
+
+            document.getElementById('fft-p').textContent = p1Fft.map(String).join('\n');
+            document.getElementById('fft-q').textContent = p2Fft.map(String).join('\n');
+
+            document.getElementById('results').hidden = false;
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('results'), katexDelims);
+            }
+        }
+
+        document.getElementById('btn-mul').addEventListener('click', multiply);
+        document.getElementById('p1').addEventListener('input', refreshPreviews);
+        document.getElementById('p2').addEventListener('input', refreshPreviews);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('card-math'), katexDelims);
+            }
+            refreshPreviews();
+        });
     </script>
 </body>
 </html>
