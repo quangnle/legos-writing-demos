@@ -154,37 +154,35 @@ function polynomialDivide(p1, p2) {
     return { quotient, remainder };
 }
 
-// calculate p^n mod q by repeated squaring
-function polynomialModPow(p, n, q) {
-    // Initialize the result as the identity element
+// calculate p^n mod (q, coeffMod) by repeated squaring
+function polynomialModPow(p, n, q, coeffMod) {
     let result = [1];
-    let order = n;
+    let base = p.slice();
 
-    // While n is greater than 0
     while (n > 0) {
-        // If the least significant bit of n is 1
-        if (n & 1) {
-            // Multiply the result by p modulo q
-            result = polynomialDivide(polynomialMultiply(result, p), q).remainder;
-
-            // modulo n for all terms
-            for (let i = 0; i < result.length; i++) {
-                result[i] = result[i] % order;
-            }
+        if (n % 2 === 1) {
+            result = polynomialMultiply(result, base);
+            result = polynomialMod(result, q, coeffMod);
         }
-
-        // Square p modulo q
-        p = polynomialDivide(polynomialMultiply(p, p), q).remainder;        
-
-        // modulo n for all terms
-        for (let i = 0; i < p.length; i++) {
-            p[i] = p[i] % order;
-        }
-
-        // Divide n by 2
-        n >>= 1;
+        base = polynomialMultiply(base, base);
+        base = polynomialMod(base, q, coeffMod);
+        n = Math.floor(n / 2);
     }
     
+    return result;
+}
+
+// Optimized mod for x^r - 1
+function polynomialMod(p, q, coeffMod) {
+    let r = q.length - 1;
+    let result = Array(r).fill(0);
+    
+    for (let i = 0; i < p.length; i++) {
+        let term = p[i] % coeffMod;
+        if (term < 0) term += coeffMod;
+        result[i % r] = (result[i % r] + term) % coeffMod;
+    }
+
     // remove leading zeros
     while (result.length > 1 && result[result.length - 1] === 0) {
         result.pop();
@@ -193,12 +191,19 @@ function polynomialModPow(p, n, q) {
 }
 
 function polynomialEqual(p1, p2) {
-    if (p1.length !== p2.length) return false;
-
-    for (let i = 0; i < p1.length; i++) {
-        if (p1[i] !== p2[i]) return false;
+    // Trim leading zeros first to be safe
+    const trim = (p) => {
+        let r = p.slice();
+        while (r.length > 1 && r[r.length - 1] === 0) r.pop();
+        return r;
+    };
+    let a = trim(p1);
+    let b = trim(p2);
+    
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
     }
-
     return true;
 }
 

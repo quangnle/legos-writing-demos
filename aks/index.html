@@ -1,24 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AKS Primality Test Demo</title>
+    <title>AKS Primality Test Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}, {left: '\\[', right: '\\]', display: true}]});"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
-    <h1>AKS Primality Test Demo</h1>    
-    <p>This is a demo I wrote to visualize the AKS algorithm. Of course it is not optimized, especially the polynomial calculations. Therefore, the speed is not as fast as other methods.</p>
-    <p>But it is a good way to understand the algorithm.</p>
-    <div><input type="text" id="n"> <button onclick="checkPrime()">Check Prime</button><span id="result"></span></div>
+
+    <div class="container">
+        <header>
+            <h1>AKS Primality Test</h1>
+        </header>
+
+        <div class="formula-display" style="margin-bottom: 30px; margin-top: 0;">
+            <h3>Theoretical Basis</h3>
+            <p>The AKS algorithm is based on the theorem: An integer $n \ge 2$ is prime if and only if the following
+                congruence holds for all $a$ coprime to $n$:</p>
+            $$(x - a)^n \equiv (x^n - a) \pmod{x^r - 1, n}$$
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Note: AKS is a deterministic algorithm but has
+                high computational complexity for polynomials. For very large numbers, the process can take
+                significant time.</p>
+            <p style="font-size: 0.85rem; color: var(--error-color); font-weight: 600; opacity: 0.9;">⚠️ Precision Limit: This demo uses standard JS numbers. For $n > 10^7$, integer overflow may occur, causing incorrect results. For real-world use, a BigInt implementation is needed.</p>
+        </div>
+
+        <div class="card">
+            <div class="controls">
+                <div class="form-group">
+                    <label for="n-input">Enter an integer n:</label>
+                    <input type="number" id="n-input" value="31" min="1" placeholder="Recommended: n < 10^7">
+                </div>
+                <button id="check-btn">Check Primality</button>
+            </div>
+
+            <div id="result" class="result-display"></div>
+
+            <div id="log-container" class="log-container" style="display: none;">
+                <div id="logs"></div>
+            </div>
+
+        </div>
+
+        <footer>
+            &copy; 2026 AKS Primality Test - Legos Writing Demos
+        </footer>
+    </div>
+
     <script src="utils.js"></script>
     <script src="aks.js"></script>
     <script>
-        function checkPrime() {
-            document.getElementById('result').innerText = "";
-            const n = parseInt(document.getElementById('n').value);
-            const result = AKSTest(n);
-            document.getElementById('result').innerText = result ? 'PRIME' : 'COMPOSITE';
+        const nInput = document.getElementById('n-input');
+        const checkBtn = document.getElementById('check-btn');
+        const resultDiv = document.getElementById('result');
+        const logContainer = document.getElementById('log-container');
+        const logsDiv = document.getElementById('logs');
+
+        function clearLogs() {
+            logsDiv.innerHTML = '';
+            logContainer.style.display = 'none';
+            resultDiv.style.display = 'none';
         }
+
+        function addLog(message, isMath = false) {
+            logContainer.style.display = 'block';
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+
+            if (isMath) {
+                entry.innerHTML = message; // Let KaTeX handle it via auto-render or manual
+                logsDiv.appendChild(entry);
+                renderMathInElement(entry, {
+                    delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }]
+                });
+            } else {
+                entry.textContent = message;
+                logsDiv.appendChild(entry);
+            }
+
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function checkPrime() {
+            const n = parseInt(nInput.value);
+            if (isNaN(n) || n < 1) {
+                alert('Please enter a valid positive integer.');
+                return;
+            }
+
+            checkBtn.disabled = true;
+            checkBtn.innerText = 'Calculating...';
+            clearLogs();
+
+            // Custom logs for the steps
+            const logger = (msg, isMath) => addLog(msg, isMath);
+
+            try {
+                // We use a small delay to allow the UI to update
+                await new Promise(resolve => setTimeout(resolve, 50));
+                const isPrime = await AKSTest(n, logger);
+
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result-display ' + (isPrime ? 'result-prime' : 'result-composite');
+                resultDiv.innerText = isPrime ? `✓ ${n} IS PRIME` : `✗ ${n} IS COMPOSITE`;
+            } catch (e) {
+                console.error(e);
+                addLog("An error occurred during calculation.");
+            } finally {
+                checkBtn.disabled = false;
+                checkBtn.innerText = 'Check Primality';
+            }
+        }
+
+        checkBtn.addEventListener('click', checkPrime);
+
+        nInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkPrime();
+        });
     </script>
+
 </body>
+
 </html>
