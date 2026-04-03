@@ -197,35 +197,67 @@
             color: var(--text-muted);
         }
 
-        .pivot-cell {
-            background: rgba(59, 130, 246, 0.15);
-            color: var(--accent-color);
-            font-weight: bold;
-        }
-
-        .success-card {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
-            border: 1px solid var(--success-color);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.3);
-            margin-top: 20px;
-        }
-
-        .factor-box {
-            background: var(--terminal-bg);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
+        /* --- Accordion Styles --- */
+        details.solution-details {
+            background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border-color);
-            margin-top: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
 
-        .factor-value {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: var(--success-color);
-            text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        details.solution-details[open] {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.03);
+        }
+
+        details.solution-details.success[open] {
+            border-color: var(--success-color);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        summary.solution-summary {
+            padding: 16px;
+            cursor: pointer;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            list-style: none;
+            user-select: none;
+        }
+
+        summary.solution-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-trivial { background: rgba(156, 163, 175, 0.1); color: var(--text-muted); }
+        .status-success { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+
+        .solution-content {
+            padding: 0 16px 16px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+
+        .calc-block {
+            background: var(--terminal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
         }
 
         @keyframes fadeIn {
@@ -471,15 +503,22 @@
                 let X = 1n;
                 let exponents = {}; FACTOR_BASE.forEach(p => exponents[p] = 0);
 
+                let chosenPairs = dep.map(idx => `(${relations[idx].a}, ${relations[idx].b})`).join(", ");
+                let chosenValues = dep.map(idx => Math.abs(relations[idx].vG)).join(" × ");
+
                 dep.forEach(idx => {
                     X = (X * BigInt(Math.abs(relations[idx].vG))) % bigN;
                     FACTOR_BASE.forEach(p => exponents[p] += (relations[idx].sG[p] + relations[idx].sF[p]));
                 });
 
                 let Y = 1n;
+                let factorExpStr = [];
                 FACTOR_BASE.forEach(p => {
-                    let power = BigInt(exponents[p] / 2);
-                    if (power > 0n) Y = (Y * (BigInt(p) ** power)) % bigN;
+                    let power = exponents[p] / 2;
+                    if (power > 0) {
+                        Y = (Y * (BigInt(p) ** BigInt(power))) % bigN;
+                        factorExpStr.push(`${p}^{${power}}`);
+                    }
                 });
 
                 let factor = Number(gcd(X - Y, bigN));
@@ -489,45 +528,55 @@
                     isTrivial = (factor === 1 || factor === N);
                 }
 
-                if (!isTrivial) {
-                    step4Html += `
-                <div class="success-card">
-                    <div style="font-weight: 800; color: var(--success-color); margin-bottom: 12px; display: flex; align-items: center;">
-                        <span style="background: var(--success-color); color: var(--bg-color); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 10px;">SOLUTION #${dIdx + 1}</span>
-                        Non-trivial potential found!
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                        <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
-                            <span style="display:block; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Rational X</span>
-                            <span style="font-family: 'Fira Code'; font-size: 0.9rem;">${X}</span>
+                const statusClass = isTrivial ? "" : "success";
+                const badgeClass = isTrivial ? "status-trivial" : "status-success";
+                const badgeText = isTrivial ? "Trivial Solution" : "NON-TRIVIAL FACTOR FOUND!";
+                const isOpen = isTrivial ? "" : "open";
+
+                step4Html += `
+                <details class="solution-details ${statusClass}" ${isOpen}>
+                    <summary class="solution-summary">
+                        <span>Solution Attempt #${dIdx + 1}</span>
+                        <span class="status-badge ${badgeClass}">${badgeText}</span>
+                    </summary>
+                    <div class="solution-content">
+                        <p style="margin-top:10px;"><strong>Chosen Rows (Pairs):</strong></p>
+                        <div class="calc-block">${chosenPairs}</div>
+
+                        <p><strong>Calculating X (Rational Side):</strong></p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">$X \\equiv \\prod (a_i - m \\cdot b_i) \\pmod N$</p>
+                        <div class="calc-block">${chosenValues} $\\equiv$ <span style="color:var(--accent-color)">${X}</span> (mod ${N})</div>
+
+                        <p><strong>Calculating Y (Algebraic Side):</strong></p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">$Y \\equiv \\sqrt{\\prod p_j^{e_{j, TOTAL}}} \\pmod N$, where $e_{j, TOTAL}$ is the even sum of exponents from all chosen relations.</p>
+                        <div class="calc-block">${factorExpStr.join(" × ")} $\\equiv$ <span style="color:var(--accent-color)">${Y}</span> (mod ${N})</div>
+
+                        <div style="margin-top:20px; padding-top:15px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                            <p>Congruence Test: $X^2 \\equiv Y^2 \\pmod N \\Rightarrow ${X}^2 \\equiv ${Y}^2 \\pmod{${N}}$</p>
+                            ${isTrivial ?
+                        `<p style="color:var(--error-color); font-weight:bold;">Result: Trivial factor (1 or ${N}). No new information.</p>` :
+                        `<div class="success-box" style="margin-top:20px;">
+                                    <div style="background: var(--success-color); color: var(--bg-color); padding: 15px; border-radius: 12px; text-align: center;">
+                                        <p style="margin:0; font-size: 0.75rem; text-transform: uppercase; font-weight: 800;">FACTORIZATION SUCCESSFUL</p>
+                                        <p style="margin:5px 0 0 0; font-size: 2rem; font-weight: 900;">${N} = ${factor} × ${N / factor}</p>
+                                    </div>
+                                </div>`
+                    }
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
-                            <span style="display:block; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Norm Root Y</span>
-                            <span style="font-family: 'Fira Code'; font-size: 0.9rem;">${Y}</span>
-                        </div>
                     </div>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Congruence: $X^2 \\equiv Y^2 \\pmod N \\Rightarrow ${X}^2 \\equiv ${Y}^2 \\pmod{${N}}$</p>
-                    <div class="factor-box">
-                        <div style="color: var(--text-muted); font-size: 0.75rem; margin-bottom: 8px;">RESULT: $\\gcd(|X - Y|, N)$</div>
-                        <div class="factor-value">${N} = ${factor} × ${N / factor}</div>
-                    </div>
-                </div>`;
-                    solved = true;
-                    break;
-                } else {
-                    step4Html += `
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 10px; opacity: 0.6; display: flex; justify-content: space-between;">
-                    <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-muted);">Trial Dependency #${dIdx + 1}</span>
-                    <span style="font-size: 0.75rem;">$\\\gcd(${X}±${Y}, N) = \\text{trivial (1 or N)}$</span>
-                </div>`;
-                }
+                </details>`;
+
+                if (!isTrivial) solved = true;
+                // We show all dependencies up to first success or all if they want to see them.
+                // The user said "the trivial solutions still have content but be folded of again".
+                if (!isTrivial) break; 
             }
 
             if (!solved) {
                 step4Html += `
-            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error-color); padding: 16px; border-radius: 12px; color: var(--error-color);">
-                <strong>Search failed.</strong> All dependencies resulted in trivial factors. Try a different degree or larger factor base.
-            </div>`;
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error-color); padding: 16px; border-radius: 12px; color: var(--error-color); text-align: center; margin-top:20px;">
+                    <strong>Factorization Failed.</strong> Try increasing the degree or exploring more relations.
+                </div>`;
             }
 
             document.getElementById('step4Output').innerHTML = step4Html;
