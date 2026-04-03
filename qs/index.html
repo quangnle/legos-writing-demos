@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadratic Sieve (QS) Simulation | Premium Math Engine</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --accent-color: #3b82f6;
+            --secondary-accent: #8b5cf6;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #1f2937;
+            --input-bg: #1f2937;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --terminal-bg: #030712;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--accent-color), var(--secondary-accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            padding: 12px 16px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        button.main-btn {
+            width: 100%;
+            background: linear-gradient(to bottom right, var(--accent-color), var(--secondary-accent));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        button.main-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .step-section {
+            margin-bottom: 40px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .step-badge {
+            background: var(--accent-color);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            margin-right: 12px;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .terminal {
+            background-color: var(--terminal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            color: var(--success-color);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .matrix-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.75rem;
+            margin-top: 10px;
+        }
+
+        .matrix-table td, .matrix-table th {
+            border: 1px solid var(--border-color);
+            padding: 4px;
+            text-align: center;
+        }
+
+        .pivot-cell {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        /* Accordion Styles */
+        details.solution-details {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        details.solution-details[open] {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.03);
+        }
+
+        details.solution-details.success[open] {
+            border-color: var(--success-color);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        summary.solution-summary {
+            padding: 16px;
+            cursor: pointer;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            list-style: none;
+            user-select: none;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        .status-trivial { background: rgba(156, 163, 175, 0.1); color: var(--text-muted); }
+        .status-success { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+
+        .solution-content {
+            padding: 0 16px 16px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+
+        .calc-block {
+            background: var(--terminal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 40px 0;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Quadratic Sieve Simulation</h1>
+        <p>A fast simulation of the Quadratic Sieve (QS) algorithm for factoring moderately large integers using the square root method.</p>
+    </header>
+
+    <div class="card">
+        <div class="controls">
+            <div class="form-group">
+                <label for="inputN">Integer N (Target Factorization):</label>
+                <input type="number" id="inputN" value="15347">
+            </div>
+        </div>
+        <button onclick="runQS()" class="main-btn">Execute Quadratic Sieve</button>
+    </div>
+
+    <div id="resultArea" style="display: none;">
+        <!-- Step 1: Initialization -->
+        <section class="step-section">
+            <div class="step-header">
+                <div class="step-badge">1</div>
+                <h2>Initialization & Factor Base</h2>
+            </div>
+            <div class="card" id="step1Output" style="padding: 20px;"></div>
+        </section>
+
+        <!-- Step 2: Sieving -->
+        <section class="step-section">
+            <div class="step-header">
+                <div class="step-badge">2</div>
+                <h2>Sieving for Smooth Relations</h2>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px; font-style: italic;">
+                Objective: Find $x$ such that $(a+x)^2 - N$ is smooth over the selected factor base.
+            </p>
+            <div id="step2Output" class="terminal"></div>
+        </section>
+
+        <!-- Step 3: Matrix -->
+        <section class="step-section">
+            <div class="step-header">
+                <div class="step-badge">3</div>
+                <h2>Exponent Matrix & Linear Solver</h2>
+            </div>
+            <div id="step3Output" class="card" style="padding: 20px; overflow-x: auto;"></div>
+        </section>
+
+        <!-- Step 4: GCD Computation -->
+        <section class="step-section">
+            <div class="step-header">
+                <div class="step-badge">4</div>
+                <h2>GCD Results & Factorization</h2>
+            </div>
+            <div id="step4Output"></div>
+        </section>
+    </div>
+
+    <footer>
+        &copy; 2026 Quadratic Sieve Visualizer - quangle.cloud
+    </footer>
+</div>
+
+<script>
+    function powMod(base, exp, mod) {
+        let res = 1n;
+        base = BigInt(base) % BigInt(mod);
+        exp = BigInt(exp);
+        while (exp > 0n) {
+            if (exp % 2n === 1n) res = (res * base) % BigInt(mod);
+            base = (base * base) % BigInt(mod);
+            exp /= 2n;
+        }
+        return res;
+    }
+
+    function legendre(a, p) {
+        if (a % p === 0) return 0;
+        let res = powMod(a, (p - 1) / 2, p);
+        return res === 1n ? 1 : -1;
+    }
+
+    function gcd(a, b) {
+        let ba = BigInt(a < 0n ? -a : a);
+        let bb = BigInt(b < 0n ? -b : b);
+        while (bb !== 0n) {
+            ba %= bb;
+            let temp = ba; ba = bb; bb = temp;
+        }
+        return ba;
+    }
+
+    function isSmooth(num, factorBase) {
+        let n = Math.abs(num);
+        if (n === 0) return null;
+        let factors = {};
+        factorBase.forEach(p => {
+            factors[p] = 0;
+            while (n % p === 0) {
+                factors[p]++;
+                n /= p;
+            }
+        });
+        return n === 1 ? factors : null;
+    }
+
+    function findAllDependencies(matrix) {
+        let rows = matrix.length;
+        let cols = matrix[0].length;
+        let transform = Array.from({ length: rows }, (_, i) => BigInt(1) << BigInt(i));
+        let currentMatrix = matrix.map(r => [...r]);
+        let pivotRow = 0;
+
+        for (let c = 0; c < cols && pivotRow < rows; c++) {
+            let sel = -1;
+            for (let r = pivotRow; r < rows; r++) {
+                if (currentMatrix[r][c] === 1) { sel = r; break; }
+            }
+            if (sel === -1) continue;
+
+            [currentMatrix[sel], currentMatrix[pivotRow]] = [currentMatrix[pivotRow], currentMatrix[sel]];
+            [transform[sel], transform[pivotRow]] = [transform[pivotRow], transform[sel]];
+
+            for (let r = 0; r < rows; r++) {
+                if (r !== pivotRow && currentMatrix[r][c] === 1) {
+                    for (let k = 0; k < cols; k++) currentMatrix[r][k] ^= currentMatrix[pivotRow][k];
+                    transform[r] ^= transform[pivotRow];
+                }
+            }
+            pivotRow++;
+        }
+
+        let dependencies = [];
+        for (let r = pivotRow; r < rows; r++) {
+            let indices = [];
+            for (let i = 0; i < rows; i++) {
+                if ((transform[r] >> BigInt(i)) & 1n) indices.push(i);
+            }
+            if (indices.length > 0) dependencies.push(indices);
+        }
+        return dependencies;
+    }
+
+    function runQS() {
+        const N = parseInt(document.getElementById('inputN').value);
+        const resultArea = document.getElementById('resultArea');
+        const bigN = BigInt(N);
+
+        if (isNaN(N) || N < 10) {
+            alert("Please enter a valid N (ideally > 100 for simulation).");
+            return;
+        }
+
+        resultArea.style.display = 'block';
+
+        // --- STEP 1: SETUP ---
+        const a_base = Math.ceil(Math.sqrt(N));
+        let factorBase = [2];
+        let pSearch = 3;
+        while (factorBase.length < 15) {
+            if (legendre(N, pSearch) === 1) factorBase.push(pSearch);
+            pSearch += 2;
+        }
+
+        document.getElementById('step1Output').innerHTML = `
+            Calculated $a = \\lceil \\sqrt{${N}} \\rceil = ${a_base}$ <br>
+            Polynomial: $Q(x) = (a + x)^2 - ${N}$ <br><br>
+            <strong>Factor Base (Primes $p$ where $N$ is a quadratic residue mod $p$):</strong> <br>
+            $P = \\{ ${factorBase.join(", ")} \\}$
+        `;
+
+        // --- STEP 2: SIEVING ---
+        let relations = [];
+        let terminalHtml = "";
+        let found = 0;
+        
+        outer: for (let x = -500; x <= 500; x++) {
+            let a_val = a_base + x;
+            let q_val = a_val * a_val - N;
+            if (q_val === 0) continue;
+            let s = isSmooth(q_val, factorBase);
+            if (s) {
+                relations.push({ x, a_val, q_val, s });
+                terminalHtml += `Found smooth: a+x=${a_val} -> Q(x)=${q_val}\n`;
+                if (++found >= 25) break outer;
+            }
+        }
+        document.getElementById('step2Output').innerText = terminalHtml + `\n>> Found ${relations.length} relations.`;
+
+        // --- STEP 3: MATRIX ---
+        let matrix = relations.map(rel => factorBase.map(p => rel.s[p] % 2));
+        let allDeps = findAllDependencies(matrix);
+
+        let matrixHtml = `<table class="matrix-table"><thead><tr><th>(a+x)</th>`;
+        factorBase.forEach(p => matrixHtml += `<th>${p}</th>`);
+        matrixHtml += `</tr></thead><tbody>`;
+        relations.forEach((rel, i) => {
+            matrixHtml += `<tr><td>${rel.a_val}</td>`;
+            matrix[i].forEach(v => matrixHtml += `<td class="${v === 1 ? 'pivot-cell' : ''}">${v}</td>`);
+            matrixHtml += `</tr>`;
+        });
+        matrixHtml += `</tbody></table>`;
+
+        if (allDeps.length === 0) {
+            document.getElementById('step3Output').innerHTML = matrixHtml + "<p style='color:var(--error-color); margin-top:15px;'>No linear dependencies found. Increase sieving range.</p>";
+            return;
+        }
+        document.getElementById('step3Output').innerHTML = matrixHtml + `<p style="color:var(--success-color); font-weight:600; margin-top:15px;">Matrix Solved. Found ${allDeps.length} dependencies.</p>`;
+
+        // --- STEP 4: RESULTS ---
+        let step4Html = "";
+        let solved = false;
+
+        for (let dIdx = 0; dIdx < allDeps.length; dIdx++) {
+            let dep = allDeps[dIdx];
+            let X = 1n;
+            let exponents = {}; factorBase.forEach(p => exponents[p] = 0);
+
+            let chosenA = dep.map(idx => relations[idx].a_val).join(" × ");
+            let chosenQ = dep.map(idx => Math.abs(relations[idx].q_val)).join(" × ");
+
+            dep.forEach(idx => {
+                X = (X * BigInt(relations[idx].a_val)) % bigN;
+                factorBase.forEach(p => exponents[p] += relations[idx].s[p]);
+            });
+
+            let Y = 1n;
+            let factorExpStr = [];
+            factorBase.forEach(p => {
+                let power = exponents[p] / 2;
+                if (power > 0) {
+                    Y = (Y * (BigInt(p) ** BigInt(power))) % bigN;
+                    factorExpStr.push(`${p}^{${power}}`);
+                }
+            });
+
+            let factor = Number(gcd(X - Y, bigN));
+            let isTrivial = (factor === 1 || factor === N);
+            if (isTrivial) {
+                factor = Number(gcd(X + Y, bigN));
+                isTrivial = (factor === 1 || factor === N);
+            }
+
+            const statusClass = isTrivial ? "" : "success";
+            const badgeClass = isTrivial ? "status-trivial" : "status-success";
+            const badgeText = isTrivial ? "Trivial" : "SUCCESS!";
+            const isOpen = isTrivial ? "" : "open";
+
+            step4Html += `
+            <details class="solution-details ${statusClass}" ${isOpen}>
+                <summary class="solution-summary">
+                    <span>Solution Attempt #${dIdx+1}</span>
+                    <span class="status-badge ${badgeClass}">${badgeText}</span>
+                </summary>
+                <div class="solution-content">
+                    <p style="margin-top:10px;"><strong>Calculation of X (mod N):</strong></p>
+                    <p style="font-size:0.8rem; color:var(--text-muted);">$X \\equiv \\prod(a+x_i) \\pmod N$</p>
+                    <div class="calc-block">${chosenA} $\\equiv$ ${X}</div>
+
+                    <p><strong>Calculation of Y (mod N):</strong></p>
+                    <p style="font-size:0.8rem; color:var(--text-muted);">$Y \\equiv \\sqrt{\\prod Q(x_i)} \\equiv \\prod p_j^{e_j/2} \\pmod N$</p>
+                    <div class="calc-block">${factorExpStr.join(" × ")} $\\equiv$ ${Y}</div>
+
+                    <div style="margin-top:15px; padding-top:15px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                        <p>$X^2 \\equiv Y^2 \\pmod N \\Rightarrow ${X}^2 \\equiv ${Y}^2 \\pmod{${N}}$</p>
+                        ${isTrivial ? 
+                            `<p style="color:var(--error-color);">Result: $\\gcd(${X} \\pm ${Y}, ${N}) = \\text{trivial}$</p>` :
+                            `<div style="background:var(--success-color); color:var(--bg-color); padding:15px; border-radius:12px; text-align:center; margin-top:15px;">
+                                <p style="margin:0; font-size: 0.75rem; text-transform: uppercase; font-weight:800;">Non-trivial Factor Found</p>
+                                <p style="margin:5px 0 0 0; font-size: 2rem; font-weight:900;">${N} = ${factor} × ${N/factor}</p>
+                            </div>`
+                        }
+                    </div>
+                </div>
+            </details>`;
+
+            if (!isTrivial) solved = true;
+            if (!isTrivial) break;
+        }
+
+        if (!solved) {
+            step4Html += `<div class="card" style="border-color:var(--error-color); text-align:center; color:var(--error-color);">
+                Factorization failed. No non-trivial factors found in the dependencies.
+            </div>`;
+        }
+
+        document.getElementById('step4Output').innerHTML = step4Html;
+        renderMathInElement(resultArea, { delimiters: [{ left: '$', right: '$', display: false }] });
+    }
+</script>
+
+</body>
+</html>
