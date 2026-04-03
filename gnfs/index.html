@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GNFS Algorithm Simulation | Premium Math Engine</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --accent-color: #3b82f6;
+            --secondary-accent: #8b5cf6;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #1f2937;
+            --input-bg: #1f2937;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --terminal-bg: #030712;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--accent-color), var(--secondary-accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            padding: 12px 16px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        button.main-btn {
+            width: 100%;
+            background: linear-gradient(to bottom right, var(--accent-color), var(--secondary-accent));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        button.main-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        button.main-btn:active {
+            transform: translateY(0);
+        }
+
+        .step-section {
+            margin-bottom: 40px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .step-badge {
+            background: var(--accent-color);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            margin-right: 12px;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .step-header h2 {
+            font-size: 1.25rem;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .terminal {
+            background-color: var(--terminal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            color: var(--success-color);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .matrix-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.75rem;
+            margin-top: 10px;
+        }
+
+        .matrix-table td,
+        .matrix-table th {
+            border: 1px solid var(--border-color);
+            padding: 4px;
+            text-align: center;
+        }
+
+        .matrix-table th {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+        }
+
+        .pivot-cell {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .success-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
+            border: 1px solid var(--success-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.3);
+            margin-top: 20px;
+        }
+
+        .factor-box {
+            background: var(--terminal-bg);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            margin-top: 16px;
+        }
+
+        .factor-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--success-color);
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 40px 0;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>GNFS Algorithm Simulation</h1>
+            <p>A high-fidelity simulation of the General Number Field Sieve for factoring large integers by finding
+                non-trivial congruences.</p>
+        </header>
+
+        <div class="card">
+            <div class="controls">
+                <div class="form-group">
+                    <label for="inputN">Integer N (Target Factorization):</label>
+                    <input type="number" id="inputN" value="3007">
+                </div>
+                <div class="form-group">
+                    <label for="inputD">Polynomial Degree d (1-3):</label>
+                    <input type="number" id="inputD" value="1" min="1" max="3">
+                </div>
+            </div>
+            <button onclick="runGNFS()" class="main-btn">Execute GNFS Sieve</button>
+        </div>
+
+        <div id="resultArea" style="display: none;">
+            <!-- Step 1: Polynomial Selection -->
+            <section class="step-section">
+                <div class="step-header">
+                    <div class="step-badge">1</div>
+                    <h2>Polynomial Selection</h2>
+                </div>
+                <div class="card" id="step1Output" style="padding: 20px; font-size: 0.95rem;"></div>
+            </section>
+
+            <!-- Step 2: Sieving -->
+            <section class="step-section">
+                <div class="step-header">
+                    <div class="step-badge">2</div>
+                    <h2>Sieving Smooth Relations</h2>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px; font-style: italic;">
+                    Objective: Find integer pairs $(a, b)$ where both $(a - mb)$ and the algebraic norm of $(a +
+                    b\alpha)$ can be fully factored using our small prime numbers (Factor Base).
+                </p>
+                <div id="step2Output" class="terminal" style="max-height: 250px;"></div>
+            </section>
+
+            <!-- Step 3: Matrix -->
+            <section class="step-section">
+                <div class="step-header">
+                    <div class="step-badge">3</div>
+                    <h2>Exponent Matrix & GF(2) Systems</h2>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                    Searching for linear dependencies in the exponent matrix modulo 2.
+                </p>
+                <div id="step3Output" class="card" style="padding: 20px; overflow-x: auto;"></div>
+            </section>
+
+            <!-- Step 4: Results -->
+            <section class="step-section">
+                <div class="step-header">
+                    <div class="step-badge">4</div>
+                    <h2>GCD Computation & Results</h2>
+                </div>
+                <div id="step4Output"></div>
+            </section>
+        </div>
+
+        <footer>
+            &copy; 2026 GNFS Visualizer - Legos Writing Demos
+        </footer>
+    </div>
+
+    <script>
+        const FACTOR_BASE = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+
+        function isSmooth(num, base) {
+            let n = Math.abs(num);
+            if (n === 0) return null;
+            let factors = {};
+            base.forEach(p => {
+                factors[p] = 0;
+                while (n % p === 0) {
+                    factors[p]++;
+                    n /= p;
+                }
+            });
+            return n === 1 ? factors : null;
+        }
+
+        function gcd(a, b) {
+            let ba = BigInt(a < 0n ? -a : a);
+            let bb = BigInt(b < 0n ? -b : b);
+            while (bb !== 0n) {
+                ba %= bb;
+                let temp = ba; ba = bb; bb = temp;
+            }
+            return ba;
+        }
+
+        function findAllDependencies(matrix) {
+            let rows = matrix.length;
+            let cols = matrix[0].length;
+            let transform = Array.from({ length: rows }, (_, i) => BigInt(1) << BigInt(i));
+            let currentMatrix = matrix.map(r => [...r]);
+            let pivotRow = 0;
+
+            for (let c = 0; c < cols && pivotRow < rows; c++) {
+                let sel = -1;
+                for (let r = pivotRow; r < rows; r++) {
+                    if (currentMatrix[r][c] === 1) { sel = r; break; }
+                }
+                if (sel === -1) continue;
+
+                [currentMatrix[sel], currentMatrix[pivotRow]] = [currentMatrix[pivotRow], currentMatrix[sel]];
+                [transform[sel], transform[pivotRow]] = [transform[pivotRow], transform[sel]];
+
+                for (let r = 0; r < rows; r++) {
+                    if (r !== pivotRow && currentMatrix[r][c] === 1) {
+                        for (let k = 0; k < cols; k++) currentMatrix[r][k] ^= currentMatrix[pivotRow][k];
+                        transform[r] ^= transform[pivotRow];
+                    }
+                }
+                pivotRow++;
+            }
+
+            let dependencies = [];
+            for (let r = pivotRow; r < rows; r++) {
+                let indices = [];
+                for (let i = 0; i < rows; i++) {
+                    if ((transform[r] >> BigInt(i)) & 1n) indices.push(i);
+                }
+                if (indices.length > 0) dependencies.push(indices);
+            }
+            return dependencies;
+        }
+
+        function runGNFS() {
+            const N = parseInt(document.getElementById('inputN').value);
+            const D = parseInt(document.getElementById('inputD').value);
+            const resultArea = document.getElementById('resultArea');
+            const bigN = BigInt(N);
+
+            if (isNaN(N) || N < 2) {
+                alert("Please enter a valid N > 1.");
+                return;
+            }
+
+            resultArea.style.display = 'block';
+
+            // --- STEP 1: POLY SELECTION ---
+            const m = Math.floor(Math.pow(N, 1 / (D + 1)));
+            let coeffs = []; let tempN = N;
+            for (let i = D; i >= 0; i--) {
+                coeffs[i] = Math.floor(tempN / Math.pow(m, i));
+                tempN %= Math.pow(m, i);
+            }
+
+            const polyF = coeffs.map((c, i) => c ? (i === 0 ? c : (i === 1 ? c + 'x' : c + 'x^' + i)) : '')
+                .filter(x => x).reverse().join(' + ');
+
+            document.getElementById('step1Output').innerHTML = `
+            Selected $m = \\lfloor \\sqrt[${D + 1}]{${N}} \\rfloor = ${m}$ <br><br>
+            <strong>Rational Polynomial:</strong> $g(x) = x - ${m} \\equiv 0 \\pmod N$ <br>
+            <strong>Number Field Polynomial:</strong> $f(x) = ${polyF} \\equiv 0 \\pmod N$ <br>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+                * Let $\\alpha$ be a root of $f(x)$, such that $f(\\alpha) = 0$. We use the algebraic field $\\mathbb{Q}(\\alpha)$ to find extra relations.
+            </p>
+        `;
+
+            // --- STEP 2: SIEVING ---
+            let relations = [];
+            let terminalHtml = "";
+            let found = 0;
+
+            outer: for (let b = 1; b <= 50; b++) {
+                for (let a = -300; a <= 300; a++) {
+                    if (gcd(BigInt(a), BigInt(b)) !== 1n) continue;
+                    let vG = a - m * b;
+                    let vF = 0; coeffs.forEach((c, i) => vF += c * Math.pow(a, i) * Math.pow(b, D - i));
+                    let sG = isSmooth(vG, FACTOR_BASE);
+                    let sF = isSmooth(vF, FACTOR_BASE);
+                    if (sG && sF) {
+                        relations.push({ a, b, sG, sF, vG, vF });
+                        terminalHtml += `Found smooth pair: (${a}, ${b}) -> Rational: ${vG}, Algebraic Norm: ${vF}\n`;
+                        if (++found >= 30) break outer;
+                    }
+                }
+            }
+            document.getElementById('step2Output').innerText = terminalHtml + `\n>> Successfully found ${relations.length} relations.`;
+
+            // --- STEP 3: MATRIX ---
+            let matrix = relations.map(rel => FACTOR_BASE.map(p => (rel.sG[p] + rel.sF[p]) % 2));
+            let allDeps = findAllDependencies(matrix);
+
+            let matrixHtml = `<table class="matrix-table"><thead><tr><th>(a,b)</th>`;
+            FACTOR_BASE.forEach(p => matrixHtml += `<th>${p}</th>`);
+            matrixHtml += `</tr></thead><tbody>`;
+            relations.forEach((rel, i) => {
+                matrixHtml += `<tr><td>(${rel.a},${rel.b})</td>`;
+                matrix[i].forEach(v => matrixHtml += `<td class="${v === 1 ? 'pivot-cell' : ''}">${v}</td>`);
+                matrixHtml += `</tr>`;
+            });
+            matrixHtml += `</tbody></table>`;
+
+            if (allDeps.length === 0) {
+                document.getElementById('step3Output').innerHTML = matrixHtml + "<p style='color:var(--error-color); margin-top:15px;'>No linear dependencies found. More sieving required.</p>";
+                return;
+            }
+            document.getElementById('step3Output').innerHTML = matrixHtml + `<p style="color:var(--success-color); font-weight:600; margin-top:15px;">Target Matrix complete. Found ${allDeps.length} dependencies.</p>`;
+
+            // --- STEP 4: GCD RESULTS ---
+            let step4Html = "";
+            let solved = false;
+
+            for (let dIdx = 0; dIdx < allDeps.length; dIdx++) {
+                let dep = allDeps[dIdx];
+                let X = 1n;
+                let exponents = {}; FACTOR_BASE.forEach(p => exponents[p] = 0);
+
+                dep.forEach(idx => {
+                    X = (X * BigInt(Math.abs(relations[idx].vG))) % bigN;
+                    FACTOR_BASE.forEach(p => exponents[p] += (relations[idx].sG[p] + relations[idx].sF[p]));
+                });
+
+                let Y = 1n;
+                FACTOR_BASE.forEach(p => {
+                    let power = BigInt(exponents[p] / 2);
+                    if (power > 0n) Y = (Y * (BigInt(p) ** power)) % bigN;
+                });
+
+                let factor = Number(gcd(X - Y, bigN));
+                let isTrivial = (factor === 1 || factor === N);
+                if (isTrivial) {
+                    factor = Number(gcd(X + Y, bigN));
+                    isTrivial = (factor === 1 || factor === N);
+                }
+
+                if (!isTrivial) {
+                    step4Html += `
+                <div class="success-card">
+                    <div style="font-weight: 800; color: var(--success-color); margin-bottom: 12px; display: flex; align-items: center;">
+                        <span style="background: var(--success-color); color: var(--bg-color); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 10px;">SOLUTION #${dIdx + 1}</span>
+                        Non-trivial potential found!
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                        <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+                            <span style="display:block; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Rational X</span>
+                            <span style="font-family: 'Fira Code'; font-size: 0.9rem;">${X}</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+                            <span style="display:block; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Norm Root Y</span>
+                            <span style="font-family: 'Fira Code'; font-size: 0.9rem;">${Y}</span>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Congruence: $X^2 \\equiv Y^2 \\pmod N \\Rightarrow ${X}^2 \\equiv ${Y}^2 \\pmod{${N}}$</p>
+                    <div class="factor-box">
+                        <div style="color: var(--text-muted); font-size: 0.75rem; margin-bottom: 8px;">RESULT: $\\gcd(|X - Y|, N)$</div>
+                        <div class="factor-value">${N} = ${factor} × ${N / factor}</div>
+                    </div>
+                </div>`;
+                    solved = true;
+                    break;
+                } else {
+                    step4Html += `
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 10px; opacity: 0.6; display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-muted);">Trial Dependency #${dIdx + 1}</span>
+                    <span style="font-size: 0.75rem;">$\\\gcd(${X}±${Y}, N) = \\text{trivial (1 or N)}$</span>
+                </div>`;
+                }
+            }
+
+            if (!solved) {
+                step4Html += `
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error-color); padding: 16px; border-radius: 12px; color: var(--error-color);">
+                <strong>Search failed.</strong> All dependencies resulted in trivial factors. Try a different degree or larger factor base.
+            </div>`;
+            }
+
+            document.getElementById('step4Output').innerHTML = step4Html;
+
+            // Re-render math
+            renderMathInElement(document.getElementById('resultArea'), { delimiters: [{ left: '$', right: '$', display: false }] });
+        }
+    </script>
+
+</body>
+
+</html>
