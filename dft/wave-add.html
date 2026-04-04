@@ -451,14 +451,7 @@
                 }
                 ctx.strokeStyle = COLORS.wave;
                 ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.fillStyle = 'var(--text-muted)';
-                ctx.font = '600 11px Inter, sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText('← past', 8, cssH - 10);
-                ctx.textAlign = 'right';
-                ctx.fillText('now →', cssW - 8, cssH - 10);
+                ctx.stroke();                
 
                 const yNow = previewMode
                     ? yComponent(tAnim, [draft])
