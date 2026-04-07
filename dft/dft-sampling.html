@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFT — Epicycles & sampling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="../rh/style.css">
+    <style>
+        .katex { font-size: 0.95em !important; color: var(--text-color); }
+
+        .sampling-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin: 0;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .slider-group input[type="range"] {
+            accent-color: var(--accent-color);
+        }
+
+        #n-display {
+            font-family: ui-monospace, monospace;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 8px;
+            color: var(--text-color);
+        }
+
+        .inputs-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .input-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .input-col-label {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .input-point {
+            width: 50px;
+            text-align: center;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 6px 4px;
+            font-size: 12px;
+            color: var(--text-color);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-point:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .section-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--secondary-accent);
+            margin: 0 0 12px 0;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .section-label--in-card {
+            margin-bottom: 16px;
+            color: var(--accent-color);
+        }
+
+        .components-list {
+            max-height: 24rem;
+            overflow-y: auto;
+            margin-bottom: 24px;
+            padding-right: 8px;
+        }
+
+        .component-row {
+            display: grid;
+            grid-template-columns: 40px minmax(0, 1fr);
+            gap: 12px;
+            align-items: start;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 768px) {
+            .component-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .k-cell {
+            text-align: center;
+            padding-top: 4px;
+        }
+
+        .k-index {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .component-main {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .component-katex-block {
+            font-size: 0.8125rem;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .comp-theta {
+            font-family: ui-monospace, monospace;
+            font-size: 0.75rem;
+            color: var(--accent-color);
+        }
+
+        .component-canvas-wrap {
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .component-row canvas {
+            display: block;
+            background: #fff;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+        }
+
+        .final-canvas-wrap {
+            margin-top: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        #finalCanvas {
+            display: block;
+            width: 100%;
+            background: #fff;
+            border-radius: 0;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header class="katex-zone">
+            <h1>DFT — Exact fit to samples</h1>
+            <p>The blue trace passes through the red sample points. The epicycle layout uses the <strong>vertical</strong> screen axis for the cosine sum \(\sum_k A_k\cos(kt+\varphi_k)\), so the dashed link to the pen is a horizontal line (same \(y\) as the graph).</p>
+        </header>
+
+        <div class="card">
+            <div class="sampling-toolbar katex-zone">
+                <h2 class="panel-title">1. Sample values \(y_n\)</h2>
+                <div class="slider-group">
+                    <label for="n-slider">Length \(N\):</label>
+                    <input type="range" id="n-slider" min="4" max="10" value="6">
+                    <span id="n-display">6</span>
+                </div>
+            </div>
+            <div id="inputs-container" class="inputs-row"></div>
+        </div>
+
+        <h2 class="section-label katex-zone">2. Modes \(X_k\) (amplitude &amp; phase)</h2>
+        <div id="components-list" class="components-list"></div>
+
+        <div class="card">
+            <h2 class="section-label section-label--in-card">3. Epicycle chain &amp; interpolant</h2>
+            <div class="final-canvas-wrap">
+                <canvas id="finalCanvas" width="900" height="300"></canvas>
+            </div>
+        </div>
+
+        <footer>DFT sampling — Legos Writing Demos</footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+        const katexOpt = { throwOnError: false, displayMode: false };
+
+        const nSlider = document.getElementById('n-slider');
+        const nDisplay = document.getElementById('n-display');
+        const inputsContainer = document.getElementById('inputs-container');
+        const componentsList = document.getElementById('components-list');
+        const finalCanvas = document.getElementById('finalCanvas');
+        const finalCtx = finalCanvas.getContext('2d');
+
+        let N = 6;
+        let yValues = [];
+        let fourierX = [];
+        let time = 0;
+        /** @type {{ ctx: CanvasRenderingContext2D, waveLeft: number, waveW: number, cy: number, cx: number }[]} */
+        let componentLayouts = [];
+
+        const WAVE_START_X = 300;
+        const WAVE_WIDTH = 550;
+
+        const COMP_CX = 75;
+        const COMP_CY = 40;
+        const COMP_WAVE_LEFT = 190;
+        const COMP_WAVE_W = 650;
+        const COMP_W = COMP_WAVE_LEFT + COMP_WAVE_W;
+        const COMP_H = 80;
+
+        function init() {
+            N = parseInt(nSlider.value, 15);
+            nDisplay.innerText = N;
+            inputsContainer.innerHTML = '';
+            yValues = [];
+            for (let i = 0; i < N; i++) {
+                const val = Math.floor(Math.random() * 80) - 40;
+                yValues.push(val);
+                const div = document.createElement('div');
+                div.className = 'input-col';
+                div.innerHTML = `
+                    <span class="input-col-label">y<sub>${i}</sub></span>
+                    <input type="number" value="${val}" class="input-point" data-idx="${i}">
+                `;
+                inputsContainer.appendChild(div);
+            }
+
+            document.querySelectorAll('.input-point').forEach(input => {
+                input.oninput = (e) => {
+                    yValues[e.target.dataset.idx] = parseFloat(e.target.value) || 0;
+                    updateDFT();
+                };
+            });
+
+            updateDFT();
+            createLabelsAndCanvases();
+        }
+
+        function renderDelimitedMathInZones() {
+            if (typeof renderMathInElement === 'undefined') return;
+            const delimiters = [
+                { left: '\\(', right: '\\)', display: false },
+                { left: '\\[', right: '\\]', display: true }
+            ];
+            document.querySelectorAll('.katex-zone').forEach(el => {
+                renderMathInElement(el, { delimiters, throwOnError: false });
+            });
+        }
+
+        function updateDFT() {
+            fourierX = [];
+            for (let k = 0; k < N; k++) {
+                let re = 0;
+                let im = 0;
+                for (let n = 0; n < N; n++) {
+                    const phi = (2 * Math.PI * k * n) / N;
+                    re += yValues[n] * Math.cos(phi);
+                    im -= yValues[n] * Math.sin(phi);
+                }
+                fourierX.push({
+                    freq: k,
+                    amp: Math.sqrt(re * re + im * im) / N,
+                    phase: Math.atan2(im, re),
+                    sumRe: re,
+                    sumIm: im
+                });
+            }
+            time = 0;
+        }
+
+        function renderStaticKaTeX(k, x) {
+            const el = document.getElementById(`katex-static-${k}`);
+            if (!el || typeof katex === 'undefined') return;
+            const xrN = x.sumRe / N;
+            const xiN = x.sumIm / N;
+            const imagLatex = xiN >= 0
+                ? `+ ${xiN.toFixed(3)}i`
+                : `- ${Math.abs(xiN).toFixed(3)}i`;
+            const latex =
+                `X_{${k}} = ${xrN.toFixed(3)} ${imagLatex},\\quad A_{${k}} = ${x.amp.toFixed(3)},\\quad ` +
+                `\\varphi_{${k}} = ${x.phase.toFixed(3)}\\ \\mathrm{rad}`;
+            katex.render(latex, el, katexOpt);
+        }
+
+        function createLabelsAndCanvases() {
+            componentsList.innerHTML = '';
+            componentLayouts = [];
+            fourierX.forEach((x, k) => {
+                const row = document.createElement('div');
+                row.className = 'component-row';
+                row.innerHTML = `
+                    <div class="k-cell">
+                        <div class="input-col-label">k</div>
+                        <div class="k-index">${k}</div>
+                    </div>
+                    <div class="component-main">
+                        <div class="component-katex-block">
+                            <span id="katex-static-${k}"></span>
+                            <div class="comp-theta" id="theta-live-${k}"></div>
+                        </div>
+                        <div class="component-canvas-wrap">
+                            <canvas id="comp-${k}" width="${COMP_W}" height="${COMP_H}"></canvas>
+                        </div>
+                    </div>
+                `;
+                componentsList.appendChild(row);
+                const canvas = document.getElementById(`comp-${k}`);
+                componentLayouts.push({
+                    ctx: canvas.getContext('2d'),
+                    waveLeft: COMP_WAVE_LEFT,
+                    waveW: COMP_WAVE_W,
+                    cy: COMP_CY,
+                    cx: COMP_CX
+                });
+                renderStaticKaTeX(k, x);
+            });
+        }
+
+        function getSignalAt(t) {
+            let y = 0;
+            for (let i = 0; i < fourierX.length; i++) {
+                const { freq, amp, phase } = fourierX[i];
+                y += amp * Math.cos(freq * t + phase);
+            }
+            return y;
+        }
+
+        function drawComponentRow(k, x, layout) {
+            const ctx = layout.ctx;
+            const { waveLeft, waveW, cy, cx } = layout;
+            ctx.clearRect(0, 0, COMP_W, COMP_H);
+
+            const theta = x.freq * time + x.phase;
+            const curX = x.amp * Math.sin(theta);
+            const curY = x.amp * Math.cos(theta);
+            const scalar = x.amp * Math.cos(theta);
+            const tipX = cx + curX;
+            const tipY = cy + curY;
+            const waveY = cy + scalar;
+            const tx = waveLeft + (time / (2 * Math.PI)) * waveW;
+
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.beginPath();
+            ctx.arc(cx, cy, Math.abs(x.amp), 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#64748b';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tx, waveY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = '#94a3b8';
+            ctx.beginPath();
+            for (let i = 0; i <= waveW; i++) {
+                const t = (i / waveW) * 2 * Math.PI;
+                const valY = x.amp * Math.cos(x.freq * t + x.phase);
+                const px = waveLeft + i;
+                const py = cy + valY;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.moveTo(tx, 0);
+            ctx.lineTo(tx, COMP_H);
+            ctx.stroke();
+
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.arc(tx, waveY, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            const thetaEl = document.getElementById(`theta-live-${k}`);
+            if (thetaEl) {
+                thetaEl.textContent = `θ${k}(t) = ${theta.toFixed(3)} rad (${(theta * 180 / Math.PI).toFixed(1)}°) · contribution = A${k}·cos(θ${k}) = ${scalar.toFixed(3)}`;
+            }
+        }
+
+        function draw() {
+            finalCtx.clearRect(0, 0, finalCanvas.width, finalCanvas.height);
+            const centerX = 150;
+            const centerY = 150;
+
+            fourierX.forEach((x, k) => {
+                if (componentLayouts[k]) drawComponentRow(k, x, componentLayouts[k]);
+            });
+
+            let ex = centerX;
+            let ey = centerY;
+            for (let idx = fourierX.length - 1; idx >= 0; idx--) {
+                const x = fourierX[idx];
+                const prevX = ex;
+                const prevY = ey;
+                const th = x.freq * time + x.phase;
+                ex += x.amp * Math.sin(th);
+                ey += x.amp * Math.cos(th);
+
+                finalCtx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
+                finalCtx.beginPath();
+                finalCtx.arc(prevX, prevY, Math.abs(x.amp), 0, Math.PI * 2);
+                finalCtx.stroke();
+                finalCtx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+                finalCtx.beginPath();
+                finalCtx.moveTo(prevX, prevY);
+                finalCtx.lineTo(ex, ey);
+                finalCtx.stroke();
+            }
+            finalCtx.fillStyle = '#10b981';
+            finalCtx.beginPath();
+            finalCtx.arc(ex, ey, 3, 0, Math.PI * 2);
+            finalCtx.fill();
+
+            const limitIdx = (time / (2 * Math.PI)) * WAVE_WIDTH;
+            const timeX = WAVE_START_X + limitIdx;
+            const graphY = centerY + getSignalAt(time);
+
+            finalCtx.strokeStyle = '#cbd5e1';
+            finalCtx.beginPath();
+            finalCtx.moveTo(WAVE_START_X, centerY);
+            finalCtx.lineTo(WAVE_START_X + WAVE_WIDTH, centerY);
+            finalCtx.stroke();
+
+            yValues.forEach((y, n) => {
+                const px = WAVE_START_X + (n / N) * WAVE_WIDTH;
+                const py = centerY + y;
+                finalCtx.setLineDash([2, 2]);
+                finalCtx.strokeStyle = 'rgba(239, 68, 68, 0.3)';
+                finalCtx.beginPath();
+                finalCtx.moveTo(px, centerY);
+                finalCtx.lineTo(px, py);
+                finalCtx.stroke();
+                finalCtx.setLineDash([]);
+                finalCtx.fillStyle = '#ef4444';
+                finalCtx.beginPath();
+                finalCtx.arc(px, py, 4, 0, Math.PI * 2);
+                finalCtx.fill();
+            });
+
+            finalCtx.strokeStyle = '#2563eb';
+            finalCtx.lineWidth = 2;
+            finalCtx.beginPath();
+            for (let i = 0; i <= limitIdx; i++) {
+                const t = (i / WAVE_WIDTH) * 2 * Math.PI;
+                const py = centerY + getSignalAt(t);
+                const px = WAVE_START_X + i;
+                if (i === 0) finalCtx.moveTo(px, py);
+                else finalCtx.lineTo(px, py);
+            }
+            finalCtx.stroke();
+
+            finalCtx.setLineDash([5, 5]);
+            finalCtx.strokeStyle = '#94a3b8';
+            finalCtx.beginPath();
+            finalCtx.moveTo(ex, ey);
+            finalCtx.lineTo(timeX, ey);
+            finalCtx.stroke();
+            finalCtx.setLineDash([]);
+
+            finalCtx.setLineDash([2, 2]);
+            finalCtx.strokeStyle = '#3b82f6';
+            finalCtx.beginPath();
+            finalCtx.moveTo(timeX, 0);
+            finalCtx.lineTo(timeX, 300);
+            finalCtx.stroke();
+            finalCtx.setLineDash([]);
+
+            finalCtx.fillStyle = '#2563eb';
+            finalCtx.beginPath();
+            finalCtx.arc(timeX, graphY, 3.5, 0, Math.PI * 2);
+            finalCtx.fill();
+
+            time += (2 * Math.PI) / 400;
+            if (time >= 2 * Math.PI) {
+                time -= 2 * Math.PI;
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        nSlider.oninput = init;
+        init();
+        renderDelimitedMathInZones();
+        draw();
+    </script>
+</body>
+</html>
