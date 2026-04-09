@@ -1,118 +1,361 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Central Limit Theorem Demo</title>
-    
-</head>
-<body>
-    <h1>Central Limit Theorem Demo</h1>
-
-    <h3>Distribution of the faces</h3>
-    <div id="dice-container">
-        <div class="dice">
-            <img src="images/dice 1.jpg" alt="Dice 1">
-            <input type="range" min="1" max="10" value="5">
-        </div>
-        <div class="dice">
-            <img src="images/dice 2.jpg" alt="Dice 2">
-            <input type="range" min="1" max="10" value="5">
-        </div>
-        <div class="dice">
-            <img src="images/dice 3.jpg" alt="Dice 3">
-            <input type="range" min="1" max="10" value="5">
-        </div>
-        <div class="dice">
-            <img src="images/dice 4.jpg" alt="Dice 4">
-            <input type="range" min="1" max="10" value="5">
-        </div>
-        <div class="dice">
-            <img src="images/dice 5.jpg" alt="Dice 5">
-            <input type="range" min="1" max="10" value="5">
-        </div>
-        <div class="dice">
-            <img src="images/dice 6.jpg" alt="Dice 6">
-            <input type="range" min="1" max="10" value="5">
-        </div>
-        <div class="dice">
-            <span>Number of dices to simulate: </span><input id="inpNDices" type="range" min="1" max="20" value="1" onchange="ndiceschanges()"> <span id="spNDices">1</span>
-            <button onclick="start()">Start Simulate!</button>
-        </div>
-    </div>
-
+    <title>Minh họa Định lý Giới hạn Trung tâm (CLT)</title>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <!-- p5.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="chart.js"></script>
     <style>
-        #dice-container {
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --accent-color: #3b82f6;
+            --secondary-accent: #8b5cf6;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #1f2937;
+            --input-bg: #1f2937;
+            --glow: rgba(59, 130, 246, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
             display: flex;
-            flex-wrap: wrap;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 420px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             gap: 20px;
         }
-        .dice {
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--accent-color), var(--secondary-accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 10px 0;
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .dice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .dice-control {
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
         }
-        .dice img {
-            width: 60px;
-            height: 60px;
+
+        .dice-control:hover {
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.05);
         }
-        .dice input {
-            margin-top: 10px;
-            width: 60px;
+
+        .dice-control img {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        .dice-control input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        .dice-control span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        input[type="number"],
+        input[type="text"] {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+
+        button {
+            background: linear-gradient(to bottom right, var(--accent-color), var(--secondary-accent));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .stats-display {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .stats-display span {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        #p5-container {
+            flex: 1;
+            background: #000;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            min-height: 400px;
+            position: relative;
+        }
+
+        .formula-card {
+            font-size: 1.1rem;
+            text-align: center;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="chart.js"></script>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div>
+            <h1>Simulate CLT</h1>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Adjust dice probabilities and see the Normal
+                distribution emerge.</p>
+        </div>
+
+        <div class="card">
+            <label style="margin-bottom: 10px; display: block;">Dice face configuration (%):</label>
+            <div class="dice-grid" id="dice-controls">
+                <!-- Dynamically generated -->
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="form-group">
+                <label for="inp-n">Number of throws in one trial:</label>
+                <input type="number" id="inp-n" value="5" min="1" max="100">
+            </div>
+            <div class="form-group">
+                <label for="inp-z">Z-value to mark:</label>
+                <input type="number" id="inp-z" value="0" step="0.1">
+            </div>
+            <button onclick="runSimulation()">Run Simulation (1000 trials)</button>
+        </div>
+
+        <div class="card stats-display">
+            <div id="pop-stats">
+                $\mu$: <span id="val-mu">3.50</span>, $\sigma$: <span id="val-sigma">1.71</span>
+            </div>
+            <div id="sample-stats">
+                $\bar{X} = \frac{1}{n}\sum x_i = $ <span id="exp-mu">0.000</span> <br>
+                $SE_{practice} = \sqrt{\frac{\sum(x_i - \bar{x})^2}{n-1}} = $ <span id="exp-se">0.000</span> <br>
+                $SE_{theory} = \frac{\sigma}{\sqrt{n}} = $ <span id="theo-se">0.000</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="card formula-card" id="formula-display">
+            $$\bar{X} \sim N\left(\mu, \frac{\sigma^2}{n}\right) \text{ when } n \to \infty$$
+        </div>
+
+        <div id="p5-container">
+            <!-- p5 canvas will be here -->
+        </div>
+    </div>
+
     <script>
-        let simCount = 0;
-        const maxSimCount = 1000;
-        let started = false;
-        let standardChart, sampleChart;
+        let probs = [1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6];
+        let mu = 3.5;
+        let sigma = 1.7078;
+        let chart = null;
 
-        function start() {
-            if (!started) {                
-                // change the text of the button to "Stop Simulate!"
-                document.querySelector("#dice-container button").innerText = "Stop Simulate!";
-                const nDices = document.getElementById("inpNDices").value*1;
-
-                const probs = [];
-                for (let i = 0; i < 6; i++) {
-                    probs.push(document.querySelectorAll(".dice input")[i].value * 1);
-                }
-                let sum = probs.reduce((a, b) => a + b, 0);
-                for (let i = 0; i < 6; i++) {
-                    probs[i] /= sum;
-                }
-                
-                standardChart = new Chart(1, probs, maxSimCount, 0, 0, width, height / 2);
-                sampleChart = new Chart(nDices, probs, maxSimCount, 0, height / 2, width, height / 2);
-            } else {                
-                // change the text of the button to "Start Simulate!"
-                document.querySelector("#dice-container button").innerText = "Start Simulate!";
+        function initUI() {
+            const container = document.getElementById('dice-controls');
+            for (let i = 0; i < 6; i++) {
+                const div = document.createElement('div');
+                div.className = 'dice-control';
+                div.innerHTML = `
+                    <img src="images/dice ${i + 1}.jpg" alt="Dice ${i + 1}">
+                    <input type="range" min="0" max="100" value="${(probs[i] * 100).toFixed(0)}" oninput="updateProbs(${i}, this.value)">
+                    <span id="prob-val-${i}">${(probs[i] * 100).toFixed(1)}%</span>
+                `;
+                container.appendChild(div);
             }
-            started = !started;
+            updateStats();
         }
 
-        function ndiceschanges() {
-            document.getElementById("spNDices").innerText = document.getElementById("inpNDices").value;
+        function updateProbs(index, value) {
+            const newValue = value / 100;
+            const oldValue = probs[index];
+            probs[index] = newValue;
+
+            // Balance other probabilities
+            const sumOther = probs.reduce((a, b, i) => i === index ? a : a + b, 0);
+            const targetSumOther = 1 - newValue;
+
+            if (sumOther > 0) {
+                const factor = targetSumOther / sumOther;
+                for (let i = 0; i < 6; i++) {
+                    if (i !== index) probs[i] *= factor;
+                }
+            } else {
+                // If others were all 0, distribute remainder equally
+                const share = targetSumOther / 5;
+                for (let i = 0; i < 6; i++) {
+                    if (i !== index) probs[i] = share;
+                }
+            }
+
+            // Update UI
+            for (let i = 0; i < 6; i++) {
+                document.getElementById(`prob-val-${i}`).innerText = (probs[i] * 100).toFixed(1) + '%';
+                document.querySelectorAll('.dice-control input')[i].value = (probs[i] * 100).toFixed(0);
+            }
+
+            updateStats();
         }
 
+        function updateStats() {
+            mu = 0;
+            for (let i = 0; i < 6; i++) mu += (i + 1) * probs[i];
+
+            let variance = 0;
+            for (let i = 0; i < 6; i++) variance += probs[i] * Math.pow((i + 1) - mu, 2);
+            sigma = Math.sqrt(variance);
+
+            document.getElementById('val-mu').innerText = mu.toFixed(3);
+            document.getElementById('val-sigma').innerText = sigma.toFixed(3);
+
+            const n = parseInt(document.getElementById('inp-n').value);
+            const se = (sigma / Math.sqrt(n)).toFixed(3);
+            document.getElementById('theo-se').innerText = se;
+
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('pop-stats'));
+                renderMathInElement(document.getElementById('sample-stats'));
+            }
+        }
+
+        function updateExpStats() {
+            if (!chart) return;
+            const expMean = chart.getExpMean();
+            const expSE = chart.getExpStdDev();
+
+            document.getElementById('exp-mu').innerText = expMean.toFixed(3);
+            document.getElementById('exp-se').innerText = expSE.toFixed(3);
+        }
+
+        function runSimulation() {
+            const n = parseInt(document.getElementById('inp-n').value);
+            const z = parseFloat(document.getElementById('inp-z').value);
+
+            if (!chart) {
+                chart = new Chart(n, probs, 1000);
+            } else {
+                chart.reset(n, probs);
+            }
+            chart.setZ(z);
+            chart.start();
+            updateStats();
+        }
+
+        // p5 hooks
         function setup() {
-            createCanvas(800, 600);
-            
+            const container = document.getElementById('p5-container');
+            const canvas = createCanvas(container.offsetWidth, container.offsetHeight);
+            canvas.parent('p5-container');
+            initUI();
+        }
+
+        function windowResized() {
+            const container = document.getElementById('p5-container');
+            resizeCanvas(container.offsetWidth, container.offsetHeight);
         }
 
         function draw() {
-            
-            if (started) {
-                background(255);
-                standardChart.throwDices();
-                standardChart.draw();
-                sampleChart.throwDices();
-                sampleChart.draw();
-                simCount++;
-            }                    
+            background(11, 15, 25);
+            if (chart) {
+                chart.update();
+                chart.draw();
+                if (chart.isRunning || chart.simCount === chart.maxSimCount) {
+                    if (frameCount % 5 === 0) updateExpStats();
+                }
+            }
         }
+
     </script>
 </body>
+
 </html>
