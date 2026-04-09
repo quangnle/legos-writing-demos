@@ -1,72 +1,135 @@
 function setup() {
-    createCanvas(800, 600);
-    background(255);
+    const size = getContainerSize();
+    const canvas = createCanvas(size.w, size.h);
+    canvas.parent('p5-container');
+    pixelDensity(displayDensity());
 }
 
-function drawOrigin(minX, maxX, minY, maxY) {
-    stroke(0);
-    line(0, height / 2, width, height / 2);
-    line(width / 2, 0, width / 2, height);
-    fill(0);
-    // text(minX, 5, height / 2 + 15);
-    // text(maxX, width - 20, height / 2 + 15);
-    // text(minY, width / 2 + 5, height - 5);
-    // text(maxY, width / 2 + 5, 15);
-}
-
-function drawGaussian(mu, sigma, scaleX = 1, scaleY = 1) {
-    stroke("#0f0");
-    noFill();
-    beginShape();
-    const startX = -0.5*scaleX;
-    const endX = 0.5*scaleX;
-    const startY = -0.5*scaleY;
-    const endY = 0.5*scaleY;
-    const step = 0.01;
-
-    for (let x = startX; x < endX; x += step) {
-        let y = gaussian(x, mu, sigma);
-        vertex(map(x, startX, endX, 0, width), map(y, startY, endY, height, 0));
-    }
-    endShape();
-
-    strokeWeight(2);
-    stroke("#00f");
-    fill(color(0,0,255,100));
-    beginShape();
-    for (let x = mu-sigma; x <= mu+sigma+step; x += step) {
-        let y = gaussian(x, mu, sigma);
-        vertex(map(x, startX, endX, 0, width), map(y, startY, endY, height, 0));
-    }
-    vertex(map(mu + sigma, startX, endX, 0, width), map(0, startY, endY, height, 0));
-    vertex(map(mu - sigma, startX, endX, 0, width), map(0, startY, endY, height, 0));    
-    endShape(CLOSE);    
-
-    // draw point at mu
-    strokeWeight(4);
-    stroke("#f00");
-    point(map(mu, startX, endX, 0, width), map(0, startY, endY, height, 0));
-    strokeWeight(1);
-    // draw line at mu
-    stroke("#f00");
-    line(map(mu, startX, endX, 0, width), 0, map(mu, startX, endX, 0, width), height);
-    // draw text at mu
-    stroke("#000");
-    fill("#000");
-    text("μ=" + mu, map(mu, startX, endX, 0, width), height / 2 + 15);
-    // draw text at sigma
-    fill("#000");
-    text("μ+σ= " + (mu+sigma).toFixed(2), map(mu + sigma, startX, endX, 0, width)-10, height / 2 + 15);
-    text("μ-σ= " + (mu-sigma).toFixed(2), map(mu - sigma, startX, endX, 0, width)-10, height / 2 + 15);
-
+function windowResized() {
+    const size = getContainerSize();
+    resizeCanvas(size.w, size.h);
 }
 
 function draw() {
-    background(255);
-    drawOrigin(-5, 5, -2, 2);
-    drawGaussian(mu, sigma, scaleX = 5, scaleY = 2);
+    background(11, 15, 25); // --bg-color
+    
+    // Grid settings
+    const scaleX = 4; // Domain is [-4, 4]
+    const scaleY = 1.2; // Co-domain for PDF
+    
+    drawGrid(scaleX, scaleY);
+    drawGaussian(mu, sigma, scaleX, scaleY);
+}
+
+function drawGrid(scaleX, scaleY) {
+    const padding = 40;
+    const graphW = width - padding * 2;
+    const graphH = height - padding * 2;
+    const x0 = width / 2;
+    const y0 = height - padding;
+
+    // Draw Axes
+    stroke(31, 41, 55); // --border-color
+    strokeWeight(1);
+    
+    // Vertical lines (Grid)
+    for (let x = -scaleX; x <= scaleX; x += 1) {
+        let px = map(x, -scaleX, scaleX, padding, width - padding);
+        line(px, padding, px, height - padding);
+        
+        // Labels
+        fill(156, 163, 175);
+        noStroke();
+        textAlign(CENTER);
+        textSize(10);
+        text(x, px, height - padding + 20);
+        stroke(31, 41, 55);
+    }
+
+    // Horizontal lines (subdued)
+    for (let y = 0; y <= scaleY; y += 0.2) {
+        let py = map(y, 0, scaleY, height - padding, padding);
+        line(padding, py, width - padding, py);
+    }
+}
+
+function drawGaussian(mu, sigma, scaleX, scaleY) {
+    const padding = 40;
+    const graphW = width - padding * 2;
+    const graphH = height - padding * 2;
+    
+    // 1. Draw Sigma Area (shading)
+    noStroke();
+    fill(139, 92, 246, 30); // purple with alpha
+    beginShape();
+    for (let x = mu - sigma; x <= mu + sigma; x += 0.01) {
+        let y = gaussian(x, mu, sigma);
+        let px = map(x, -scaleX, scaleX, padding, width - padding);
+        let py = map(y, 0, scaleY, height - padding, padding);
+        vertex(px, py);
+    }
+    vertex(map(mu + sigma, -scaleX, scaleX, padding, width - padding), height - padding);
+    vertex(map(mu - sigma, -scaleX, scaleX, padding, width - padding), height - padding);
+    endShape(CLOSE);
+
+    // 2. Draw FWHM Line
+    const maxVal = gaussian(mu, mu, sigma);
+    const halfMax = maxVal / 2;
+    const halfWidth = sigma * Math.sqrt(2 * Math.log(2));
+    
+    const fwhmX1 = mu - halfWidth;
+    const fwhmX2 = mu + halfWidth;
+    const fwhmY = map(halfMax, 0, scaleY, height - padding, padding);
+    const fwhmPX1 = map(fwhmX1, -scaleX, scaleX, padding, width - padding);
+    const fwhmPX2 = map(fwhmX2, -scaleX, scaleX, padding, width - padding);
+
+    stroke(139, 92, 246);
+    strokeWeight(2);
+    setLineDash([5, 5]);
+    line(fwhmPX1, fwhmY, fwhmPX2, fwhmY);
+    setLineDash([]); // Reset
+    
+    fill(139, 92, 246);
+    noStroke();
+    textAlign(CENTER);
+    text("FWHM", (fwhmPX1 + fwhmPX2) / 2, fwhmY - 10);
+
+    // 3. Draw the Curve
+    noFill();
+    stroke(59, 130, 246); // --accent-color
+    strokeWeight(3);
+    
+    // Glow effect (simplified)
+    drawingContext.shadowBlur = 15;
+    drawingContext.shadowColor = 'rgba(59, 130, 246, 0.5)';
+    
+    beginShape();
+    for (let x = -scaleX; x <= scaleX; x += 0.02) {
+        let y = gaussian(x, mu, sigma);
+        let px = map(x, -scaleX, scaleX, padding, width - padding);
+        let py = map(y, 0, scaleY, height - padding, padding);
+        vertex(px, py);
+    }
+    endShape();
+    
+    // Reset glow
+    drawingContext.shadowBlur = 0;
+
+    // 4. Mean line
+    stroke(243, 244, 246);
+    strokeWeight(1);
+    const muPX = map(mu, -scaleX, scaleX, padding, width - padding);
+    line(muPX, height - padding, muPX, padding);
+    
+    fill(243, 244, 246);
+    noStroke();
+    ellipse(muPX, map(maxVal, 0, scaleY, height - padding, padding), 6, 6);
 }
 
 function gaussian(x, mean, sigma) {
-    return Math.exp(-0.5 * ((x - mean) / sigma) ** 2) / (sigma * Math.sqrt(2 * Math.PI));
+    return Math.exp(-0.5 * Math.pow((x - mean) / sigma, 2)) / (sigma * Math.sqrt(2 * Math.PI));
 }
+
+function setLineDash(list) {
+    drawingContext.setLineDash(list);
+}

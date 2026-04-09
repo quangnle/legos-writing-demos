@@ -1,35 +1,212 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gauss Distribution Formula</title>
+    <title>Công thức Phân phối Gauss (Normal Distribution)</title>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <!-- p5.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.0.0/math.js"></script>    
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --accent-color: #3b82f6;
+            --secondary-accent: #8b5cf6;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #1f2937;
+            --input-bg: #1f2937;
+            --glow: rgba(59, 130, 246, 0.3);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 380px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--accent-color), var(--secondary-accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 5px 0;
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .label-val {
+            color: var(--accent-color);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        .stats-display {
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        .stats-display span {
+            color: var(--secondary-accent);
+            font-weight: 600;
+        }
+
+        #p5-container {
+            flex: 1;
+            background: #000;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .formula-card {
+            font-size: 1.2rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .desc-card {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+    </style>
 </head>
 <body>
-    <h1>Gauss Distribution Formula</h1>
-    <p>Formula: \(\displaystyle f(x) = \dfrac{1}{\sigma \sqrt{2 \pi}} \mathrm{exp}\left(-\frac{1}{2} \frac{(x-\mu)^2}{ \sigma^2} \right) \), where:</p>
-    <ul>
-        <li>\(f(x)\) is the probability density function</li> 
-        <li>\(\sigma\) is the standard deviation <input id="inpSigma" type="range" min="0.5" max="1.0" value="0.5" step="0.01" onchange="sigmaChange()"> <span id="sigmaValue">0.5</span></li> 
-        <li>\(\mu\) is the mean<input id="inpMu" type="range" min="-1.0" max="1.0" value="0.0" step="0.01" onchange="muChange()"><span id="muValue">0.0</span></li> 
-    </ul>
+    <div class="sidebar">
+        <div>
+            <h1>Gaussian Visualizer</h1>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Explore the Probability Density Function of the Normal Distribution.</p>
+        </div>
+
+        <div class="card">
+            <div class="form-group">
+                <label>Mean ($\mu$): <span class="label-val" id="mu-val">0.00</span></label>
+                <input type="range" id="inp-mu" min="-2.0" max="2.0" step="0.01" value="0.00">
+            </div>
+            <div class="form-group">
+                <label>Std Dev ($\sigma$): <span class="label-val" id="sigma-val">0.50</span></label>
+                <input type="range" id="inp-sigma" min="0.1" max="2.0" step="0.01" value="0.50">
+            </div>
+        </div>
+
+        <div class="card stats-display">
+            <div id="math-results">
+                Maximum Height: <span id="val-max-h">0.00</span><br>
+                FWHM: <span id="val-fwhm">0.00</span><br>
+                $\approx 2.355 \times \sigma$
+            </div>
+        </div>
+
+        <div class="card desc-card">
+            Độ rộng tại nửa cực đại (**FWHM**) là khoảng cách giữa các điểm trên trục x mà tại đó giá trị hàm số bằng một nửa giá trị cực đại. Đối với phân phối chuẩn:
+            $$FWHM = 2\sigma\sqrt{2\ln 2} \approx 2.355\sigma$$
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="card formula-card" id="formula-display">
+            $$f(x) = \frac{1}{\sigma \sqrt{2\pi}} e^{-\frac{1}{2} \left(\frac{x-\mu}{\sigma}\right)^2}$$
+        </div>
+        
+        <div id="p5-container">
+            <!-- p5 canvas -->
+        </div>
+    </div>
+
     <script src="sketch.js"></script>
     <script>
         let sigma = 0.5;
         let mu = 0.0;
 
-        function sigmaChange() {
-            sigma = document.getElementById("inpSigma").value * 1;
-            document.getElementById("sigmaValue").innerHTML = sigma;
+        function updateUI() {
+            mu = parseFloat(document.getElementById('inp-mu').value);
+            sigma = parseFloat(document.getElementById('inp-sigma').value);
+
+            document.getElementById('mu-val').innerText = mu.toFixed(2);
+            document.getElementById('sigma-val').innerText = sigma.toFixed(2);
+
+            // Calculate stats
+            const maxH = 1 / (sigma * Math.sqrt(2 * Math.PI));
+            const fwhm = 2 * sigma * Math.sqrt(2 * Math.log(2));
+
+            document.getElementById('val-max-h').innerText = maxH.toFixed(3);
+            document.getElementById('val-fwhm').innerText = fwhm.toFixed(3);
+
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('math-results'));
+            }
         }
 
-        function muChange() {
-            mu = document.getElementById("inpMu").value * 1;
-            document.getElementById("muValue").innerHTML = mu;
-        }        
+        document.getElementById('inp-mu').addEventListener('input', updateUI);
+        document.getElementById('inp-sigma').addEventListener('input', updateUI);
+
+        updateUI();
+
+        // p5 container logic
+        function getContainerSize() {
+            const container = document.getElementById('p5-container');
+            return { w: container.offsetWidth, h: container.offsetHeight };
+        }
     </script>
 </body>
-</html>
+</html>
