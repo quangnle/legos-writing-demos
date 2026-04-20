@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Armed Bandit Lab | quangle.cloud</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Multi-Armed Bandit Lab</h1>
+            <p>So sánh hiệu suất: &epsilon;-Greedy vs UCB vs Exp3 trong môi trường đối kháng.</p>
+        </header>
+
+        <div class="card">
+            <div class="config-grid">
+                <!-- Section 1: Arms -->
+                <div class="config-section">
+                    <h3 class="section-greedy">1. Thiết lập máy (Arms)</h3>
+                    <div id="arms-config" class="space-y-2">
+                        <!-- Arms will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Section 2: Parameters -->
+                <div class="config-section">
+                    <h3 class="section-ucb">2. Tham số chiến thuật</h3>
+                    <div class="form-group">
+                        <label title="Epsilon-Greedy">&epsilon; (Greedy):</label>
+                        <input type="number" id="param-epsilon" value="0.1" step="0.05" min="0" max="1">
+                    </div>
+                    <div class="form-group">
+                        <label title="Confidence bound">C (UCB):</label>
+                        <input type="number" id="param-ucb" value="0.3" step="0.1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label title="Learning Rate cho Exp3">&eta; (Exp3):</label>
+                        <input type="number" id="param-eta" value="0.1" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <!-- Section 3: Environment -->
+                <div class="config-section">
+                    <h3 class="section-exp3">3. Môi trường</h3>
+                    <div class="form-group">
+                        <label>Số lượt (T):</label>
+                        <input type="number" id="simulation-steps" value="2000" step="500">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="env-adversarial" checked>
+                        <label for="env-adversarial">Chế độ Đối kháng Động</label>
+                    </div>
+                    <button id="btn-run">CHẠY GIẢ LẬP</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="card chart-card">
+                <h3>Cumulative Regret (Càng thấp càng tốt)</h3>
+                <div class="canvas-container">
+                    <canvas id="regretChart"></canvas>
+                </div>
+            </div>
+            <div class="card chart-card">
+                <h3>Tần suất chọn máy</h3>
+                <div class="canvas-container">
+                    <canvas id="selectionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="results-summary" class="results-summary hidden">
+            <div class="result-box result-greedy">
+                <div class="label">&epsilon;-Greedy</div>
+                <div id="res-greedy" class="value">0</div>
+            </div>
+            <div class="result-box result-ucb">
+                <div class="label">UCB</div>
+                <div id="res-ucb" class="value">0</div>
+            </div>
+            <div class="result-box result-exp3">
+                <div class="label">Exp3</div>
+                <div id="res-exp3" class="value">0</div>
+            </div>
+        </div>
+
+        <footer>
+            &copy; 2026 Multi-Armed Bandit Lab - quangle.cloud
+        </footer>
+    </div>
+
+    <script>
+        const initialArms = [
+            { mean: 0.1 }, { mean: 0.1 }, { mean: 0.8 }, { mean: 0.1 }, { mean: 0.1 }
+        ];
+
+        const armsConfigContainer = document.getElementById('arms-config');
+        initialArms.forEach((arm, i) => {
+            const div = document.createElement('div');
+            div.className = "form-group";
+            div.innerHTML = `<label>Máy ${i + 1}:</label> <input type="number" class="arm-mean" data-id="${i}" value="${arm.mean}" step="0.1" min="0" max="1">`;
+            armsConfigContainer.appendChild(div);
+        });
+
+        let regretChart, selectionChart;
+
+        function initCharts() {
+            const ctxRegret = document.getElementById('regretChart').getContext('2d');
+            const ctxSelection = document.getElementById('selectionChart').getContext('2d');
+            if (regretChart) regretChart.destroy();
+            if (selectionChart) selectionChart.destroy();
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#f3f4f6', font: { family: 'Inter' } } }
+                }
+            };
+
+            regretChart = new Chart(ctxRegret, {
+                type: 'line',
+                data: {
+                    labels: [], datasets: [
+                        { label: 'ε-Greedy', borderColor: '#3b82f6', data: [], fill: false, borderWidth: 2, pointRadius: 0, tension: 0.1 },
+                        { label: 'UCB', borderColor: '#22c55e', data: [], fill: false, borderWidth: 2, pointRadius: 0, tension: 0.1 },
+                        { label: 'Exp3', borderColor: '#a855f7', data: [], fill: false, borderWidth: 3, pointRadius: 0, tension: 0.1 }
+                    ]
+                },
+                options: commonOptions
+            });
+
+            selectionChart = new Chart(ctxSelection, {
+                type: 'bar',
+                data: {
+                    labels: initialArms.map((_, i) => `Máy ${i + 1}`),
+                    datasets: [
+                        { label: 'ε-Greedy', backgroundColor: 'rgba(59, 130, 246, 0.8)', data: [] },
+                        { label: 'UCB', backgroundColor: 'rgba(34, 197, 94, 0.8)', data: [] },
+                        { label: 'Exp3', backgroundColor: 'rgba(168, 85, 247, 0.8)', data: [] }
+                    ]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        ...commonOptions.scales,
+                        x: { ...commonOptions.scales.x, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('btn-run').addEventListener('click', () => {
+            const T = parseInt(document.getElementById('simulation-steps').value);
+            const params = {
+                epsilon: parseFloat(document.getElementById('param-epsilon').value),
+                c_ucb: parseFloat(document.getElementById('param-ucb').value),
+                eta: parseFloat(document.getElementById('param-eta').value),
+                gamma: 0.05, // Exploration cưỡng bức để ổn định Exp3
+                isAdversarial: document.getElementById('env-adversarial').checked
+            };
+            const initialMeans = Array.from(document.querySelectorAll('.arm-mean')).map(input => parseFloat(input.value));
+            
+            const btn = document.getElementById('btn-run');
+            btn.disabled = true;
+            btn.innerText = 'ĐANG GIẢ LẬP...';
+
+            setTimeout(() => {
+                initCharts();
+                runSimulation(T, initialMeans, params);
+                btn.disabled = false;
+                btn.innerText = 'CHẠY GIẢ LẬP';
+            }, 50);
+        });
+
+        function runSimulation(T, initialMeans, params) {
+            const K = initialMeans.length;
+            const SWAP_THRESHOLD = 0.12;
+
+            let envs = [
+                { name: 'greedy', means: [...initialMeans], regret: 0, counts: new Array(K).fill(0), history: [], state: { greedyMeans: new Array(K).fill(0) } },
+                { name: 'ucb', means: [...initialMeans], regret: 0, counts: new Array(K).fill(0), history: [], state: { ucbMeans: new Array(K).fill(0) } },
+                { name: 'exp3', means: [...initialMeans], regret: 0, counts: new Array(K).fill(0), history: [], state: { S_hat: new Array(K).fill(0) } }
+            ];
+
+            for (let t = 1; t <= T; t++) {
+                envs.forEach(env => {
+                    const currentMeans = env.means;
+                    const bestExpected = Math.max(...currentMeans);
+                    let chosenArm;
+
+                    if (env.name === 'greedy') {
+                        if (Math.random() < params.epsilon) chosenArm = Math.floor(Math.random() * K);
+                        else {
+                            const maxQ = Math.max(...env.state.greedyMeans);
+                            const bestArms = [];
+                            env.state.greedyMeans.forEach((q, i) => { if (q === maxQ) bestArms.push(i); });
+                            chosenArm = bestArms[Math.floor(Math.random() * bestArms.length)];
+                        }
+                    } else if (env.name === 'ucb') {
+                        if (t <= K) chosenArm = t - 1;
+                        else {
+                            let ucbScores = env.state.ucbMeans.map((m, i) => m + params.c_ucb * Math.sqrt(Math.log(t) / env.counts[i]));
+                            const maxUCB = Math.max(...ucbScores);
+                            const bestArms = [];
+                            ucbScores.forEach((s, i) => { if (s === maxUCB) bestArms.push(i); });
+                            chosenArm = bestArms[Math.floor(Math.random() * bestArms.length)];
+                        }
+                    } else { // exp3
+                        let maxS = Math.max(...env.state.S_hat);
+                        let expS = env.state.S_hat.map(s => Math.exp(params.eta * (s - maxS)));
+                        let sumExp = expS.reduce((a, b) => a + b, 0);
+
+                        let probs = expS.map(es => (1 - params.gamma) * (es / sumExp) + params.gamma / K);
+
+                        let rand = Math.random(), cumulativeP = 0;
+                        for (let i = 0; i < K; i++) {
+                            cumulativeP += probs[i];
+                            if (rand <= cumulativeP) { chosenArm = i; break; }
+                        }
+                        env.state.lastProbs = probs;
+                    }
+
+                    // Thưởng ngẫu nhiên dựa trên xác suất (Bernoulli)
+                    let reward = Math.random() < currentMeans[chosenArm] ? 1 : 0;
+                    env.counts[chosenArm]++;
+                    env.regret += (bestExpected - currentMeans[chosenArm]);
+
+                    if (env.name === 'greedy') {
+                        env.state.greedyMeans[chosenArm] += (reward - env.state.greedyMeans[chosenArm]) / env.counts[chosenArm];
+                    } else if (env.name === 'ucb') {
+                        env.state.ucbMeans[chosenArm] += (reward - env.state.ucbMeans[chosenArm]) / env.counts[chosenArm];
+                    } else {
+                        // Exp3 update
+                        let xHat = reward / env.state.lastProbs[chosenArm];
+                        env.state.S_hat[chosenArm] += xHat;
+                    }
+
+                    // Adversarial Logic
+                    if (params.isAdversarial && env.counts[chosenArm] > t * SWAP_THRESHOLD && t > 100) {
+                        if (currentMeans[chosenArm] === Math.max(...currentMeans)) {
+                            let minIdx = currentMeans.indexOf(Math.min(...currentMeans));
+                            currentMeans[chosenArm] = 0.05;
+                            currentMeans[minIdx] = 0.85; 
+                            env.counts[chosenArm] = Math.floor(t * (SWAP_THRESHOLD - 0.05)); 
+                        }
+                    }
+                    if (t % 25 === 0) env.history.push(env.regret);
+                });
+            }
+
+            regretChart.data.labels = Array.from({ length: envs[0].history.length }, (_, i) => (i + 1) * 25);
+            envs.forEach((env, i) => {
+                regretChart.data.datasets[i].data = env.history;
+                selectionChart.data.datasets[i].data = env.counts;
+            });
+            regretChart.update();
+            selectionChart.update();
+            
+            document.getElementById('results-summary').classList.remove('hidden');
+            document.getElementById('res-greedy').innerText = Math.round(envs[0].regret);
+            document.getElementById('res-ucb').innerText = Math.round(envs[1].regret);
+            document.getElementById('res-exp3').innerText = Math.round(envs[2].regret);
+        }
+        window.onload = initCharts;
+    </script>
+</body>
+
+</html>
