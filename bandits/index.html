@@ -17,7 +17,7 @@
     <div class="container">
         <header>
             <h1>Multi-Armed Bandit Lab</h1>
-            <p>So sánh hiệu suất: &epsilon;-Greedy vs UCB vs Exp3 trong môi trường đối kháng.</p>
+            <p>Trực quan hiệu suất thích nghi trong môi trường đối kháng.</p>
         </header>
 
         <div class="card">
@@ -39,7 +39,7 @@
                     </div>
                     <div class="form-group">
                         <label title="Confidence bound">C (UCB):</label>
-                        <input type="number" id="param-ucb" value="0.3" step="0.1" min="0">
+                        <input type="number" id="param-ucb" value="1.4" step="0.1" min="0">
                     </div>
                     <div class="form-group">
                         <label title="Learning Rate cho Exp3">&eta; (Exp3):</label>
@@ -52,7 +52,7 @@
                     <h3 class="section-exp3">3. Môi trường</h3>
                     <div class="form-group">
                         <label>Số lượt (T):</label>
-                        <input type="number" id="simulation-steps" value="2000" step="500">
+                        <input type="number" id="simulation-steps" value="10000" step="500">
                     </div>
                     <div class="checkbox-group">
                         <input type="checkbox" id="env-adversarial" checked>
@@ -65,15 +65,21 @@
 
         <div class="charts-grid">
             <div class="card chart-card">
-                <h3>Cumulative Regret (Càng thấp càng tốt)</h3>
+                <h3>Cumulative Reward: &epsilon;-Greedy</h3>
                 <div class="canvas-container">
-                    <canvas id="regretChart"></canvas>
+                    <canvas id="greedyPerformanceChart"></canvas>
                 </div>
             </div>
             <div class="card chart-card">
-                <h3>Tần suất chọn máy</h3>
+                <h3>Cumulative Reward: UCB</h3>
                 <div class="canvas-container">
-                    <canvas id="selectionChart"></canvas>
+                    <canvas id="ucbPerformanceChart"></canvas>
+                </div>
+            </div>
+            <div class="card chart-card">
+                <h3>Cumulative Reward: Exp3</h3>
+                <div class="canvas-container">
+                    <canvas id="exp3PerformanceChart"></canvas>
                 </div>
             </div>
         </div>
@@ -82,14 +88,17 @@
             <div class="result-box result-greedy">
                 <div class="label">&epsilon;-Greedy</div>
                 <div id="res-greedy" class="value">0</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">Total Regret</div>
             </div>
             <div class="result-box result-ucb">
                 <div class="label">UCB</div>
                 <div id="res-ucb" class="value">0</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">Total Regret</div>
             </div>
             <div class="result-box result-exp3">
                 <div class="label">Exp3</div>
                 <div id="res-exp3" class="value">0</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">Total Regret</div>
             </div>
         </div>
 
@@ -111,13 +120,12 @@
             armsConfigContainer.appendChild(div);
         });
 
-        let regretChart, selectionChart;
+        let greedyChart, ucbChart, exp3Chart;
 
         function initCharts() {
-            const ctxRegret = document.getElementById('regretChart').getContext('2d');
-            const ctxSelection = document.getElementById('selectionChart').getContext('2d');
-            if (regretChart) regretChart.destroy();
-            if (selectionChart) selectionChart.destroy();
+            if (greedyChart) greedyChart.destroy();
+            if (ucbChart) ucbChart.destroy();
+            if (exp3Chart) exp3Chart.destroy();
 
             const commonOptions = {
                 responsive: true,
@@ -138,36 +146,24 @@
                 }
             };
 
-            regretChart = new Chart(ctxRegret, {
-                type: 'line',
-                data: {
-                    labels: [], datasets: [
-                        { label: 'ε-Greedy', borderColor: '#3b82f6', data: [], fill: false, borderWidth: 2, pointRadius: 0, tension: 0.1 },
-                        { label: 'UCB', borderColor: '#22c55e', data: [], fill: false, borderWidth: 2, pointRadius: 0, tension: 0.1 },
-                        { label: 'Exp3', borderColor: '#a855f7', data: [], fill: false, borderWidth: 3, pointRadius: 0, tension: 0.1 }
-                    ]
-                },
-                options: commonOptions
-            });
+            const createRewardChart = (id, color, label) => {
+                const ctx = document.getElementById(id).getContext('2d');
+                return new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'Oracle (Best possible)', borderColor: '#fbbf24', data: [], fill: false, borderWidth: 1, borderDash: [5, 5], pointRadius: 0 },
+                            { label: label + ' (Actual)', borderColor: color, data: [], fill: 'origin', backgroundColor: color + '15', borderWidth: 2, pointRadius: 0, tension: 0.1 }
+                        ]
+                    },
+                    options: commonOptions
+                });
+            };
 
-            selectionChart = new Chart(ctxSelection, {
-                type: 'bar',
-                data: {
-                    labels: initialArms.map((_, i) => `Máy ${i + 1}`),
-                    datasets: [
-                        { label: 'ε-Greedy', backgroundColor: 'rgba(59, 130, 246, 0.8)', data: [] },
-                        { label: 'UCB', backgroundColor: 'rgba(34, 197, 94, 0.8)', data: [] },
-                        { label: 'Exp3', backgroundColor: 'rgba(168, 85, 247, 0.8)', data: [] }
-                    ]
-                },
-                options: {
-                    ...commonOptions,
-                    scales: {
-                        ...commonOptions.scales,
-                        x: { ...commonOptions.scales.x, grid: { display: false } }
-                    }
-                }
-            });
+            greedyChart = createRewardChart('greedyPerformanceChart', '#3b82f6', 'ε-Greedy');
+            ucbChart = createRewardChart('ucbPerformanceChart', '#22c55e', 'UCB');
+            exp3Chart = createRewardChart('exp3PerformanceChart', '#a855f7', 'Exp3');
         }
 
         document.getElementById('btn-run').addEventListener('click', () => {
@@ -176,7 +172,7 @@
                 epsilon: parseFloat(document.getElementById('param-epsilon').value),
                 c_ucb: parseFloat(document.getElementById('param-ucb').value),
                 eta: parseFloat(document.getElementById('param-eta').value),
-                gamma: 0.05, // Exploration cưỡng bức để ổn định Exp3
+                gamma: 0.05,
                 isAdversarial: document.getElementById('env-adversarial').checked
             };
             const initialMeans = Array.from(document.querySelectorAll('.arm-mean')).map(input => parseFloat(input.value));
@@ -198,13 +194,12 @@
             const SWAP_THRESHOLD = 0.12;
 
             let envs = [
-                { name: 'greedy', regret: 0, counts: new Array(K).fill(0), history: [], state: { greedyMeans: new Array(K).fill(0) } },
-                { name: 'ucb', regret: 0, counts: new Array(K).fill(0), history: [], state: { ucbMeans: new Array(K).fill(0) } },
-                { name: 'exp3', regret: 0, counts: new Array(K).fill(0), history: [], state: { S_hat: new Array(K).fill(0) } }
+                { name: 'greedy', regret: 0, cumOracle: 0, cumAgent: 0, counts: new Array(K).fill(0), history: { oracle: [], agent: [] }, state: { greedyMeans: new Array(K).fill(0) } },
+                { name: 'ucb', regret: 0, cumOracle: 0, cumAgent: 0, counts: new Array(K).fill(0), history: { oracle: [], agent: [] }, state: { ucbMeans: new Array(K).fill(0) } },
+                { name: 'exp3', regret: 0, cumOracle: 0, cumAgent: 0, counts: new Array(K).fill(0), history: { oracle: [], agent: [] }, state: { S_hat: new Array(K).fill(0) } }
             ];
 
             envs.forEach(env => {
-                // Khởi tạo môi trường riêng cho từng giải thuật
                 const currentMeans = [...initialMeans];
 
                 for (let t = 1; t <= T; t++) {
@@ -232,7 +227,6 @@
                         let maxS = Math.max(...env.state.S_hat);
                         let expS = env.state.S_hat.map(s => Math.exp(params.eta * (s - maxS)));
                         let sumExp = expS.reduce((a, b) => a + b, 0);
-
                         let probs = expS.map(es => (1 - params.gamma) * (es / sumExp) + params.gamma / K);
 
                         let rand = Math.random(), cumulativeP = 0;
@@ -243,22 +237,21 @@
                         env.state.lastProbs = probs;
                     }
 
-                    // Thưởng ngẫu nhiên dựa trên xác suất (Bernoulli)
                     let reward = Math.random() < currentMeans[chosenArm] ? 1 : 0;
                     env.counts[chosenArm]++;
                     env.regret += (bestExpected - currentMeans[chosenArm]);
+                    env.cumOracle += bestExpected;
+                    env.cumAgent += currentMeans[chosenArm];
 
                     if (env.name === 'greedy') {
                         env.state.greedyMeans[chosenArm] += (reward - env.state.greedyMeans[chosenArm]) / env.counts[chosenArm];
                     } else if (env.name === 'ucb') {
                         env.state.ucbMeans[chosenArm] += (reward - env.state.ucbMeans[chosenArm]) / env.counts[chosenArm];
                     } else {
-                        // Exp3 update
                         let xHat = reward / env.state.lastProbs[chosenArm];
                         env.state.S_hat[chosenArm] += xHat;
                     }
 
-                    // Adversarial Logic: Mỗi môi trường bây giờ hoàn toàn độc lập
                     if (params.isAdversarial && env.counts[chosenArm] > t * SWAP_THRESHOLD && t > 100) {
                         if (currentMeans[chosenArm] === Math.max(...currentMeans)) {
                             let minIdx = currentMeans.indexOf(Math.min(...currentMeans));
@@ -267,17 +260,33 @@
                             env.counts[chosenArm] = Math.floor(t * (SWAP_THRESHOLD - 0.05));
                         }
                     }
-                    if (t % 25 === 0) env.history.push(env.regret);
+
+                    if (t % 25 === 0) {
+                        env.history.oracle.push(env.cumOracle);
+                        env.history.agent.push(env.cumAgent);
+                    }
                 }
             });
 
-            regretChart.data.labels = Array.from({ length: envs[0].history.length }, (_, i) => (i + 1) * 25);
-            envs.forEach((env, i) => {
-                regretChart.data.datasets[i].data = env.history;
-                selectionChart.data.datasets[i].data = env.counts;
-            });
-            regretChart.update();
-            selectionChart.update();
+            const labels = Array.from({ length: envs[0].history.oracle.length }, (_, i) => (i + 1) * 25);
+
+            // Greedy Update
+            greedyChart.data.labels = labels;
+            greedyChart.data.datasets[0].data = envs[0].history.oracle;
+            greedyChart.data.datasets[1].data = envs[0].history.agent;
+            greedyChart.update();
+
+            // UCB Update
+            ucbChart.data.labels = labels;
+            ucbChart.data.datasets[0].data = envs[1].history.oracle;
+            ucbChart.data.datasets[1].data = envs[1].history.agent;
+            ucbChart.update();
+
+            // Exp3 Update
+            exp3Chart.data.labels = labels;
+            exp3Chart.data.datasets[0].data = envs[2].history.oracle;
+            exp3Chart.data.datasets[1].data = envs[2].history.agent;
+            exp3Chart.update();
 
             document.getElementById('results-summary').classList.remove('hidden');
             document.getElementById('res-greedy').innerText = Math.round(envs[0].regret);
