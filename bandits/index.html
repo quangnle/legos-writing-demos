@@ -7,7 +7,9 @@
     <title>Multi-Armed Bandit Lab | quangle.cloud</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
@@ -98,7 +100,7 @@
 
     <script>
         const initialArms = [
-            { mean: 0.1 }, { mean: 0.1 }, { mean: 0.8 }, { mean: 0.1 }, { mean: 0.1 }
+            { mean: 0.2 }, { mean: 0.25 }, { mean: 0.4 }, { mean: 0.3 }, { mean: 0.15 }
         ];
 
         const armsConfigContainer = document.getElementById('arms-config');
@@ -178,7 +180,7 @@
                 isAdversarial: document.getElementById('env-adversarial').checked
             };
             const initialMeans = Array.from(document.querySelectorAll('.arm-mean')).map(input => parseFloat(input.value));
-            
+
             const btn = document.getElementById('btn-run');
             btn.disabled = true;
             btn.innerText = 'ĐANG GIẢ LẬP...';
@@ -196,14 +198,16 @@
             const SWAP_THRESHOLD = 0.12;
 
             let envs = [
-                { name: 'greedy', means: [...initialMeans], regret: 0, counts: new Array(K).fill(0), history: [], state: { greedyMeans: new Array(K).fill(0) } },
-                { name: 'ucb', means: [...initialMeans], regret: 0, counts: new Array(K).fill(0), history: [], state: { ucbMeans: new Array(K).fill(0) } },
-                { name: 'exp3', means: [...initialMeans], regret: 0, counts: new Array(K).fill(0), history: [], state: { S_hat: new Array(K).fill(0) } }
+                { name: 'greedy', regret: 0, counts: new Array(K).fill(0), history: [], state: { greedyMeans: new Array(K).fill(0) } },
+                { name: 'ucb', regret: 0, counts: new Array(K).fill(0), history: [], state: { ucbMeans: new Array(K).fill(0) } },
+                { name: 'exp3', regret: 0, counts: new Array(K).fill(0), history: [], state: { S_hat: new Array(K).fill(0) } }
             ];
 
-            for (let t = 1; t <= T; t++) {
-                envs.forEach(env => {
-                    const currentMeans = env.means;
+            envs.forEach(env => {
+                // Khởi tạo môi trường riêng cho từng giải thuật
+                const currentMeans = [...initialMeans];
+
+                for (let t = 1; t <= T; t++) {
                     const bestExpected = Math.max(...currentMeans);
                     let chosenArm;
 
@@ -254,18 +258,18 @@
                         env.state.S_hat[chosenArm] += xHat;
                     }
 
-                    // Adversarial Logic
+                    // Adversarial Logic: Mỗi môi trường bây giờ hoàn toàn độc lập
                     if (params.isAdversarial && env.counts[chosenArm] > t * SWAP_THRESHOLD && t > 100) {
                         if (currentMeans[chosenArm] === Math.max(...currentMeans)) {
                             let minIdx = currentMeans.indexOf(Math.min(...currentMeans));
                             currentMeans[chosenArm] = 0.05;
-                            currentMeans[minIdx] = 0.85; 
-                            env.counts[chosenArm] = Math.floor(t * (SWAP_THRESHOLD - 0.05)); 
+                            currentMeans[minIdx] = 0.85;
+                            env.counts[chosenArm] = Math.floor(t * (SWAP_THRESHOLD - 0.05));
                         }
                     }
                     if (t % 25 === 0) env.history.push(env.regret);
-                });
-            }
+                }
+            });
 
             regretChart.data.labels = Array.from({ length: envs[0].history.length }, (_, i) => (i + 1) * 25);
             envs.forEach((env, i) => {
@@ -274,7 +278,7 @@
             });
             regretChart.update();
             selectionChart.update();
-            
+
             document.getElementById('results-summary').classList.remove('hidden');
             document.getElementById('res-greedy').innerText = Math.round(envs[0].regret);
             document.getElementById('res-ucb').innerText = Math.round(envs[1].regret);
