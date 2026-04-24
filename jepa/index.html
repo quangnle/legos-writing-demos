@@ -40,7 +40,7 @@
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-bold text-green-400 mb-2">JEPA Pattern Laboratory v2</h1>
-            <p class="text-gray-400 italic">Khắc phục lỗi hội tụ - Huấn luyện sâu hơn với MLP & Variance Loss</p>
+            <p class="text-gray-400 italic">Demo đơn giản về JEPA</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -251,7 +251,7 @@
             trainStep(xPatch, yPatch, dx, dy) {
                 let zx = this.online.forward(xPatch);
                 let sy = this.target.forward(yPatch);
-                
+
                 const norm = v => {
                     const mag = Math.sqrt(v.reduce((a, b) => a + b * b, 0)) + 1e-8;
                     return v.map(x => x / mag);
@@ -351,13 +351,13 @@
         function visualizePrediction(ox = 0, oy = 0) {
             pCtx.fillStyle = '#000';
             pCtx.fillRect(0, 0, 80, 80);
-            
+
             let zx = model.online.forward(getPatch(ox, oy));
-            
+
             // Chuẩn hóa zx giống như lúc train
             const mag = Math.sqrt(zx.reduce((a, b) => a + b * b, 0)) + 1e-8;
             zx = zx.map(x => x / mag);
-            
+
             for (let y = 0; y < 2; y++) {
                 for (let x = 0; x < 2; x++) {
                     const sy_hat = model.predictor.forward([...zx, (x * 8) / 8, (y * 8) / 8]);
