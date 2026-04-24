@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEPA Pattern Lab - Khám phá trí tuệ tự giám sát</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            border: 1px solid #333;
+            image-rendering: pixelated;
+        }
+
+        .grid-cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #444;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .grid-cell:hover {
+            border-color: #22c55e;
+        }
+
+        .grid-cell.active {
+            background-color: white;
+            box-shadow: 0 0 8px #fff;
+        }
+
+        .latent-dot {
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 font-sans">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-green-400 mb-2">JEPA Pattern Laboratory v2</h1>
+            <p class="text-gray-400 italic">Khắc phục lỗi hội tụ - Huấn luyện sâu hơn với MLP & Variance Loss</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- 1. Editor -->
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
+                    <span class="bg-green-600 text-xs px-2 py-1 rounded">1</span> Thiết kế Pattern (8x8)
+                </h2>
+                <div id="pattern-grid" class="grid grid-cols-8 gap-1 w-fit mx-auto bg-gray-700 p-2 mb-6 rounded-lg">
+                    <!-- JS generated cells -->
+                </div>
+                <button id="reset-btn"
+                    class="w-full bg-red-900/50 hover:bg-red-600 border border-red-500 text-red-100 py-2 rounded font-bold transition">Reset
+                    Thế giới</button>
+            </div>
+
+            <!-- 2. World -->
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
+                    <span class="bg-blue-600 text-xs px-2 py-1 rounded">2</span> Thế giới thực (64x64)
+                </h2>
+                <canvas id="world-canvas" width="200" height="200"
+                    class="mx-auto mb-4 bg-black rounded shadow-inner"></canvas>
+                <div class="space-y-4">
+                    <div class="bg-gray-900 p-4 rounded-lg border border-gray-700">
+                        <label class="text-xs uppercase text-gray-500 font-bold block mb-2">Số bước huấn luyện
+                            (x1000)</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="train-iters" value="5" min="1" max="50"
+                                class="w-20 bg-black border border-gray-600 rounded px-3 py-2 text-green-400 font-mono">
+                            <button id="train-btn"
+                                class="flex-1 bg-green-600 hover:bg-green-500 py-2 rounded font-bold transition shadow-lg">BẮT
+                                ĐẦU HỌC</button>
+                        </div>
+                        <div id="progress-container" class="mt-4 hidden">
+                            <div class="flex justify-between text-[10px] mb-1">
+                                <span>Tiến độ:</span>
+                                <span id="progress-text">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                                <div id="progress-bar" class="bg-green-500 h-full w-0 transition-all"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center bg-gray-900 p-3 rounded">
+                        <span>Trạng thái:</span>
+                        <span id="status" class="text-yellow-400 font-mono text-sm">Sẵn sàng</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Latent Space -->
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
+                    <span class="bg-purple-600 text-xs px-2 py-1 rounded">3</span> Latent & Prediction
+                </h2>
+                <div class="relative">
+                    <div class="h-40 w-full bg-black rounded-lg mb-2 relative overflow-hidden border border-gray-700"
+                        id="latent-view">
+                        <!-- Trục tọa độ -->
+                        <div class="absolute inset-x-4 top-1/2 h-[1px] bg-gray-800/50"></div>
+                        <div class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 font-mono">-1
+                        </div>
+                        <div class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 font-mono">+1
+                        </div>
+                        <div id="latent-container" class="absolute inset-0 flex items-center justify-center"></div>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mb-4 leading-relaxed">
+                        <span class="text-purple-400 font-bold">● Giải nghĩa:</span> Mỗi chấm đại diện cho 1 chiều của
+                        vector không gian ẩn (Latent Vector).
+                        Vị trí ngang thể hiện giá trị nơ-ron. Các chấm càng phân tán, mô hình càng học được nhiều đặc
+                        trưng khác biệt.
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-4 text-xs font-mono">
+                    <div class="bg-gray-900 p-2 rounded">Loss: <span id="loss-val" class="text-green-400">0.0000</span>
+                    </div>
+                    <div class="bg-gray-900 p-2 rounded">Step: <span id="step-count" class="text-blue-400">0</span>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-gray-700">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-[10px] uppercase text-gray-500 font-bold">Tái tạo (Scouting Mode)</p>
+                        <span id="scout-status"
+                            class="text-[9px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30 hidden">Live</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="relative group">
+                            <canvas id="pred-canvas" width="80" height="80"
+                                class="bg-black border border-green-500/30 rounded cursor-crosshair shadow-lg shadow-green-500/10"></canvas>
+                        </div>
+                        <p id="scout-hint" class="text-[9px] text-gray-500 italic text-center">Huấn luyện xong để bắt
+                            đầu thám hiểm thế giới qua không gian ẩn</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- UTILS ---
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const mod = (n, m) => ((n % m) + m) % m;
+        const tanh = Math.tanh;
+
+        // --- MẠNG NEURAL SÂU HƠN (MLP) ---
+        class MLP {
+            constructor(inSize, hiddenSize, outSize) {
+                this.inSize = inSize;
+                // Khởi tạo weights ổn định hơn
+                const scale1 = Math.sqrt(1 / inSize);
+                const scale2 = Math.sqrt(1 / hiddenSize);
+                this.w1 = Array.from({ length: hiddenSize }, () => Array.from({ length: inSize }, () => (Math.random() - 0.5) * 2 * scale1));
+                this.b1 = Array(hiddenSize).fill(0);
+                this.w2 = Array.from({ length: outSize }, () => Array.from({ length: hiddenSize }, () => (Math.random() - 0.5) * 2 * scale2));
+                this.b2 = Array(outSize).fill(0);
+
+                this.h = [];
+                this.out = [];
+                this.input = [];
+            }
+
+            forward(input) {
+                this.input = input;
+                this.h = this.w1.map((wRow, i) => {
+                    let sum = wRow.reduce((acc, w, j) => acc + w * input[j], 0) + this.b1[i];
+                    return tanh(sum);
+                });
+                this.out = this.w2.map((wRow, i) => {
+                    let sum = wRow.reduce((acc, w, j) => acc + w * this.h[j], 0) + this.b2[i];
+                    return tanh(sum);
+                });
+                return this.out;
+            }
+
+            backward(grad, lr) {
+                // grad = dL/dout
+                const d_out = grad.map((g, i) => g * (1 - this.out[i] * this.out[i]));
+                const d_h = Array(this.h.length).fill(0);
+                const d_input = Array(this.inSize).fill(0);
+
+                // Cập nhật Layer 2 và tính dL/dh
+                for (let i = 0; i < this.w2.length; i++) {
+                    for (let j = 0; j < this.w2[i].length; j++) {
+                        d_h[j] += d_out[i] * this.w2[i][j];
+                        this.w2[i][j] -= lr * d_out[i] * this.h[j];
+                    }
+                    this.b2[i] -= lr * d_out[i];
+                }
+
+                // Cập nhật Layer 1 và tính dL/dinput
+                const d_h_act = d_h.map((g, i) => g * (1 - this.h[i] * this.h[i]));
+                for (let i = 0; i < this.w1.length; i++) {
+                    for (let j = 0; j < this.w1[i].length; j++) {
+                        d_input[j] += d_h_act[i] * this.w1[i][j];
+                        this.w1[i][j] -= lr * d_h_act[i] * this.input[j];
+                    }
+                    this.b1[i] -= lr * d_h_act[i];
+                }
+
+                return d_input;
+            }
+        }
+
+        // --- CẤU HÌNH ---
+        const PATTERN_SIZE = 8;
+        const WORLD_SIZE = 64;
+        const LATENT_DIM = 16; // Tăng lên 16 để chứa được nhiều thông tin hơn
+        let pattern = Array(PATTERN_SIZE * PATTERN_SIZE).fill(0);
+        let isTraining = false;
+        let trainSteps = 0;
+
+        // --- KHỞI TẠO JEPA ---
+        class JEPA_V2 {
+            constructor() {
+                // Tăng hiddenSize lên 64 để có sức chứa lớn hơn
+                // Tăng lr lên 0.05 để học nhanh hơn
+                this.online = new MLP(64, 64, LATENT_DIM);
+                this.target = new MLP(64, 64, LATENT_DIM);
+                this.predictor = new MLP(LATENT_DIM + 2, 64, LATENT_DIM);
+                this.decoder = new MLP(LATENT_DIM, 64, 64);
+                this.tau = 0.9; // Cập nhật target nhanh hơn ở giai đoạn đầu
+                this.lr = 0.05;
+                this.copyWeights();
+            }
+
+            copyWeights() {
+                this.target.w1 = this.online.w1.map(r => [...r]);
+                this.target.b1 = [...this.online.b1];
+                this.target.w2 = this.online.w2.map(r => [...r]);
+                this.target.b2 = [...this.online.b2];
+            }
+
+            emaUpdate() {
+                const update = (s, d) => {
+                    for (let i = 0; i < d.length; i++) {
+                        if (Array.isArray(d[i])) update(s[i], d[i]);
+                        else d[i] = this.tau * d[i] + (1 - this.tau) * s[i];
+                    }
+                };
+                update(this.online.w1, this.target.w1);
+                update(this.online.b1, this.target.b1);
+                update(this.online.w2, this.target.w2);
+                update(this.online.b2, this.target.b2);
+            }
+
+            trainStep(xPatch, yPatch, dx, dy) {
+                let zx = this.online.forward(xPatch);
+                let sy = this.target.forward(yPatch);
+                
+                const norm = v => {
+                    const mag = Math.sqrt(v.reduce((a, b) => a + b * b, 0)) + 1e-8;
+                    return v.map(x => x / mag);
+                };
+                zx = norm(zx);
+                sy = norm(sy);
+
+                const predIn = [...zx, dx / PATTERN_SIZE, dy / PATTERN_SIZE];
+                const sy_hat = this.predictor.forward(predIn);
+
+                // 1. MSE Loss (Invariance)
+                const diff = sy_hat.map((val, i) => val - sy[i]);
+                const loss = diff.reduce((a, v) => a + v * v, 0) / LATENT_DIM;
+
+                const varGrad = sy_hat.map(v => (Math.abs(v) < 0.5 ? -v * 1.5 : 0));
+                const combinedGrad = diff.map((g, i) => (g + varGrad[i]));
+
+                // Update Predictor
+                const d_predIn = this.predictor.backward(combinedGrad, this.lr);
+
+                const sy_rec = this.decoder.forward(sy);
+                const d_rec = sy_rec.map((v, i) => (v - (yPatch[i] === 1 ? 1 : -1)));
+                this.decoder.backward(d_rec, this.lr);
+
+                // Backprop qua Encoder Online (dùng gradient của zx từ predictor)
+                const d_zx = d_predIn.slice(0, LATENT_DIM);
+                this.online.backward(d_zx, this.lr * 0.5);
+
+                this.emaUpdate();
+                return { loss, latent: zx };
+            }
+        }
+
+        const model = new JEPA_V2();
+
+        // --- UI & CANVAS ---
+        const patternGrid = document.getElementById('pattern-grid');
+        for (let i = 0; i < 64; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.style.width = '20px';
+            cell.style.height = '20px';
+            cell.onclick = () => {
+                pattern[i] = pattern[i] === 0 ? 1 : 0;
+                cell.classList.toggle('active');
+                drawWorld();
+            };
+            patternGrid.appendChild(cell);
+        }
+
+        const worldCanvas = document.getElementById('world-canvas');
+        const ctx = worldCanvas.getContext('2d');
+        const pCanvas = document.getElementById('pred-canvas');
+        const pCtx = pCanvas.getContext('2d');
+
+        function drawWorld() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, worldCanvas.width, worldCanvas.height);
+            const size = worldCanvas.width / WORLD_SIZE;
+            for (let y = 0; y < WORLD_SIZE; y++) {
+                for (let x = 0; x < WORLD_SIZE; x++) {
+                    if (pattern[mod(y, 8) * 8 + mod(x, 8)] === 1) {
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(x * size, y * size, Math.ceil(size), Math.ceil(size));
+                    }
+                }
+            }
+        }
+
+        function getPatch(ox, oy) {
+            const p = [];
+            for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                    // Chuyển 0 -> -1 và 1 -> 1 để tối ưu cho hàm tanh
+                    const val = pattern[mod(oy + y, 8) * 8 + mod(ox + x, 8)];
+                    p.push(val === 1 ? 1 : -1);
+                }
+            }
+            return p;
+        }
+
+        function updateLatentVisuals(latent) {
+            if (!latent) return;
+            const container = document.getElementById('latent-container');
+            container.innerHTML = '';
+            latent.forEach((v, i) => {
+                const dot = document.createElement('div');
+                dot.className = 'latent-dot absolute w-3 h-3 rounded-full border border-white/20';
+                dot.style.backgroundColor = `hsl(${(i * 45) % 360}, 70%, 60%)`;
+                dot.style.left = `calc(50% + ${v * 60}px)`;
+                dot.style.top = `calc(50% + ${Math.sin(i * 2) * 30}px)`;
+                dot.style.boxShadow = `0 0 10px hsl(${(i * 45) % 360}, 70%, 60%)`;
+                container.appendChild(dot);
+            });
+        }
+
+        function visualizePrediction(ox = 0, oy = 0) {
+            pCtx.fillStyle = '#000';
+            pCtx.fillRect(0, 0, 80, 80);
+            
+            let zx = model.online.forward(getPatch(ox, oy));
+            
+            // Chuẩn hóa zx giống như lúc train
+            const mag = Math.sqrt(zx.reduce((a, b) => a + b * b, 0)) + 1e-8;
+            zx = zx.map(x => x / mag);
+            
+            for (let y = 0; y < 2; y++) {
+                for (let x = 0; x < 2; x++) {
+                    const sy_hat = model.predictor.forward([...zx, (x * 8) / 8, (y * 8) / 8]);
+                    const pixels = model.decoder.forward(sy_hat);
+
+                    pixels.forEach((val, i) => {
+                        const px = (i % 8);
+                        const py = Math.floor(i / 8);
+                        // Ngưỡng 0 là điểm phân chia hoàn hảo giữa -1 và 1
+                        const color = val > 0 ? 255 : 0;
+                        pCtx.fillStyle = `rgb(${color},${color},${color})`;
+                        pCtx.fillRect((x * 40) + px * 5, (y * 40) + py * 5, 5, 5);
+                    });
+                }
+            }
+        }
+
+        let scoutMode = false;
+        worldCanvas.onmousemove = (e) => {
+            if (!scoutMode) return;
+            const rect = worldCanvas.getBoundingClientRect();
+            // Sử dụng kích thước thực tế của canvas để tính toán
+            const scaleX = worldCanvas.width / rect.width;
+            const scaleY = worldCanvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            const x = Math.floor(mouseX / (worldCanvas.width / WORLD_SIZE));
+            const y = Math.floor(mouseY / (worldCanvas.height / WORLD_SIZE));
+
+            // Vẽ lại world với highlight scout area
+            drawWorld();
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            const size = worldCanvas.width / WORLD_SIZE;
+            // Vẽ khung 16x16 (tương ứng với 2x2 tiles 8x8) để khớp với ô Prediction
+            ctx.strokeRect(x * size, y * size, size * 16, size * 16);
+
+            visualizePrediction(x, y);
+        };
+
+        async function trainLoop() {
+            const iterations = parseInt(document.getElementById('train-iters').value) * 1000;
+            const batchSize = 50;
+            isTraining = true;
+            scoutMode = false;
+
+            document.getElementById('progress-container').classList.remove('hidden');
+            document.getElementById('scout-status').classList.add('hidden');
+            document.getElementById('scout-hint').innerText = "Đang huấn luyện...";
+
+            for (let step = 0; step < iterations; step++) {
+                if (!isTraining) break;
+
+                const x = Math.floor(Math.random() * WORLD_SIZE);
+                const y = Math.floor(Math.random() * WORLD_SIZE);
+                // Quay lại lấy mẫu theo bội số của 8 để mô hình dễ hội tụ hơn
+                const dx = (Math.floor(Math.random() * 3) - 1) * PATTERN_SIZE;
+                const dy = (Math.floor(Math.random() * 3) - 1) * PATTERN_SIZE;
+
+                const res = model.trainStep(getPatch(x, y), getPatch(x + dx, y + dy), dx, dy);
+                trainSteps++;
+
+                if (step % batchSize === 0) {
+                    const progress = (step / iterations) * 100;
+                    document.getElementById('progress-bar').style.width = `${progress}%`;
+                    document.getElementById('progress-text').innerText = `${Math.floor(progress)}%`;
+                    document.getElementById('loss-val').innerText = res.loss.toFixed(5);
+                    document.getElementById('step-count').innerText = trainSteps;
+                    updateLatentVisuals(res.latent);
+
+                    // Giữ UI responsive
+                    await new Promise(r => setTimeout(r, 0));
+                }
+            }
+
+            isTraining = false;
+            scoutMode = true;
+            document.getElementById('status').innerText = "Đã học xong!";
+            document.getElementById('status').className = "text-green-400 font-mono text-sm";
+            document.getElementById('progress-bar').style.width = `100%`;
+            document.getElementById('progress-text').innerText = `100%`;
+            document.getElementById('scout-status').classList.remove('hidden');
+            document.getElementById('scout-hint').innerText = "DI CHUỘT LÊN THẾ GIỚI THỰC ĐỂ THÁM HIỂM";
+
+            // Cập nhật UI lần cuối để khớp Step count
+            document.getElementById('step-count').innerText = trainSteps;
+
+            visualizePrediction(0, 0);
+        }
+
+        // CONTROL
+        document.getElementById('train-btn').onclick = () => {
+            if (isTraining) return;
+            trainLoop();
+        };
+
+        // Bỏ pause btn vì đã chuyển sang chế độ batch training
+
+        document.getElementById('reset-btn').onclick = () => {
+            pattern.fill(0);
+            document.querySelectorAll('.grid-cell').forEach(c => c.classList.remove('active'));
+            drawWorld();
+            trainSteps = 0;
+        };
+
+        drawWorld();
+    </script>
+</body>
+
+</html>
