@@ -48,9 +48,9 @@
             <!-- 1. Editor -->
             <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
                 <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
-                    <span class="bg-green-600 text-xs px-2 py-1 rounded">1</span> Thiết kế Pattern (8x8)
+                    <span class="bg-green-600 text-xs px-2 py-1 rounded">1</span> Thiết kế Pattern (4x4)
                 </h2>
-                <div id="pattern-grid" class="grid grid-cols-8 gap-1 w-fit mx-auto bg-gray-700 p-2 mb-6 rounded-lg">
+                <div id="pattern-grid" class="grid grid-cols-4 gap-1 w-fit mx-auto bg-gray-700 p-2 mb-6 rounded-lg">
                     <!-- JS generated cells -->
                 </div>
                 <button id="reset-btn"
@@ -61,7 +61,7 @@
             <!-- 2. World -->
             <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
                 <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
-                    <span class="bg-blue-600 text-xs px-2 py-1 rounded">2</span> Thế giới thực (64x64)
+                    <span class="bg-blue-600 text-xs px-2 py-1 rounded">2</span> Thế giới thực (20x20)
                 </h2>
                 <canvas id="world-canvas" width="200" height="200"
                     class="mx-auto mb-4 bg-black rounded shadow-inner"></canvas>
@@ -207,9 +207,9 @@
         }
 
         // --- CẤU HÌNH ---
-        const PATTERN_SIZE = 8;
-        const WORLD_SIZE = 64;
-        const LATENT_DIM = 16; // Tăng lên 16 để chứa được nhiều thông tin hơn
+        const PATTERN_SIZE = 4;
+        const WORLD_SIZE = 20;
+        const LATENT_DIM = 8;
         let pattern = Array(PATTERN_SIZE * PATTERN_SIZE).fill(0);
         let isTraining = false;
         let trainSteps = 0;
@@ -217,13 +217,12 @@
         // --- KHỞI TẠO JEPA ---
         class JEPA_V2 {
             constructor() {
-                // Tăng hiddenSize lên 64 để có sức chứa lớn hơn
-                // Tăng lr lên 0.05 để học nhanh hơn
-                this.online = new MLP(64, 64, LATENT_DIM);
-                this.target = new MLP(64, 64, LATENT_DIM);
-                this.predictor = new MLP(LATENT_DIM + 2, 64, LATENT_DIM);
-                this.decoder = new MLP(LATENT_DIM, 64, 64);
-                this.tau = 0.9; // Cập nhật target nhanh hơn ở giai đoạn đầu
+                // Hạ quy mô về 16 đầu vào (4x4)
+                this.online = new MLP(16, 32, LATENT_DIM);
+                this.target = new MLP(16, 32, LATENT_DIM);
+                this.predictor = new MLP(LATENT_DIM + 2, 32, LATENT_DIM);
+                this.decoder = new MLP(LATENT_DIM, 32, 16);
+                this.tau = 0.9;
                 this.lr = 0.05;
                 this.copyWeights();
             }
@@ -289,11 +288,11 @@
 
         // --- UI & CANVAS ---
         const patternGrid = document.getElementById('pattern-grid');
-        for (let i = 0; i < 64; i++) {
+        for (let i = 0; i < PATTERN_SIZE * PATTERN_SIZE; i++) {
             const cell = document.createElement('div');
             cell.className = 'grid-cell';
-            cell.style.width = '20px';
-            cell.style.height = '20px';
+            cell.style.width = '30px';
+            cell.style.height = '30px';
             cell.onclick = () => {
                 pattern[i] = pattern[i] === 0 ? 1 : 0;
                 cell.classList.toggle('active');
@@ -313,7 +312,7 @@
             const size = worldCanvas.width / WORLD_SIZE;
             for (let y = 0; y < WORLD_SIZE; y++) {
                 for (let x = 0; x < WORLD_SIZE; x++) {
-                    if (pattern[mod(y, 8) * 8 + mod(x, 8)] === 1) {
+                    if (pattern[mod(y, PATTERN_SIZE) * PATTERN_SIZE + mod(x, PATTERN_SIZE)] === 1) {
                         ctx.fillStyle = '#fff';
                         ctx.fillRect(x * size, y * size, Math.ceil(size), Math.ceil(size));
                     }
@@ -323,10 +322,10 @@
 
         function getPatch(ox, oy) {
             const p = [];
-            for (let y = 0; y < 8; y++) {
-                for (let x = 0; x < 8; x++) {
-                    // Chuyển 0 -> -1 và 1 -> 1 để tối ưu cho hàm tanh
-                    const val = pattern[mod(oy + y, 8) * 8 + mod(ox + x, 8)];
+            for (let y = 0; y < PATTERN_SIZE; y++) {
+                for (let x = 0; x < PATTERN_SIZE; x++) {
+                    // Chuyển 0 -> -1 và 1 -> 1
+                    const val = pattern[mod(oy + y, PATTERN_SIZE) * PATTERN_SIZE + mod(ox + x, PATTERN_SIZE)];
                     p.push(val === 1 ? 1 : -1);
                 }
             }
@@ -360,16 +359,16 @@
 
             for (let y = 0; y < 2; y++) {
                 for (let x = 0; x < 2; x++) {
-                    const sy_hat = model.predictor.forward([...zx, (x * 8) / 8, (y * 8) / 8]);
+                    const sy_hat = model.predictor.forward([...zx, (x * PATTERN_SIZE) / PATTERN_SIZE, (y * PATTERN_SIZE) / PATTERN_SIZE]);
                     const pixels = model.decoder.forward(sy_hat);
-
+                    
                     pixels.forEach((val, i) => {
-                        const px = (i % 8);
-                        const py = Math.floor(i / 8);
-                        // Ngưỡng 0 là điểm phân chia hoàn hảo giữa -1 và 1
+                        const px = (i % PATTERN_SIZE);
+                        const py = Math.floor(i / PATTERN_SIZE);
                         const color = val > 0 ? 255 : 0;
                         pCtx.fillStyle = `rgb(${color},${color},${color})`;
-                        pCtx.fillRect((x * 40) + px * 5, (y * 40) + py * 5, 5, 5);
+                        const pixelSize = 40 / PATTERN_SIZE;
+                        pCtx.fillRect((x * 40) + px * pixelSize, (y * 40) + py * pixelSize, pixelSize, pixelSize);
                     });
                 }
             }
@@ -385,16 +384,19 @@
             const mouseX = (e.clientX - rect.left) * scaleX;
             const mouseY = (e.clientY - rect.top) * scaleY;
 
-            const x = Math.floor(mouseX / (worldCanvas.width / WORLD_SIZE));
-            const y = Math.floor(mouseY / (worldCanvas.height / WORLD_SIZE));
+            // Làm tròn tọa độ để chỉ nhảy theo từng ô Pattern (bội số của 4)
+            let x = Math.floor(mouseX / (worldCanvas.width / WORLD_SIZE));
+            let y = Math.floor(mouseY / (worldCanvas.height / WORLD_SIZE));
+            x = Math.floor(x / PATTERN_SIZE) * PATTERN_SIZE;
+            y = Math.floor(y / PATTERN_SIZE) * PATTERN_SIZE;
 
             // Vẽ lại world với highlight scout area
             drawWorld();
             ctx.strokeStyle = '#22c55e';
             ctx.lineWidth = 2;
             const size = worldCanvas.width / WORLD_SIZE;
-            // Vẽ khung 16x16 (tương ứng với 2x2 tiles 8x8) để khớp với ô Prediction
-            ctx.strokeRect(x * size, y * size, size * 16, size * 16);
+            // Vẽ khung 8x8 (tương ứng với 2x2 tiles 4x4) để khớp với ô Prediction
+            ctx.strokeRect(x * size, y * size, size * (PATTERN_SIZE * 2), size * (PATTERN_SIZE * 2));
 
             visualizePrediction(x, y);
         };
