@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-Learning Grid World Explorer</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}, {left: '\\[', right: '\\]', display: true}] });"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --accent-color: #3b82f6;
+            --secondary-accent: #8b5cf6;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #1f2937;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --cell-size: 70px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-color), var(--secondary-accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: -0.025em;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 460px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Grid Board */
+        #grid-board {
+            display: grid;
+            grid-template-columns: repeat(4, var(--cell-size));
+            gap: 2px;
+            background-color: var(--border-color);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            width: fit-content;
+            margin: 0 auto;
+        }
+
+        .grid-cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background-color: #1a2234;
+            position: relative;
+            transition: background-color 0.3s;
+        }
+
+        .grid-cell.start {
+            background-color: rgba(59, 130, 246, 0.15);
+        }
+
+        .grid-cell.goal {
+            background-color: rgba(16, 185, 129, 0.15);
+        }
+
+        .grid-cell.red-zone {
+            background-color: rgba(239, 68, 68, 0.15);
+        }
+
+        .cell-label {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 2.5rem;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        .q-val {
+            position: absolute;
+            font-family: 'Fira Code', monospace;
+            font-size: 9px;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .q-up {
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .q-down {
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .q-left {
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .q-right {
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .best-action {
+            color: var(--accent-color);
+            font-weight: bold;
+            font-size: 11px;
+            text-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+        }
+
+        .agent {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 10;
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
+
+        /* Stats & Controls */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stat-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-family: 'Fira Code', monospace;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        button {
+            background: linear-gradient(to bottom right, var(--accent-color), var(--secondary-accent));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            filter: brightness(1.1);
+        }
+
+        button.active {
+            background: linear-gradient(to bottom right, var(--error-color), #b91c1c);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: var(--input-bg, #1f2937);
+            border: 1px solid var(--border-color);
+        }
+
+        .formula-box {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .input-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-field label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .input-field input {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            padding: 5px 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .input-field input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Q-Learning Grid World</h1>
+            <p>Visualizing the Q-Table as an agent learns to navigate a 4x4 environment</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="card" style="display: flex; justify-content: center; align-items: center; min-height: 450px;">
+                <div id="grid-board">
+                    <!-- Cells generated by JS -->
+                </div>
+
+            </div>
+
+            <div class="side-panel">
+                <div class="card">
+                    <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--accent-color);">Controls</h3>
+                    <div class="btn-group">
+                        <button id="btn-auto" onclick="toggleAuto()">Start Auto Step</button>
+                        <button onclick="runStep()">Take Next Step</button>
+                        <button onclick="train(100)">Train 100 Episodes</button>
+                        <button onclick="resetAgent()" class="secondary">Reset Agent Pos</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--text-muted);">Update Rule</h3>
+                    <div class="formula-box" style="font-size: 0.8rem;">
+                        $$Q(s, a) \leftarrow Q(s, a) + \alpha [r + \gamma \max_{a'} Q(s', a') - Q(s, a)]$$
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--accent-color);">Training Metrics &
+                        Params</h3>
+
+                    <div class="stat-group">
+                        <div class="stat-card" style="grid-column: span 2;">
+                            <span class="stat-label">Episodes</span>
+                            <div id="ep-count" class="stat-value">0</div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="input-field">
+                            <label>Alpha</label>
+                            <input type="number" id="inp-alpha" value="0.1" step="0.05" min="0" max="1">
+                        </div>
+                        <div class="input-field">
+                            <label>Gamma</label>
+                            <input type="number" id="inp-gamma" value="0.9" step="0.05" min="0" max="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            Note: Numbers in cells represent $Q(s, a)$. Blue highlights the optimal action for each state.
+        </footer>
+    </div>
+
+    <script>
+        const GRID_SIZE = 4;
+        const ACTIONS = ['up', 'down', 'left', 'right'];
+        const START = { x: 0, y: 3 };
+        const GOAL = { x: 3, y: 0 };
+        const RED_ZONES = [{ x: 1, y: 2 }, { x: 2, y: 1 }];
+
+        let qTable = {};
+        let agentPos = { ...START };
+        let episodeCount = 0;
+
+        function getParams() {
+            return {
+                alpha: parseFloat(document.getElementById('inp-alpha').value),
+                gamma: parseFloat(document.getElementById('inp-gamma').value)
+            };
+        }
+
+        function init() {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    ACTIONS.forEach(a => qTable[`(${x},${y},${a})`] = 0);
+                }
+            }
+            renderGrid();
+        }
+
+        function getReward(x, y) {
+            if (x === GOAL.x && y === GOAL.y) return 100;
+            if (RED_ZONES.some(z => z.x === x && z.y === y)) return -10;
+            return -1;
+        }
+
+        function getNextState(x, y, action) {
+            let nx = x, ny = y;
+            if (action === 'up') ny = Math.max(0, y - 1);
+            if (action === 'down') ny = Math.min(GRID_SIZE - 1, y + 1);
+            if (action === 'left') nx = Math.max(0, x - 1);
+            if (action === 'right') nx = Math.min(GRID_SIZE - 1, x + 1);
+            return { x: nx, y: ny };
+        }
+
+        function chooseAction(x, y) {
+            let bestAction = ACTIONS[0];
+            let maxVal = -Infinity;
+            // Greedy selection
+            ACTIONS.forEach(a => {
+                let val = qTable[`(${x},${y},${a})`];
+                if (val > maxVal) { maxVal = val; bestAction = a; }
+            });
+            return bestAction;
+        }
+
+        function runStep() {
+            if (agentPos.x === GOAL.x && agentPos.y === GOAL.y) {
+                resetAgent();
+                return;
+            }
+
+            const { alpha, gamma } = getParams();
+            const action = chooseAction(agentPos.x, agentPos.y);
+            const next = getNextState(agentPos.x, agentPos.y, action);
+            const reward = getReward(next.x, next.y);
+
+            const maxNextQ = Math.max(...ACTIONS.map(a => qTable[`(${next.x},${next.y},${a})`]));
+            const currentQ = qTable[`(${agentPos.x},${agentPos.y},${action})`];
+
+            qTable[`(${agentPos.x},${agentPos.y},${action})`] = currentQ + alpha * (reward + gamma * maxNextQ - currentQ);
+
+            agentPos = next;
+            renderGrid();
+        }
+
+        async function train(count) {
+            const { alpha, gamma } = getParams();
+            for (let i = 0; i < count; i++) {
+                agentPos = { ...START };
+                while (!(agentPos.x === GOAL.x && agentPos.y === GOAL.y)) {
+                    const action = chooseAction(agentPos.x, agentPos.y);
+                    const next = getNextState(agentPos.x, agentPos.y, action);
+                    const reward = getReward(next.x, next.y);
+                    const maxNextQ = Math.max(...ACTIONS.map(a => qTable[`(${next.x},${next.y},${a})`]));
+                    const currentQ = qTable[`(${agentPos.x},${agentPos.y},${action})`];
+                    qTable[`(${agentPos.x},${agentPos.y},${action})`] = currentQ + alpha * (reward + gamma * maxNextQ - currentQ);
+                    agentPos = next;
+                }
+                episodeCount++;
+                if (i % 10 === 0) {
+                    document.getElementById('ep-count').innerText = episodeCount;
+                    renderGrid();
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            }
+            renderGrid();
+        }
+
+        function resetAgent() {
+            agentPos = { ...START };
+            renderGrid();
+        }
+
+        let autoInterval = null;
+        function toggleAuto() {
+            const btn = document.getElementById('btn-auto');
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+                btn.innerText = 'Start Auto Step';
+                btn.classList.remove('active');
+            } else {
+                autoInterval = setInterval(() => {
+                    runStep();
+                }, 200);
+                btn.innerText = 'Stop Auto Step';
+                btn.classList.add('active');
+            }
+        }
+
+        function renderGrid() {
+            const board = document.getElementById('grid-board');
+            board.innerHTML = '';
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+
+                    if (x === START.x && y === START.y) cell.classList.add('start');
+                    if (x === GOAL.x && y === GOAL.y) cell.classList.add('goal');
+                    if (RED_ZONES.some(z => z.x === x && z.y === y)) cell.classList.add('red-zone');
+
+                    if (x === START.x && y === START.y) cell.innerHTML += `<div class="cell-label" style="color: var(--accent-color)">S</div>`;
+                    if (x === GOAL.x && y === GOAL.y) cell.innerHTML += `<div class="cell-label" style="color: var(--success-color)">G</div>`;
+
+                    let maxVal = -Infinity;
+                    ACTIONS.forEach(a => { if (qTable[`(${x},${y},${a})`] > maxVal) maxVal = qTable[`(${x},${y},${a})`]; });
+
+                    ACTIONS.forEach(a => {
+                        const val = qTable[`(${x},${y},${a})`].toFixed(1);
+                        const isBest = qTable[`(${x},${y},${a})`] === maxVal && maxVal !== 0;
+                        cell.innerHTML += `<span class="q-val q-${a} ${isBest ? 'best-action' : ''}">${val}</span>`;
+                    });
+
+                    if (agentPos.x === x && agentPos.y === y) {
+                        cell.innerHTML += `<div class="agent"></div>`;
+                    }
+
+                    board.appendChild(cell);
+                }
+            }
+            document.getElementById('ep-count').innerText = episodeCount;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
