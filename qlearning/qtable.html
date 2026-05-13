@@ -434,7 +434,9 @@
         }
 
         function runStep() {
+            // An episode ends when the agent reaches the Goal (G).
             if (agentPos.x === GOAL.x && agentPos.y === GOAL.y) {
+                episodeCount++;
                 resetAgent();
                 return;
             }
