@@ -1,0 +1,725 @@
+/* Aligned with rh/style.css theme (dark panel, gradients, accents) */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg-color: #0b0f19;
+    --panel-bg: #111827;
+    --accent-color: #3b82f6;
+    --secondary-accent: #8b5cf6;
+    --text-color: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border-color: #1f2937;
+    --input-bg: #1f2937;
+
+    --ann-node-bg: #1f2937;
+    --ann-node-border: #374151;
+    --class-pos: #3b82f6;
+    --class-neg: #f97316;
+    --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.hidden {
+    display: none !important;
+}
+
+body.ann-body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.5;
+    overflow-x: hidden;
+}
+
+.mono {
+    font-family: 'Roboto Mono', monospace;
+}
+
+.ann-shell {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+}
+
+/* Header */
+.ann-header {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 24px;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    position: sticky;
+    top: 12px;
+    z-index: 100;
+}
+
+.ann-brand {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.ann-brand h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0 0 4px;
+    background: linear-gradient(to right, var(--accent-color), var(--secondary-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.ann-brand .ann-subtitle {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.ann-brand .ann-subtitle a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.ann-brand .ann-subtitle a:hover {
+    text-decoration: underline;
+}
+
+.ann-header-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+}
+
+.ann-toolbar-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ann-divider-v {
+    width: 1px;
+    height: 40px;
+    background: var(--border-color);
+}
+
+.stat-block .stat-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.stat-block .mono {
+    font-size: 1.75rem;
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    color: var(--text-color);
+}
+
+.ann-hyperparameters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px 28px;
+    justify-content: flex-end;
+    flex: 2 1 360px;
+}
+
+.control-group label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.control-group select {
+    width: 100%;
+    min-width: 118px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.control-group select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.ann-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.ann-secondary-btn:hover {
+    background: #374151;
+    border-color: #4b5563;
+}
+
+.ann-secondary-btn:active {
+    transform: scale(0.95);
+}
+
+.ann-play-btn {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(to bottom right, var(--accent-color), var(--secondary-accent));
+    color: white;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+    transition: transform 0.1s, opacity 0.2s;
+}
+
+.ann-play-btn:hover {
+    opacity: 0.92;
+}
+
+.ann-play-btn:active {
+    transform: scale(0.96);
+}
+
+.ann-secondary-btn svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+}
+
+.ann-play-btn svg {
+    width: 26px;
+    height: 26px;
+    stroke: #fff;
+}
+
+.ann-micro-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+}
+
+/* Main grid — TF Playground-like columns */
+.ann-layout {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 2.2fr) minmax(0, 1.25fr);
+    gap: 20px;
+    min-height: calc(100vh - 200px);
+    align-items: start;
+}
+
+/*
+ * Edges sit above Inputs / Network panels (opaque cards) but below Data / Output
+ * columns so sliders and canvases stay usable. SVG root ignores pointer hits so
+ * neurons and ± buttons underneath still receive hover/click; only .edge-hit
+ * paths capture strokes (see drawNetwork).
+ */
+#networkSvg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 24;
+    pointer-events: none;
+}
+
+#networkSvg .weight-path {
+    pointer-events: none;
+}
+
+#networkSvg .edge-hit {
+    pointer-events: stroke;
+}
+
+/* Data + Output panels above SVG so controls are never masked */
+#colData,
+#colResult {
+    position: relative;
+    z-index: 30;
+}
+
+/* Layers above SVG for neuron clicks; transparent pass-through elsewhere */
+#featuresCol,
+#networkCol {
+    position: relative;
+    z-index: 18;
+    pointer-events: none;
+}
+
+#featuresCol #featureList > * {
+    pointer-events: none;
+}
+
+#featuresCol .ann-section-title,
+#featuresCol .ann-lead {
+    pointer-events: none;
+}
+
+#networkCol #layerContainer {
+    pointer-events: none;
+}
+
+#networkCol #layerContainer > div {
+    pointer-events: none;
+}
+
+#networkCol > .ann-layer-toolbar {
+    pointer-events: none;
+}
+
+#networkCol > .ann-layer-toolbar button {
+    pointer-events: auto;
+}
+
+#featuresCol .node-box,
+#featuresCol .node-box *,
+#featuresCol #featureList > * > span,
+#networkCol #layerContainer .node-box,
+#networkCol #layerContainer .node-box *,
+#networkCol button {
+    pointer-events: auto;
+}
+
+.node-box {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--ann-node-border);
+    background: var(--ann-node-bg);
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 6px;
+    transition: transform 0.1s, outline 0.12s;
+}
+
+.node-box:hover {
+    transform: scale(1.08);
+    z-index: 50;
+}
+
+.node-canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    border-radius: 4px;
+}
+
+.node-focused {
+    outline: 3px solid #fbbf24;
+    outline-offset: 2px;
+    z-index: 5;
+}
+
+.dataset-thumbnail {
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 8px;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--input-bg);
+}
+
+.dataset-thumbnail:hover {
+    border-color: var(--text-muted);
+}
+
+.dataset-thumbnail.active {
+    border-color: var(--accent-color);
+    background: rgba(59, 130, 246, 0.12);
+}
+
+.ann-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.feat-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.feat-active {
+    box-shadow: 0 0 0 2px var(--accent-color);
+    opacity: 1;
+}
+
+.feat-inactive {
+    opacity: 0.4;
+}
+
+.feat-label-btn {
+    font-size: 0.75rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    user-select: none;
+}
+
+.feat-label-btn-strong {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.ann-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.ann-stack label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.ann-stack input[type='range'] {
+    width: 100%;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.mono-inline {
+    float: right;
+    color: var(--text-color);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.ann-layer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.ann-micro-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+    cursor: pointer;
+    color: var(--text-color);
+    font-size: 0.875rem;
+    transition: background 0.15s;
+}
+
+.ann-micro-btn:hover {
+    background: #374151;
+}
+
+.toolbar-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+}
+
+.layer-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    justify-content: center;
+    flex: 1;
+}
+
+.layer-title {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.layer-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    flex: 1;
+}
+
+.layer-neurons {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+}
+
+.ann-grow {
+    flex: 1;
+    width: 100%;
+}
+
+#layerContainer {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: flex-start;
+    padding: 0 8px;
+    min-height: 500px;
+}
+
+.neuron-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+/* Panels — rh .card style */
+.ann-front {
+    position: relative;
+    z-index: 20;
+}
+
+.ann-panel {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 22px 20px;
+    box-shadow: var(--shadow-card);
+}
+
+.ann-section-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 8px;
+}
+
+.ann-lead {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin: 0 0 20px;
+}
+
+.ann-muted {
+    color: var(--text-muted);
+}
+
+.ann-loss-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.loss-tile {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.loss-tile .loss-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.loss-tile .mono {
+    font-size: 1.125rem;
+    color: var(--text-color);
+}
+
+.output-canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: #0d111c;
+}
+
+.ann-checkbox-list {
+    margin-top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ann-checkbox-list label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.ann-checkbox-list input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.legend-block {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border-color);
+}
+
+.legend-strip {
+    height: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(to right, var(--class-neg), #94a3b8, var(--class-pos));
+}
+
+.legend-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.ann-edge-panel {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    border-radius: 10px;
+}
+
+.ann-edge-panel .panel-h {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--secondary-accent);
+    margin-bottom: 8px;
+}
+
+.edge-weight-field {
+    width: 100%;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8125rem;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-color);
+}
+
+.edge-meta {
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    margin: 8px 0 0;
+}
+
+.primary-block-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 4px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: linear-gradient(to bottom right, var(--accent-color), var(--secondary-accent));
+    color: white;
+    transition: opacity 0.2s;
+}
+
+.primary-block-btn:hover {
+    opacity: 0.92;
+}
+
+.ann-output-hint {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin: 0 0 14px;
+    min-height: 2.75rem;
+    line-height: 1.45;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 48px;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+}
+
+.weight-path {
+    fill: none;
+    transition: stroke-width 0.12s, stroke 0.12s, opacity 0.12s;
+}
+
+.output-canvas-wrap canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.edge-hit {
+    cursor: pointer;
+}
+

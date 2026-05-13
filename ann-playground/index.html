@@ -1,367 +1,156 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neural Lab Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Neural Network Playground</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono&display=swap');
-
-        :root {
-            --primary-orange: #f57c00;
-            --primary-blue: #0877bd;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #fff;
-            color: #333;
-            overflow-x: hidden;
-        }
-
-        .mono {
-            font-family: 'Roboto Mono', monospace;
-        }
-
-        .control-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .control-group select {
-            border: none;
-            border-bottom: 1px solid #ccc;
-            background: transparent;
-            font-size: 14px;
-            padding: 4px 0;
-            width: 100%;
-            outline: none;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        .control-group select:focus {
-            border-bottom-color: var(--primary-blue);
-        }
-
-        .node-box {
-            width: 34px;
-            height: 34px;
-            border: 1px solid #333;
-            background: #eee;
-            position: relative;
-            cursor: pointer;
-            overflow: hidden;
-            transition: transform 0.1s;
-        }
-
-        .node-box:hover {
-            transform: scale(1.1);
-            z-index: 50;
-        }
-
-        .node-canvas {
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-        }
-
-        .dataset-thumbnail {
-            width: 40px;
-            height: 40px;
-            border: 2px solid #eee;
-            cursor: pointer;
-            padding: 2px;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-
-        .dataset-thumbnail.active {
-            border-color: var(--primary-orange);
-            background: #fff1e6;
-        }
-
-        input[type=range] {
-            width: 100%;
-            accent-color: #666;
-            cursor: pointer;
-        }
-
-        .play-btn {
-            background-color: #0277bd;
-            transition: all 0.2s;
-            border: none;
-        }
-
-        .play-btn:hover {
-            background-color: #01579b;
-            transform: scale(1.05);
-        }
-
-        .play-btn:active {
-            transform: scale(0.95);
-        }
-
-        .reset-btn {
-            border: 1px solid #ddd;
-            background: white;
-            transition: all 0.2s;
-        }
-
-        .reset-btn:hover {
-            background: #f5f5f5;
-            border-color: #ccc;
-        }
-
-        #networkSvg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 12;
-            pointer-events: auto;
-        }
-
-        /*
-          SVG z-12 đứng sau hai cột này (z-18) để ô neuron nhận click; chỉ neuron/nút được auto.
-          Các khối flex không được “che” làm trong suốt chuột mà không tới được edge-hit.
-        */
-        #featuresCol,
-        #networkCol {
-            position: relative;
-            z-index: 18;
-            pointer-events: none;
-        }
-
-        #featuresCol #featureList > * {
-            pointer-events: none;
-        }
-
-        #featuresCol h3,
-        #featuresCol > p {
-            pointer-events: none;
-        }
-
-        #networkCol #layerContainer {
-            pointer-events: none;
-        }
-
-        /* Cột một lớp: none; chỉ ô neuron (và canvas con) nhận chuột */
-        #networkCol #layerContainer > div {
-            pointer-events: none;
-        }
-
-        #networkCol > .flex.mb-10 {
-            pointer-events: none;
-        }
-
-        #networkCol > .flex.mb-10 button {
-            pointer-events: auto;
-        }
-
-        #featuresCol .node-box,
-        #featuresCol .node-box *,
-        #featuresCol input[type=range],
-        #featuresCol button,
-        #featuresCol #featureList > * > span,
-        #networkCol #layerContainer .node-box,
-        #networkCol #layerContainer .node-box *,
-        #networkCol button {
-            pointer-events: auto;
-        }
-
-        .node-box.node-focused {
-            outline: 3px solid #f59e0b;
-            outline-offset: 2px;
-            z-index: 5;
-        }
-
-        .weight-path {
-            fill: none;
-            transition: stroke-width 0.12s, stroke 0.12s, opacity 0.12s;
-        }
-
-        .edge-hit {
-            cursor: pointer;
-        }
-    </style>
 </head>
 
-<body class="bg-slate-50">
+<body class="ann-body">
 
-    <header class="border-b bg-white px-8 py-4 flex items-center justify-between sticky top-0 z-[100] shadow-sm">
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-3">
-                <button id="resetBtn" title="Reset Network" class="reset-btn p-3 rounded-full text-slate-600">
-                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-                </button>
-                <button id="playBtn"
-                    class="play-btn w-14 h-14 flex items-center justify-center rounded-full text-white shadow-lg">
-                    <i data-lucide="play" id="playIcon" class="w-7 h-7 fill-current"></i>
-                </button>
-                <button id="stepBtn" title="One Step" class="reset-btn p-3 rounded-full text-slate-600">
-                    <i data-lucide="skip-forward" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="border-r h-12 mx-2"></div>
-            <div>
-                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Epoch</div>
-                <div id="epochDisplay" class="text-3xl mono leading-none font-light tracking-tighter">000,000</div>
-            </div>
-        </div>
+<div class="ann-shell">
 
-        <div class="flex-1 flex gap-8 max-w-5xl justify-end">
-            <div class="control-group w-32">
-                <label>Learning rate</label>
-                <select id="lrSelect">
-                    <option value="0.0001">0.0001</option>
-                    <option value="0.001">0.001</option>
-                    <option value="0.01">0.01</option>
-                    <option value="0.03" selected>0.03</option>
-                    <option value="0.1">0.1</option>
-                    <option value="1">1</option>
-                </select>
+        <header class="ann-header">
+            <div class="ann-brand">
+                <h1>Neural Network Playground</h1>
+                <p class="ann-subtitle">
+                    Concept inspired by
+                    <a href="https://playground.tensorflow.org" target="_blank" rel="noopener noreferrer">TensorFlow Playground</a>
+                    (interactive in-browser training; this page uses TensorFlow.js and is not an official Google product).
+                </p>
             </div>
-            <div class="control-group w-32">
-                <label>Activation</label>
-                <select id="activationSelect" title="Hidden layers only. Output layer is linear so predictions can match labels ±1 (sigmoid/ReLU cannot output -1).">
-                    <option value="relu">ReLU</option>
-                    <option value="tanh" selected>Tanh</option>
-                    <option value="sigmoid">Sigmoid</option>
-                    <option value="linear">Linear</option>
-                </select>
-            </div>
-            <div class="control-group w-32">
-                <label>Regularization</label>
-                <select id="regSelect">
-                    <option value="none" selected>None</option>
-                    <option value="l1">L1</option>
-                    <option value="l2">L2</option>
-                </select>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-[1440px] mx-auto grid grid-cols-12 gap-0 py-10 px-6 min-h-[calc(100vh-100px)] relative">
-
-        <!-- SVG: chi tiết căn chỉnh trong #networkSvg (style); phải dưới features/network (z-18) -->
-        <svg id="networkSvg" class="absolute top-0 left-0 w-full h-full"></svg>
-
-        <!-- DATA COLUMN -->
-        <div id="colData" class="col-span-2 px-6 relative z-[20]">
-            <h3 class="text-sm font-bold uppercase text-slate-800 mb-6">Data</h3>
-            <p class="text-[11px] text-slate-500 mb-4">Which dataset do you want to use?</p>
-            <div class="grid grid-cols-2 gap-3 mb-10" id="datasetPicker">
-                <div data-set="circle" class="dataset-thumbnail active border" title="Circle"><canvas width="34" height="34"></canvas></div>
-                <div data-set="xor" class="dataset-thumbnail border" title="XOR"><canvas width="34" height="34"></canvas></div>
-                <div data-set="gauss" class="dataset-thumbnail border" title="Gaussian"><canvas width="34" height="34"></canvas></div>
-                <div data-set="spiral" class="dataset-thumbnail border" title="Spiral"><canvas width="34" height="34"></canvas></div>
-            </div>
-
-            <div class="space-y-6">
-                <div>
-                    <label class="text-[11px] font-bold text-slate-500 uppercase block mb-2">Noise: <span
-                            id="noiseLabel" class="float-right text-slate-800">0</span></label>
-                    <input type="range" id="noiseSlider" min="0" max="50" step="5" value="0">
+            <div class="ann-header-controls">
+                <div class="ann-toolbar-btns">
+                    <button type="button" id="resetBtn" title="Reset network" class="ann-secondary-btn">
+                        <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                    </button>
+                    <button type="button" id="playBtn" class="ann-play-btn" title="Run / pause training">
+                        <i data-lucide="play" id="playIcon" class="w-7 h-7"></i>
+                    </button>
+                    <button type="button" id="stepBtn" title="Train one batch" class="ann-secondary-btn">
+                        <i data-lucide="skip-forward" class="w-5 h-5"></i>
+                    </button>
                 </div>
-                <div>
-                    <label class="text-[11px] font-bold text-slate-500 uppercase block mb-2">Batch size: <span
-                            id="batchLabel" class="float-right text-slate-800">10</span></label>
-                    <input type="range" id="batchSlider" min="1" max="30" step="1" value="10">
+                <div class="ann-divider-v"></div>
+                <div class="stat-block">
+                    <div class="stat-label">Epoch</div>
+                    <div id="epochDisplay" class="mono">000,000</div>
                 </div>
-                <button id="regenBtn"
-                    class="w-full py-3 bg-white border border-slate-200 hover:bg-slate-50 text-xs font-bold uppercase rounded shadow-sm text-slate-600 transition-all">Regenerate</button>
             </div>
-        </div>
-
-        <!-- FEATURES COLUMN -->
-        <div id="featuresCol" class="col-span-2 px-6">
-            <h3 class="text-sm font-bold uppercase text-slate-800 mb-6">Features</h3>
-            <p class="text-[11px] text-slate-500 mb-4">Properties to feed in</p>
-            <div class="flex flex-col gap-5" id="featureList"></div>
-        </div>
-
-        <!-- NETWORK COLUMN (HIDDEN + OUTPUT) -->
-        <div id="networkCol" class="col-span-5 px-4 flex flex-col items-center">
-            <div class="flex items-center gap-4 mb-10 bg-slate-100 p-2 rounded-lg border">
-                <button id="removeLayer"
-                    class="w-8 h-8 bg-white border flex items-center justify-center rounded-md shadow-sm hover:bg-slate-50 transition-colors">
-                    <i data-lucide="minus" class="w-4 h-4"></i>
-                </button>
-                <button id="addLayer"
-                    class="w-8 h-8 bg-white border flex items-center justify-center rounded-md shadow-sm hover:bg-slate-50 transition-colors">
-                    <i data-lucide="plus" class="w-4 h-4"></i>
-                </button>
-                <span class="text-sm font-bold uppercase text-slate-700 mx-2"><span id="layerCount">2</span> Hidden
-                    Layers</span>
-            </div>
-
-            <div id="layerContainer" class="w-full flex justify-between px-2 min-h-[500px]"></div>
-        </div>
-
-        <!-- RESULT COLUMN -->
-        <div id="colResult" class="col-span-3 px-8 border-l border-slate-200 bg-white relative z-[20]">
-            <h3 class="text-sm font-bold uppercase text-slate-800 mb-6">Output</h3>
-
-            <p id="outputViewHint" class="text-[11px] text-slate-500 mb-3 min-h-[2.5rem]">Nhấp một neuron để xem kích hoạt trên lưới; nhấp một cạnh để xem trọng số.</p>
-
-            <div id="edgeWeightPanel" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <div class="text-[10px] font-bold text-amber-800 uppercase mb-1">Trọng số cạnh</div>
-                <input type="text" id="edgeWeightInput" readonly
-                    class="w-full mono text-sm px-2 py-1.5 border border-amber-300 rounded bg-white text-slate-800" value="">
-                <p class="text-[10px] text-amber-900/70 mt-1" id="edgeWeightMeta"></p>
-            </div>
-
-            <div class="mb-6 grid grid-cols-2 gap-4">
-                <div class="p-3 bg-slate-50 rounded border border-slate-100">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">Test loss</div>
-                    <div id="testLoss" class="text-xl mono font-medium text-slate-700">0.000</div>
+            <div class="ann-hyperparameters">
+                <div class="control-group">
+                    <label for="lrSelect">Learning rate</label>
+                    <select id="lrSelect">
+                        <option value="0.0001">0.0001</option>
+                        <option value="0.001">0.001</option>
+                        <option value="0.01">0.01</option>
+                        <option value="0.03" selected>0.03</option>
+                        <option value="0.1">0.1</option>
+                        <option value="1">1</option>
+                    </select>
                 </div>
-                <div class="p-3 bg-slate-50 rounded border border-slate-100">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">Train loss</div>
-                    <div id="trainLoss" class="text-xl mono font-medium text-slate-700">0.000</div>
+                <div class="control-group">
+                    <label for="activationSelect">Activation (hidden)</label>
+                    <select id="activationSelect" title="Hidden dense layers only; output layer is linear for ±1 targets.">
+                        <option value="relu">ReLU</option>
+                        <option value="tanh" selected>Tanh</option>
+                        <option value="sigmoid">Sigmoid</option>
+                        <option value="linear">Linear</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="regSelect">Regularization</label>
+                    <select id="regSelect">
+                        <option value="none" selected>None</option>
+                        <option value="l1">L1</option>
+                        <option value="l2">L2</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <main class="ann-layout">
+            <svg id="networkSvg" aria-hidden="true"></svg>
+
+            <div id="colData" class="ann-panel ann-front">
+                <h3 class="ann-section-title">Data</h3>
+                <p class="ann-lead">Pick a synthetic 2-D toy dataset.</p>
+                <div class="ann-picker-grid" id="datasetPicker">
+                    <div data-set="circle" class="dataset-thumbnail active" title="Circle"><canvas width="34" height="34"></canvas></div>
+                    <div data-set="xor" class="dataset-thumbnail" title="XOR"><canvas width="34" height="34"></canvas></div>
+                    <div data-set="gauss" class="dataset-thumbnail" title="Gaussian moons"><canvas width="34" height="34"></canvas></div>
+                    <div data-set="spiral" class="dataset-thumbnail" title="Spiral"><canvas width="34" height="34"></canvas></div>
+                </div>
+                <div class="ann-stack">
+                    <div>
+                        <label>Noise<span class="mono mono-inline" id="noiseLabel">0</span></label>
+                        <input type="range" id="noiseSlider" min="0" max="50" step="5" value="0">
+                    </div>
+                    <div>
+                        <label>Batch size<span class="mono mono-inline" id="batchLabel">10</span></label>
+                        <input type="range" id="batchSlider" min="1" max="30" step="1" value="10">
+                    </div>
+                    <button type="button" id="regenBtn" class="primary-block-btn">Regenerate data</button>
                 </div>
             </div>
 
-            <div
-                class="relative w-full aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shadow-inner group">
-                <canvas id="mainOutputCanvas" class="w-full h-full absolute inset-0"></canvas>
-                <canvas id="mainDataCanvas" class="w-full h-full absolute inset-0 pointer-events-none"></canvas>
+            <div id="featuresCol" class="ann-panel ann-front">
+                <h3 class="ann-section-title">Inputs</h3>
+                <p class="ann-lead">Hover over an input cell to preview its map; click the cell or label to add or remove it from the network.</p>
+                <div class="ann-stack" id="featureList"></div>
             </div>
 
-            <div class="mt-8 flex flex-col gap-3">
-                <label class="flex items-center gap-3 text-xs text-slate-600 cursor-pointer select-none">
-                    <input type="checkbox" id="showTestData" class="w-4 h-4 rounded border-slate-300">
-                    <span>Show test data</span>
-                </label>
-                <label class="flex items-center gap-3 text-xs text-slate-600 cursor-pointer select-none">
-                    <input type="checkbox" id="discretizeOutput" class="w-4 h-4 rounded border-slate-300">
-                    <span>Discretize output</span>
-                </label>
+            <div id="networkCol" class="ann-panel ann-front ann-grow">
+                <div class="ann-layer-toolbar">
+                    <button type="button" id="removeLayer" class="ann-micro-btn" title="Remove hidden layer"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                    <button type="button" id="addLayer" class="ann-micro-btn" title="Add hidden layer"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    <span class="toolbar-label"><span id="layerCount">2</span> hidden layers</span>
+                </div>
+                <div id="layerContainer"></div>
             </div>
 
-            <div class="mt-8 border-t pt-6">
-                <div class="text-[10px] text-slate-400 font-bold uppercase mb-4">Legend</div>
-                <div class="flex items-center gap-4">
-                    <div class="h-4 w-full rounded bg-gradient-to-r from-[#f57c00] via-white to-[#0877bd] border"></div>
+            <div id="colResult" class="ann-panel ann-front ann-results">
+                <h3 class="ann-section-title">Output</h3>
+                <p id="outputViewHint" class="ann-output-hint">Hover over a neuron to show its activation; click an edge for its weight. Press Escape to clear.</p>
+                <div id="edgeWeightPanel" class="ann-edge-panel hidden">
+                    <div class="panel-h">Edge weight</div>
+                    <input type="text" id="edgeWeightInput" class="edge-weight-field" readonly value="">
+                    <p class="edge-meta" id="edgeWeightMeta"></p>
                 </div>
-                <div class="flex justify-between text-[10px] text-slate-500 mt-2 mono">
-                    <span>-1</span>
-                    <span>0</span>
-                    <span>1</span>
+                <div class="ann-loss-grid">
+                    <div class="loss-tile">
+                        <div class="loss-label">Test loss</div>
+                        <div id="testLoss" class="mono">0.000</div>
+                    </div>
+                    <div class="loss-tile">
+                        <div class="loss-label">Train loss</div>
+                        <div id="trainLoss" class="mono">0.000</div>
+                    </div>
+                </div>
+                <div class="output-canvas-wrap">
+                    <canvas id="mainOutputCanvas"></canvas>
+                    <canvas id="mainDataCanvas" style="pointer-events:none"></canvas>
+                </div>
+                <div class="ann-checkbox-list">
+                    <label><input type="checkbox" id="showTestData"><span>Show test points</span></label>
+                    <label><input type="checkbox" id="discretizeOutput"><span>Binarize plot (±1)</span></label>
+                </div>
+                <div class="legend-block">
+                    <div class="ann-section-title" style="margin-bottom:12px">Legend</div>
+                    <div class="legend-strip"></div>
+                    <div class="legend-ticks"><span>&minus;1</span><span>0</span><span>1</span></div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+
+        <footer class="footer">
+            Neural Network Playground demo &mdash; Legos Writing Demos
+        </footer>
+    </div>
 
     <script>
         const DataGen = {
@@ -445,6 +234,16 @@
 
         const FEATURE_LABELS = { 'x1': 'X₁', 'x2': 'X₂', 'x1sq': 'X₁²', 'x2sq': 'X₂²', 'x1x2': 'X₁X₂', 'sinX1': 'sin(X₁)', 'sinX2': 'sin(X₂)' };
 
+        const VIS = {
+            hexPos: '#3b82f6',
+            hexNeg: '#f97316',
+            rgbPos: [59, 130, 246],
+            rgbNeg: [249, 115, 22],
+            rgbPosHi: [96, 165, 250],
+            rgbNegHi: [251, 146, 60],
+            edgeSel: [139, 92, 246]
+        };
+
         function classifyEdgeStroke(denseIdx, sIdx, nIdx) {
             if (state.focusEdge &&
                 state.focusEdge.denseIdx === denseIdx &&
@@ -500,30 +299,63 @@
                         ? (Math.abs(w) < 1e-5 ? w.toExponential(6) : String(+w.toPrecision(8)))
                         : '';
                 }
-                if (meta) meta.textContent = `Cạnh: lớp dense ${fe.denseIdx + 1}, từ nguồn ${fe.sIdx} → đích ${fe.nIdx}`;
-                hint.textContent = 'Đang xem một cạnh. Nhấn Esc để về đầy đủ mạng.';
+                if (meta) meta.textContent = `Layer ${fe.denseIdx + 1}: source unit ${fe.sIdx} → destination unit ${fe.nIdx}`;
+                hint.textContent = 'Inspecting one edge. Press Escape to return to the full network.';
             } else {
                 panel.classList.add('hidden');
                 if (meta) meta.textContent = '';
                 if (state.focusNeuron?.type === 'feature') {
-                    hint.textContent = `Đặc trưng ${FEATURE_LABELS[state.focusNeuron.featKey] || state.focusNeuron.featKey} (đầu vào).`;
+                    hint.textContent = `Feature ${FEATURE_LABELS[state.focusNeuron.featKey] || state.focusNeuron.featKey} (mapped on the plot).`;
                 } else if (state.focusNeuron?.type === 'unit') {
                     const L = state.focusNeuron.denseLayer + 1;
-                    hint.textContent = `Kích hoạt nơ-ron: cột ${L}, chỉ số ${state.focusNeuron.unitIndex}`;
+                    hint.textContent = `Neuron activation — column ${L}, unit ${state.focusNeuron.unitIndex}.`;
                 } else {
-                    hint.textContent = 'Đầu ra đầy đủ của mạng. Nhấp nơ-ron hoặc cạnh để xem chi tiết; Esc để thoát.';
+                    hint.textContent = 'Full network output on the plot. Hover a neuron or click an edge for details (Escape clears).';
                 }
             }
+        }
+
+        function refreshInspectView() {
+            syncInspectPanels();
+            syncNodeFocusClass();
+            drawNetwork();
+            drawMainOutput();
+        }
+
+        /** When edge selection clears, restore neuron hover highlight if cursor is still over a node. */
+        function resyncInspectFromHoverAt(clientX, clientY) {
+            state.focusEdge = null;
+            const stack = typeof document.elementsFromPoint === 'function'
+                ? document.elementsFromPoint(clientX, clientY)
+                : [];
+            for (const el of stack) {
+                const box = el.closest && el.closest('.node-box');
+                if (!box || !box.id) continue;
+                if (box.id.startsWith('feat-')) {
+                    state.focusNeuron = { type: 'feature', featKey: box.id.slice(5) };
+                    refreshInspectView();
+                    return;
+                }
+                const m = box.id.match(/^node-l(\d+)-n(\d+)$/);
+                if (m) {
+                    state.focusNeuron = {
+                        type: 'unit',
+                        denseLayer: parseInt(m[1], 10) - 1,
+                        unitIndex: parseInt(m[2], 10)
+                    };
+                    refreshInspectView();
+                    return;
+                }
+            }
+            state.focusNeuron = null;
+            refreshInspectView();
         }
 
         function clearInspectFocus() {
             if (!state.focusNeuron && !state.focusEdge) return;
             state.focusNeuron = null;
             state.focusEdge = null;
-            syncNodeFocusClass();
-            syncInspectPanels();
-            drawNetwork();
-            drawMainOutput();
+            refreshInspectView();
         }
 
         function kernelRegularizer() {
@@ -598,7 +430,7 @@
                 const d = DataGen[el.dataset.set](100, 0);
                 ctx.clearRect(0, 0, 34, 34);
                 d.forEach(p => {
-                    ctx.fillStyle = p.label > 0 ? '#0877bd' : '#f57c00';
+                    ctx.fillStyle = p.label > 0 ? VIS.hexPos : VIS.hexNeg;
                     ctx.fillRect((p.x + 6) * 2.8, (p.y + 6) * 2.8, 2, 2);
                 });
             });
@@ -640,18 +472,37 @@
             Object.keys(FEATURE_MAP).forEach(key => {
                 const isActive = state.features.includes(key);
                 const div = document.createElement('div');
-                div.className = 'flex items-center gap-4 group';
+                div.className = 'feat-row';
                 div.innerHTML = `
-            <div id="feat-${key}" class="node-box border-slate-300 rounded shadow-sm ${isActive ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-30'}">
+            <div id="feat-${key}" class="node-box ${isActive ? 'feat-active' : 'feat-inactive'}">
                 <canvas id="canvas-${key}" class="node-canvas" width="34" height="34"></canvas>
             </div>
-            <span class="text-xs cursor-pointer select-none ${isActive ? 'text-slate-800 font-bold' : 'text-slate-400'}">${FEATURE_LABELS[key]}</span>
+            <span class="feat-label-btn ${isActive ? 'feat-label-btn-strong' : ''}">${FEATURE_LABELS[key]}</span>
         `;
                 div.querySelector('span').onclick = (e) => {
                     e.stopPropagation();
                     toggleFeature(key);
                 };
                 featContainer.appendChild(div);
+                const featBox = div.querySelector('.node-box');
+                if (featBox) {
+                    featBox.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        toggleFeature(key);
+                    });
+                    featBox.addEventListener('pointerenter', () => {
+                        state.focusEdge = null;
+                        state.focusNeuron = { type: 'feature', featKey: key };
+                        refreshInspectView();
+                    });
+                    featBox.addEventListener('pointerleave', () => {
+                        if (state.focusNeuron?.type === 'feature' && state.focusNeuron.featKey === key) {
+                            state.focusNeuron = null;
+                            refreshInspectView();
+                        }
+                    });
+                }
                 drawNodePreview(`canvas-${key}`, (x, y) => FEATURE_MAP[key](x, y));
             });
 
@@ -666,30 +517,51 @@
                 const isOutput = absoluteLIdx === layersToRender.length;
                 
                 const layerDiv = document.createElement('div');
-                layerDiv.className = 'flex flex-col items-center gap-6 flex-1';
+                layerDiv.className = 'layer-col';
                 
                 let controls = '';
                 if (!isOutput) {
                     controls = `
-                        <div class="flex items-center gap-1 mb-2">
-                            <button onclick="changeNeuron(${absoluteLIdx}, -1)" class="w-6 h-6 border flex items-center justify-center rounded bg-white hover:bg-slate-50 text-[10px] shadow-sm">-</button>
-                            <button onclick="changeNeuron(${absoluteLIdx}, 1)" class="w-6 h-6 border flex items-center justify-center rounded bg-white hover:bg-slate-50 text-[10px] shadow-sm">+</button>
+                        <div class="neuron-controls">
+                            <button type="button" onclick="changeNeuron(${absoluteLIdx}, -1)" class="ann-micro-btn">&minus;</button>
+                            <button type="button" onclick="changeNeuron(${absoluteLIdx}, 1)" class="ann-micro-btn">+</button>
                         </div>
                     `;
                 }
 
                 layerDiv.innerHTML = `
                     ${controls}
-                    <div class="text-[10px] uppercase font-bold text-slate-400 mb-2">${isOutput ? 'Output' : neuronCount + ' neurons'}</div>
-                    <div class="flex flex-col gap-5 justify-center flex-1">
+                    <div class="layer-title">${isOutput ? 'Output' : neuronCount + ' neurons'}</div>
+                    <div class="layer-neurons">
                         ${Array.from({ length: neuronCount }, (_, nIdx) => `
-                            <div class="node-box border-slate-300 rounded shadow-sm" id="node-l${absoluteLIdx}-n${nIdx}">
+                            <div class="node-box" id="node-l${absoluteLIdx}-n${nIdx}">
                                 <canvas id="canvas-l${absoluteLIdx}-n${nIdx}" class="node-canvas" width="34" height="34"></canvas>
                             </div>
                         `).join('')}
                     </div>
                 `;
                 layerContainer.appendChild(layerDiv);
+            });
+
+            layerContainer.querySelectorAll('.layer-neurons .node-box').forEach(box => {
+                const m = box.id.match(/^node-l(\d+)-n(\d+)$/);
+                if (!m) return;
+                const uiL = parseInt(m[1], 10);
+                const uiN = parseInt(m[2], 10);
+                const denseLayer = uiL - 1;
+                box.addEventListener('pointerenter', () => {
+                    state.focusEdge = null;
+                    state.focusNeuron = { type: 'unit', denseLayer, unitIndex: uiN };
+                    refreshInspectView();
+                });
+                box.addEventListener('pointerleave', () => {
+                    if (state.focusNeuron?.type === 'unit' &&
+                        state.focusNeuron.denseLayer === denseLayer &&
+                        state.focusNeuron.unitIndex === uiN) {
+                        state.focusNeuron = null;
+                        refreshInspectView();
+                    }
+                });
             });
 
             document.getElementById('layerCount').innerText = state.shape.length - 2;
@@ -717,9 +589,9 @@
                     const val = fn(nx, ny);
                     const idx = (j * w + i) * 4;
 
-                    const r = val > 0 ? 8 : 245;
-                    const g = val > 0 ? 119 : 124;
-                    const b = val > 0 ? 189 : 0;
+                    const r = val > 0 ? VIS.rgbPos[0] : VIS.rgbNeg[0];
+                    const g = val > 0 ? VIS.rgbPos[1] : VIS.rgbNeg[1];
+                    const b = val > 0 ? VIS.rgbPos[2] : VIS.rgbNeg[2];
                     const alpha = Math.min(255, Math.abs(val) * 255);
 
                     imgData.data[idx] = r;
@@ -761,9 +633,9 @@
                     const gj = Math.min(gridH - 1, Math.floor((j / h) * gridH));
                     const val = actData[(gj * gridW + gi) * units + unitIndex];
                     const idx = (j * w + i) * 4;
-                    imgData.data[idx] = val > 0 ? 8 : 245;
-                    imgData.data[idx + 1] = val > 0 ? 119 : 124;
-                    imgData.data[idx + 2] = val > 0 ? 189 : 0;
+                    imgData.data[idx] = val > 0 ? VIS.rgbPos[0] : VIS.rgbNeg[0];
+                    imgData.data[idx + 1] = val > 0 ? VIS.rgbPos[1] : VIS.rgbNeg[1];
+                    imgData.data[idx + 2] = val > 0 ? VIS.rgbPos[2] : VIS.rgbNeg[2];
                     imgData.data[idx + 3] = Math.min(255, Math.abs(val) * 255);
                 }
             }
@@ -840,9 +712,9 @@
                 for (let j = 0; j < h; j += res) {
                     let val = preds[q++];
                     if (discretize) val = val > 0 ? 1 : -1;
-                    const r = val > 0 ? 8 : 245;
-                    const g = val > 0 ? 119 : 124;
-                    const b = val > 0 ? 189 : 0;
+                    const r = val > 0 ? VIS.rgbPos[0] : VIS.rgbNeg[0];
+                    const g = val > 0 ? VIS.rgbPos[1] : VIS.rgbNeg[1];
+                    const b = val > 0 ? VIS.rgbPos[2] : VIS.rgbNeg[2];
                     const alpha = Math.min(180, Math.abs(val) * 180);
                     for (let dx = 0; dx < res && i + dx < w; dx++) {
                         for (let dy = 0; dy < res && j + dy < h; dy++) {
@@ -868,8 +740,8 @@
                 const cy = (p.y + 6) * h / 12;
                 dCtx.beginPath();
                 dCtx.arc(cx, cy, 4, 0, Math.PI * 2);
-                dCtx.fillStyle = p.label > 0 ? '#0877bd' : '#f57c00';
-                dCtx.strokeStyle = 'white';
+                dCtx.fillStyle = p.label > 0 ? VIS.hexPos : VIS.hexNeg;
+                dCtx.strokeStyle = '#f3f4f6';
                 dCtx.lineWidth = 2;
                 dCtx.fill();
                 dCtx.stroke();
@@ -927,19 +799,19 @@
                         const baseW = Math.min(8, Math.abs(linkWeight) * 4);
                         let opacity = 0.75;
                         let strokeW = Math.max(baseW, 0.6);
-                        let strokeRgb = linkWeight > 0 ? [8, 119, 189] : [245, 124, 0];
+                        let strokeRgb = linkWeight > 0 ? [...VIS.rgbPos] : [...VIS.rgbNeg];
                         if (mode === 'dim') {
                             opacity = 0.08;
                             strokeW = Math.max(baseW * 0.55, 0.35);
                         } else if (mode === 'incident') {
                             opacity = 0.95;
                             strokeW = Math.max(baseW * 1.3, 2.2);
-                            strokeRgb = linkWeight > 0 ? [5, 80, 130] : [180, 80, 0];
+                            strokeRgb = linkWeight > 0 ? [...VIS.rgbPosHi] : [...VIS.rgbNegHi];
                         }
                         if (mode === 'selected') {
                             opacity = 1;
                             strokeW = Math.max(baseW + 4, 6);
-                            strokeRgb = [92, 15, 95];
+                            strokeRgb = [...VIS.edgeSel];
                         }
 
                         const visPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -948,7 +820,6 @@
                         visPath.setAttribute('stroke-width', String(strokeW));
                         visPath.setAttribute('fill', 'none');
                         visPath.classList.add('weight-path');
-                        visPath.style.pointerEvents = 'none';
                         svg.appendChild(visPath);
 
                         const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -961,7 +832,6 @@
                         hitPath.dataset.sIdx = String(sIdx);
                         hitPath.dataset.nIdx = String(nIdx);
                         hitPath.dataset.weight = String(linkWeight);
-                        hitPath.style.pointerEvents = 'stroke';
                         svg.appendChild(hitPath);
                     }
                 }
@@ -1096,44 +966,6 @@
         window.onload = init;
         window.onresize = () => { renderUI(); drawNetwork(); drawMainOutput(); };
 
-        document.getElementById('featureList').addEventListener('click', (e) => {
-            const box = e.target.closest('.node-box');
-            if (!box || !box.id.startsWith('feat-')) return;
-            e.stopPropagation();
-            const key = box.id.slice(5);
-            if (state.focusNeuron?.type === 'feature' && state.focusNeuron.featKey === key) {
-                state.focusNeuron = null;
-            } else {
-                state.focusNeuron = { type: 'feature', featKey: key };
-            }
-            state.focusEdge = null;
-            syncInspectPanels();
-            syncNodeFocusClass();
-            drawNetwork();
-            drawMainOutput();
-        });
-        document.getElementById('layerContainer').addEventListener('click', (e) => {
-            const box = e.target.closest('.node-box');
-            if (!box || !box.id.startsWith('node-l')) return;
-            e.stopPropagation();
-            const m = box.id.match(/^node-l(\d+)-n(\d+)$/);
-            if (!m) return;
-            const uiL = parseInt(m[1], 10);
-            const uiN = parseInt(m[2], 10);
-            const denseLayer = uiL - 1;
-            if (state.focusNeuron?.type === 'unit' &&
-                state.focusNeuron.denseLayer === denseLayer &&
-                state.focusNeuron.unitIndex === uiN) {
-                state.focusNeuron = null;
-            } else {
-                state.focusNeuron = { type: 'unit', denseLayer, unitIndex: uiN };
-            }
-            state.focusEdge = null;
-            syncInspectPanels();
-            syncNodeFocusClass();
-            drawNetwork();
-            drawMainOutput();
-        });
         document.getElementById('networkSvg').addEventListener('click', (e) => {
             const hit = e.target.closest('.edge-hit');
             if (!hit) return;
@@ -1142,19 +974,18 @@
             const sIdx = parseInt(hit.dataset.sIdx, 10);
             const nIdx = parseInt(hit.dataset.nIdx, 10);
             if (![denseIdx, sIdx, nIdx].every(Number.isFinite)) return;
-            if (state.focusEdge &&
+            const toggleOff =
+                state.focusEdge &&
                 state.focusEdge.denseIdx === denseIdx &&
                 state.focusEdge.sIdx === sIdx &&
-                state.focusEdge.nIdx === nIdx) {
-                state.focusEdge = null;
+                state.focusEdge.nIdx === nIdx;
+            if (toggleOff) {
+                resyncInspectFromHoverAt(e.clientX, e.clientY);
             } else {
                 state.focusEdge = { denseIdx, sIdx, nIdx };
+                state.focusNeuron = null;
+                refreshInspectView();
             }
-            state.focusNeuron = null;
-            syncNodeFocusClass();
-            syncInspectPanels();
-            drawNetwork();
-            drawMainOutput();
         });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') clearInspectFocus();
