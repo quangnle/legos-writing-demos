@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Lab Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono&display=swap');
+
+        :root {
+            --primary-orange: #f57c00;
+            --primary-blue: #0877bd;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fff;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .control-group select {
+            border: none;
+            border-bottom: 1px solid #ccc;
+            background: transparent;
+            font-size: 14px;
+            padding: 4px 0;
+            width: 100%;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .control-group select:focus {
+            border-bottom-color: var(--primary-blue);
+        }
+
+        .node-box {
+            width: 34px;
+            height: 34px;
+            border: 1px solid #333;
+            background: #eee;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.1s;
+        }
+
+        .node-box:hover {
+            transform: scale(1.1);
+            z-index: 50;
+        }
+
+        .node-canvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .dataset-thumbnail {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #eee;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .dataset-thumbnail.active {
+            border-color: var(--primary-orange);
+            background: #fff1e6;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: #666;
+            cursor: pointer;
+        }
+
+        .play-btn {
+            background-color: #0277bd;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .play-btn:hover {
+            background-color: #01579b;
+            transform: scale(1.05);
+        }
+
+        .play-btn:active {
+            transform: scale(0.95);
+        }
+
+        .reset-btn {
+            border: 1px solid #ddd;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #f5f5f5;
+            border-color: #ccc;
+        }
+
+        #networkSvg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 12;
+            pointer-events: auto;
+        }
+
+        /*
+          SVG z-12 đứng sau hai cột này (z-18) để ô neuron nhận click; chỉ neuron/nút được auto.
+          Các khối flex không được “che” làm trong suốt chuột mà không tới được edge-hit.
+        */
+        #featuresCol,
+        #networkCol {
+            position: relative;
+            z-index: 18;
+            pointer-events: none;
+        }
+
+        #featuresCol #featureList > * {
+            pointer-events: none;
+        }
+
+        #featuresCol h3,
+        #featuresCol > p {
+            pointer-events: none;
+        }
+
+        #networkCol #layerContainer {
+            pointer-events: none;
+        }
+
+        /* Cột một lớp: none; chỉ ô neuron (và canvas con) nhận chuột */
+        #networkCol #layerContainer > div {
+            pointer-events: none;
+        }
+
+        #networkCol > .flex.mb-10 {
+            pointer-events: none;
+        }
+
+        #networkCol > .flex.mb-10 button {
+            pointer-events: auto;
+        }
+
+        #featuresCol .node-box,
+        #featuresCol .node-box *,
+        #featuresCol input[type=range],
+        #featuresCol button,
+        #featuresCol #featureList > * > span,
+        #networkCol #layerContainer .node-box,
+        #networkCol #layerContainer .node-box *,
+        #networkCol button {
+            pointer-events: auto;
+        }
+
+        .node-box.node-focused {
+            outline: 3px solid #f59e0b;
+            outline-offset: 2px;
+            z-index: 5;
+        }
+
+        .weight-path {
+            fill: none;
+            transition: stroke-width 0.12s, stroke 0.12s, opacity 0.12s;
+        }
+
+        .edge-hit {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50">
+
+    <header class="border-b bg-white px-8 py-4 flex items-center justify-between sticky top-0 z-[100] shadow-sm">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <button id="resetBtn" title="Reset Network" class="reset-btn p-3 rounded-full text-slate-600">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                </button>
+                <button id="playBtn"
+                    class="play-btn w-14 h-14 flex items-center justify-center rounded-full text-white shadow-lg">
+                    <i data-lucide="play" id="playIcon" class="w-7 h-7 fill-current"></i>
+                </button>
+                <button id="stepBtn" title="One Step" class="reset-btn p-3 rounded-full text-slate-600">
+                    <i data-lucide="skip-forward" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="border-r h-12 mx-2"></div>
+            <div>
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Epoch</div>
+                <div id="epochDisplay" class="text-3xl mono leading-none font-light tracking-tighter">000,000</div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex gap-8 max-w-5xl justify-end">
+            <div class="control-group w-32">
+                <label>Learning rate</label>
+                <select id="lrSelect">
+                    <option value="0.0001">0.0001</option>
+                    <option value="0.001">0.001</option>
+                    <option value="0.01">0.01</option>
+                    <option value="0.03" selected>0.03</option>
+                    <option value="0.1">0.1</option>
+                    <option value="1">1</option>
+                </select>
+            </div>
+            <div class="control-group w-32">
+                <label>Activation</label>
+                <select id="activationSelect" title="Hidden layers only. Output layer is linear so predictions can match labels ±1 (sigmoid/ReLU cannot output -1).">
+                    <option value="relu">ReLU</option>
+                    <option value="tanh" selected>Tanh</option>
+                    <option value="sigmoid">Sigmoid</option>
+                    <option value="linear">Linear</option>
+                </select>
+            </div>
+            <div class="control-group w-32">
+                <label>Regularization</label>
+                <select id="regSelect">
+                    <option value="none" selected>None</option>
+                    <option value="l1">L1</option>
+                    <option value="l2">L2</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-[1440px] mx-auto grid grid-cols-12 gap-0 py-10 px-6 min-h-[calc(100vh-100px)] relative">
+
+        <!-- SVG: chi tiết căn chỉnh trong #networkSvg (style); phải dưới features/network (z-18) -->
+        <svg id="networkSvg" class="absolute top-0 left-0 w-full h-full"></svg>
+
+        <!-- DATA COLUMN -->
+        <div id="colData" class="col-span-2 px-6 relative z-[20]">
+            <h3 class="text-sm font-bold uppercase text-slate-800 mb-6">Data</h3>
+            <p class="text-[11px] text-slate-500 mb-4">Which dataset do you want to use?</p>
+            <div class="grid grid-cols-2 gap-3 mb-10" id="datasetPicker">
+                <div data-set="circle" class="dataset-thumbnail active border" title="Circle"><canvas width="34" height="34"></canvas></div>
+                <div data-set="xor" class="dataset-thumbnail border" title="XOR"><canvas width="34" height="34"></canvas></div>
+                <div data-set="gauss" class="dataset-thumbnail border" title="Gaussian"><canvas width="34" height="34"></canvas></div>
+                <div data-set="spiral" class="dataset-thumbnail border" title="Spiral"><canvas width="34" height="34"></canvas></div>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="text-[11px] font-bold text-slate-500 uppercase block mb-2">Noise: <span
+                            id="noiseLabel" class="float-right text-slate-800">0</span></label>
+                    <input type="range" id="noiseSlider" min="0" max="50" step="5" value="0">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-slate-500 uppercase block mb-2">Batch size: <span
+                            id="batchLabel" class="float-right text-slate-800">10</span></label>
+                    <input type="range" id="batchSlider" min="1" max="30" step="1" value="10">
+                </div>
+                <button id="regenBtn"
+                    class="w-full py-3 bg-white border border-slate-200 hover:bg-slate-50 text-xs font-bold uppercase rounded shadow-sm text-slate-600 transition-all">Regenerate</button>
+            </div>
+        </div>
+
+        <!-- FEATURES COLUMN -->
+        <div id="featuresCol" class="col-span-2 px-6">
+            <h3 class="text-sm font-bold uppercase text-slate-800 mb-6">Features</h3>
+            <p class="text-[11px] text-slate-500 mb-4">Properties to feed in</p>
+            <div class="flex flex-col gap-5" id="featureList"></div>
+        </div>
+
+        <!-- NETWORK COLUMN (HIDDEN + OUTPUT) -->
+        <div id="networkCol" class="col-span-5 px-4 flex flex-col items-center">
+            <div class="flex items-center gap-4 mb-10 bg-slate-100 p-2 rounded-lg border">
+                <button id="removeLayer"
+                    class="w-8 h-8 bg-white border flex items-center justify-center rounded-md shadow-sm hover:bg-slate-50 transition-colors">
+                    <i data-lucide="minus" class="w-4 h-4"></i>
+                </button>
+                <button id="addLayer"
+                    class="w-8 h-8 bg-white border flex items-center justify-center rounded-md shadow-sm hover:bg-slate-50 transition-colors">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>
+                <span class="text-sm font-bold uppercase text-slate-700 mx-2"><span id="layerCount">2</span> Hidden
+                    Layers</span>
+            </div>
+
+            <div id="layerContainer" class="w-full flex justify-between px-2 min-h-[500px]"></div>
+        </div>
+
+        <!-- RESULT COLUMN -->
+        <div id="colResult" class="col-span-3 px-8 border-l border-slate-200 bg-white relative z-[20]">
+            <h3 class="text-sm font-bold uppercase text-slate-800 mb-6">Output</h3>
+
+            <p id="outputViewHint" class="text-[11px] text-slate-500 mb-3 min-h-[2.5rem]">Nhấp một neuron để xem kích hoạt trên lưới; nhấp một cạnh để xem trọng số.</p>
+
+            <div id="edgeWeightPanel" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div class="text-[10px] font-bold text-amber-800 uppercase mb-1">Trọng số cạnh</div>
+                <input type="text" id="edgeWeightInput" readonly
+                    class="w-full mono text-sm px-2 py-1.5 border border-amber-300 rounded bg-white text-slate-800" value="">
+                <p class="text-[10px] text-amber-900/70 mt-1" id="edgeWeightMeta"></p>
+            </div>
+
+            <div class="mb-6 grid grid-cols-2 gap-4">
+                <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">Test loss</div>
+                    <div id="testLoss" class="text-xl mono font-medium text-slate-700">0.000</div>
+                </div>
+                <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">Train loss</div>
+                    <div id="trainLoss" class="text-xl mono font-medium text-slate-700">0.000</div>
+                </div>
+            </div>
+
+            <div
+                class="relative w-full aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shadow-inner group">
+                <canvas id="mainOutputCanvas" class="w-full h-full absolute inset-0"></canvas>
+                <canvas id="mainDataCanvas" class="w-full h-full absolute inset-0 pointer-events-none"></canvas>
+            </div>
+
+            <div class="mt-8 flex flex-col gap-3">
+                <label class="flex items-center gap-3 text-xs text-slate-600 cursor-pointer select-none">
+                    <input type="checkbox" id="showTestData" class="w-4 h-4 rounded border-slate-300">
+                    <span>Show test data</span>
+                </label>
+                <label class="flex items-center gap-3 text-xs text-slate-600 cursor-pointer select-none">
+                    <input type="checkbox" id="discretizeOutput" class="w-4 h-4 rounded border-slate-300">
+                    <span>Discretize output</span>
+                </label>
+            </div>
+
+            <div class="mt-8 border-t pt-6">
+                <div class="text-[10px] text-slate-400 font-bold uppercase mb-4">Legend</div>
+                <div class="flex items-center gap-4">
+                    <div class="h-4 w-full rounded bg-gradient-to-r from-[#f57c00] via-white to-[#0877bd] border"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-500 mt-2 mono">
+                    <span>-1</span>
+                    <span>0</span>
+                    <span>1</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const DataGen = {
+            circle: (n, noise) => {
+                let data = [];
+                for (let i = 0; i < n; i++) {
+                    let r = i < n / 2 ? Math.random() * 2.5 : 3.8 + Math.random() * 2.2;
+                    let angle = Math.random() * Math.PI * 2;
+                    let x = r * Math.cos(angle) + (Math.random() - 0.5) * noise * 0.15;
+                    let y = r * Math.sin(angle) + (Math.random() - 0.5) * noise * 0.15;
+                    data.push({ x, y, label: i < n / 2 ? 1 : -1 });
+                }
+                return data;
+            },
+            xor: (n, noise) => {
+                let data = [];
+                for (let i = 0; i < n; i++) {
+                    let x = (Math.random() * 10 - 5);
+                    let y = (Math.random() * 10 - 5);
+                    x += (x > 0 ? 0.5 : -0.5); y += (y > 0 ? 0.5 : -0.5);
+                    let label = (x * y > 0) ? 1 : -1;
+                    data.push({ x, y, label });
+                }
+                return data;
+            },
+            gauss: (n, noise) => {
+                let data = [];
+                for (let i = 0; i < n; i++) {
+                    let label = i < n / 2 ? 1 : -1;
+                    let off = label * 2.5;
+                    let x = (Math.random() * 3.5 - 1.75 + off) + (Math.random() - 0.5) * noise * 0.2;
+                    let y = (Math.random() * 3.5 - 1.75 - off) + (Math.random() - 0.5) * noise * 0.2;
+                    data.push({ x, y, label });
+                }
+                return data;
+            },
+            spiral: (n, noise) => {
+                let data = [];
+                const gen = (label) => {
+                    for (let i = 0; i < n / 2; i++) {
+                        let r = i / (n / 2) * 5;
+                        let t = 1.75 * i / (n / 2) * 2 * Math.PI + (label > 0 ? 0 : Math.PI);
+                        let x = r * Math.sin(t) + (Math.random() - 0.5) * noise * 0.1;
+                        let y = r * Math.cos(t) + (Math.random() - 0.5) * noise * 0.1;
+                        data.push({ x, y, label });
+                    }
+                }
+                gen(1); gen(-1);
+                return data;
+            }
+        };
+
+        const state = {
+            dataset: 'circle',
+            noise: 0,
+            batchSize: 10,
+            lr: 0.03,
+            activation: 'tanh',
+            reg: 'none',
+            shape: [2, 4, 2, 1],
+            features: ['x1', 'x2'],
+            isPlaying: false,
+            epoch: 0,
+            trainData: [],
+            testData: [],
+            model: null,
+            totalTrainLoss: 0,
+            focusNeuron: null,
+            focusEdge: null
+        };
+
+        const FEATURE_MAP = {
+            'x1': (x, y) => x / 6,
+            'x2': (x, y) => y / 6,
+            'x1sq': (x, y) => (x * x) / 36,
+            'x2sq': (x, y) => (y * y) / 36,
+            'x1x2': (x, y) => (x * y) / 36,
+            'sinX1': (x, y) => Math.sin(x),
+            'sinX2': (x, y) => Math.sin(y)
+        };
+
+        const FEATURE_LABELS = { 'x1': 'X₁', 'x2': 'X₂', 'x1sq': 'X₁²', 'x2sq': 'X₂²', 'x1x2': 'X₁X₂', 'sinX1': 'sin(X₁)', 'sinX2': 'sin(X₂)' };
+
+        function classifyEdgeStroke(denseIdx, sIdx, nIdx) {
+            if (state.focusEdge &&
+                state.focusEdge.denseIdx === denseIdx &&
+                state.focusEdge.sIdx === sIdx &&
+                state.focusEdge.nIdx === nIdx) {
+                return 'selected';
+            }
+            if (state.focusEdge) return 'dim';
+            const fn = state.focusNeuron;
+            if (!fn) return 'normal';
+            if (fn.type === 'feature') {
+                const fIdx = state.features.indexOf(fn.featKey);
+                if (fIdx < 0) return 'dim';
+                if (denseIdx === 0 && sIdx === fIdx) return 'incident';
+                return 'dim';
+            }
+            const incoming = denseIdx === fn.denseLayer && nIdx === fn.unitIndex;
+            const outgoing = denseIdx === fn.denseLayer + 1 && sIdx === fn.unitIndex;
+            if (incoming || outgoing) return 'incident';
+            return 'dim';
+        }
+
+        function syncNodeFocusClass() {
+            document.querySelectorAll('.node-focused').forEach(el => el.classList.remove('node-focused'));
+            if (!state.focusNeuron || state.focusEdge) return;
+            if (state.focusNeuron.type === 'feature') {
+                const el = document.getElementById(`feat-${state.focusNeuron.featKey}`);
+                if (el) el.classList.add('node-focused');
+            } else {
+                const L = state.focusNeuron.denseLayer + 1;
+                const N = state.focusNeuron.unitIndex;
+                const el = document.getElementById(`node-l${L}-n${N}`);
+                if (el) el.classList.add('node-focused');
+            }
+        }
+
+        function syncInspectPanels() {
+            const hint = document.getElementById('outputViewHint');
+            const panel = document.getElementById('edgeWeightPanel');
+            const input = document.getElementById('edgeWeightInput');
+            const meta = document.getElementById('edgeWeightMeta');
+            if (!hint || !panel || !input) return;
+
+            if (state.focusEdge && state.model) {
+                panel.classList.remove('hidden');
+                const fe = state.focusEdge;
+                const lyr = state.model.layers[fe.denseIdx];
+                if (lyr) {
+                    const W = lyr.getWeights()[0];
+                    const outD = W.shape[1];
+                    const w = W.dataSync()[fe.sIdx * outD + fe.nIdx];
+                    input.value = Number.isFinite(w)
+                        ? (Math.abs(w) < 1e-5 ? w.toExponential(6) : String(+w.toPrecision(8)))
+                        : '';
+                }
+                if (meta) meta.textContent = `Cạnh: lớp dense ${fe.denseIdx + 1}, từ nguồn ${fe.sIdx} → đích ${fe.nIdx}`;
+                hint.textContent = 'Đang xem một cạnh. Nhấn Esc để về đầy đủ mạng.';
+            } else {
+                panel.classList.add('hidden');
+                if (meta) meta.textContent = '';
+                if (state.focusNeuron?.type === 'feature') {
+                    hint.textContent = `Đặc trưng ${FEATURE_LABELS[state.focusNeuron.featKey] || state.focusNeuron.featKey} (đầu vào).`;
+                } else if (state.focusNeuron?.type === 'unit') {
+                    const L = state.focusNeuron.denseLayer + 1;
+                    hint.textContent = `Kích hoạt nơ-ron: cột ${L}, chỉ số ${state.focusNeuron.unitIndex}`;
+                } else {
+                    hint.textContent = 'Đầu ra đầy đủ của mạng. Nhấp nơ-ron hoặc cạnh để xem chi tiết; Esc để thoát.';
+                }
+            }
+        }
+
+        function clearInspectFocus() {
+            if (!state.focusNeuron && !state.focusEdge) return;
+            state.focusNeuron = null;
+            state.focusEdge = null;
+            syncNodeFocusClass();
+            syncInspectPanels();
+            drawNetwork();
+            drawMainOutput();
+        }
+
+        function kernelRegularizer() {
+            if (state.reg === 'l1') return tf.regularizers.l1({ l1: 0.01 });
+            if (state.reg === 'l2') return tf.regularizers.l2({ l2: 0.01 });
+            return null;
+        }
+
+        function disposeModel() {
+            if (state.model) {
+                state.model.dispose();
+                state.model = null;
+            }
+        }
+
+        function denseConfig(units, opts = {}, isOutputLayer = false) {
+            const reg = kernelRegularizer();
+            const regOpts = reg ? { kernelRegularizer: reg } : {};
+            const cfg = {
+                units,
+                kernelInitializer: tf.initializers.randomNormal({ stddev: 0.5 }),
+                biasInitializer: tf.initializers.constant({ value: 0.1 }),
+                ...regOpts,
+                ...opts
+            };
+            /* Labels are ±1: sigmoid output is stuck in (0,1) and cannot fit -1. Only hidden layers use the chosen activation. */
+            const act = state.activation;
+            if (!isOutputLayer && act !== 'linear') cfg.activation = act;
+            return cfg;
+        }
+
+        function buildModel() {
+            disposeModel();
+            const inputDim = state.features.length;
+            const sizes = state.shape.slice(1);
+            const hidden = sizes.slice(0, -1);
+            const model = tf.sequential();
+            let first = true;
+            for (const units of hidden) {
+                model.add(tf.layers.dense(denseConfig(units, first ? { inputShape: [inputDim] } : {}, false)));
+                first = false;
+            }
+            model.add(tf.layers.dense(denseConfig(1, {}, true)));
+            model.compile({ optimizer: tf.train.sgd(state.lr), loss: 'meanSquaredError' });
+            state.model = model;
+        }
+
+        function recompileOptimizer() {
+            if (state.model) {
+                state.model.compile({ optimizer: tf.train.sgd(state.lr), loss: 'meanSquaredError' });
+            }
+        }
+
+        async function init() {
+            await tf.ready();
+            try {
+                await tf.setBackend('webgl');
+            } catch {
+                await tf.setBackend('cpu');
+            }
+            refreshIcons();
+            state.reg = document.getElementById('regSelect').value;
+            state.lr = parseFloat(document.getElementById('lrSelect').value);
+            state.activation = document.getElementById('activationSelect').value;
+            generateData();
+            resetNetwork();
+            
+            // Draw dataset thumbnails
+            document.querySelectorAll('.dataset-thumbnail').forEach(el => {
+                const canvas = el.querySelector('canvas');
+                const ctx = canvas.getContext('2d');
+                const d = DataGen[el.dataset.set](100, 0);
+                ctx.clearRect(0, 0, 34, 34);
+                d.forEach(p => {
+                    ctx.fillStyle = p.label > 0 ? '#0877bd' : '#f57c00';
+                    ctx.fillRect((p.x + 6) * 2.8, (p.y + 6) * 2.8, 2, 2);
+                });
+            });
+
+            setTimeout(() => {
+                renderUI();
+                syncInspectPanels();
+                loop();
+            }, 100);
+        }
+
+        function resetNetwork() {
+            state.shape[0] = state.features.length;
+            state.focusNeuron = null;
+            state.focusEdge = null;
+            buildModel();
+            state.epoch = 0;
+            state.totalTrainLoss = 0;
+            updateStatus(0);
+            syncInspectPanels();
+        }
+
+        function generateData() {
+            const raw = DataGen[state.dataset](200, state.noise);
+            // Shuffle so both classes appear in train set
+            for (let i = raw.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [raw[i], raw[j]] = [raw[j], raw[i]];
+            }
+            state.trainData = raw.slice(0, 140);
+            state.testData = raw.slice(140);
+        }
+
+        function renderUI() {
+            const featContainer = document.getElementById('featureList');
+            if (!featContainer) return;
+
+            featContainer.innerHTML = '';
+            Object.keys(FEATURE_MAP).forEach(key => {
+                const isActive = state.features.includes(key);
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-4 group';
+                div.innerHTML = `
+            <div id="feat-${key}" class="node-box border-slate-300 rounded shadow-sm ${isActive ? 'ring-2 ring-blue-500 opacity-100' : 'opacity-30'}">
+                <canvas id="canvas-${key}" class="node-canvas" width="34" height="34"></canvas>
+            </div>
+            <span class="text-xs cursor-pointer select-none ${isActive ? 'text-slate-800 font-bold' : 'text-slate-400'}">${FEATURE_LABELS[key]}</span>
+        `;
+                div.querySelector('span').onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFeature(key);
+                };
+                featContainer.appendChild(div);
+                drawNodePreview(`canvas-${key}`, (x, y) => FEATURE_MAP[key](x, y));
+            });
+
+            const layerContainer = document.getElementById('layerContainer');
+            layerContainer.innerHTML = '';
+            
+            // Render Hidden Layers + Output Layer
+            const layersToRender = state.shape.slice(1);
+
+            layersToRender.forEach((neuronCount, lIdx) => {
+                const absoluteLIdx = lIdx + 1;
+                const isOutput = absoluteLIdx === layersToRender.length;
+                
+                const layerDiv = document.createElement('div');
+                layerDiv.className = 'flex flex-col items-center gap-6 flex-1';
+                
+                let controls = '';
+                if (!isOutput) {
+                    controls = `
+                        <div class="flex items-center gap-1 mb-2">
+                            <button onclick="changeNeuron(${absoluteLIdx}, -1)" class="w-6 h-6 border flex items-center justify-center rounded bg-white hover:bg-slate-50 text-[10px] shadow-sm">-</button>
+                            <button onclick="changeNeuron(${absoluteLIdx}, 1)" class="w-6 h-6 border flex items-center justify-center rounded bg-white hover:bg-slate-50 text-[10px] shadow-sm">+</button>
+                        </div>
+                    `;
+                }
+
+                layerDiv.innerHTML = `
+                    ${controls}
+                    <div class="text-[10px] uppercase font-bold text-slate-400 mb-2">${isOutput ? 'Output' : neuronCount + ' neurons'}</div>
+                    <div class="flex flex-col gap-5 justify-center flex-1">
+                        ${Array.from({ length: neuronCount }, (_, nIdx) => `
+                            <div class="node-box border-slate-300 rounded shadow-sm" id="node-l${absoluteLIdx}-n${nIdx}">
+                                <canvas id="canvas-l${absoluteLIdx}-n${nIdx}" class="node-canvas" width="34" height="34"></canvas>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                layerContainer.appendChild(layerDiv);
+            });
+
+            document.getElementById('layerCount').innerText = state.shape.length - 2;
+
+            requestAnimationFrame(() => {
+                drawMainOutput();
+                drawNetwork();
+                syncNodeFocusClass();
+                syncInspectPanels();
+            });
+        }
+
+        function drawNodePreview(canvasId, fn) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            if (w <= 0 || h <= 0) return;
+
+            const imgData = ctx.createImageData(w, h);
+            for (let j = 0; j < h; j++) {
+                for (let i = 0; i < w; i++) {
+                    const nx = (i / w) * 12 - 6;
+                    const ny = (j / h) * 12 - 6;
+                    const val = fn(nx, ny);
+                    const idx = (j * w + i) * 4;
+
+                    const r = val > 0 ? 8 : 245;
+                    const g = val > 0 ? 119 : 124;
+                    const b = val > 0 ? 189 : 0;
+                    const alpha = Math.min(255, Math.abs(val) * 255);
+
+                    imgData.data[idx] = r;
+                    imgData.data[idx + 1] = g;
+                    imgData.data[idx + 2] = b;
+                    imgData.data[idx + 3] = alpha;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function featureGridTensor(gridW, gridH) {
+            const f = state.features.length;
+            const rows = gridW * gridH;
+            const buf = new Float32Array(rows * f);
+            let o = 0;
+            for (let j = 0; j < gridH; j++) {
+                for (let i = 0; i < gridW; i++) {
+                    const nx = (i / gridW) * 12 - 6;
+                    const ny = (j / gridH) * 12 - 6;
+                    for (let k = 0; k < f; k++) {
+                        buf[o++] = FEATURE_MAP[state.features[k]](nx, ny);
+                    }
+                }
+            }
+            return tf.tensor2d(buf, [rows, f]);
+        }
+
+        function drawPreviewFromChannel(canvasId, actData, units, unitIndex, gridW, gridH) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            if (w <= 0 || h <= 0) return;
+            const imgData = ctx.createImageData(w, h);
+            for (let j = 0; j < h; j++) {
+                for (let i = 0; i < w; i++) {
+                    const gi = Math.min(gridW - 1, Math.floor((i / w) * gridW));
+                    const gj = Math.min(gridH - 1, Math.floor((j / h) * gridH));
+                    const val = actData[(gj * gridW + gi) * units + unitIndex];
+                    const idx = (j * w + i) * 4;
+                    imgData.data[idx] = val > 0 ? 8 : 245;
+                    imgData.data[idx + 1] = val > 0 ? 119 : 124;
+                    imgData.data[idx + 2] = val > 0 ? 189 : 0;
+                    imgData.data[idx + 3] = Math.min(255, Math.abs(val) * 255);
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function drawMainOutput() {
+            const canvas = document.getElementById('mainOutputCanvas');
+            if (!canvas || !state.model) return;
+            const ctx = canvas.getContext('2d');
+            const discretize = document.getElementById('discretizeOutput').checked;
+
+            const w = canvas.width = canvas.clientWidth;
+            const h = canvas.height = canvas.clientHeight;
+            if (w <= 0 || h <= 0) return;
+
+            const imgData = ctx.createImageData(w, h);
+            const res = 4;
+            const rows = [];
+            for (let i = 0; i < w; i += res) {
+                for (let j = 0; j < h; j += res) {
+                    const nx = (i / w) * 12 - 6;
+                    const ny = (j / h) * 12 - 6;
+                    rows.push(state.features.map(f => FEATURE_MAP[f](nx, ny)));
+                }
+            }
+
+            const neu = state.focusNeuron;
+            let preds;
+            if (neu?.type === 'feature') {
+                preds = new Float32Array(rows.length);
+                let qi = 0;
+                for (let i = 0; i < w; i += res) {
+                    for (let j = 0; j < h; j += res) {
+                        const nx = (i / w) * 12 - 6;
+                        const ny = (j / h) * 12 - 6;
+                        preds[qi++] = FEATURE_MAP[neu.featKey](nx, ny);
+                    }
+                }
+            } else {
+                const xs = tf.tensor2d(rows);
+                let predTensor = null;
+                if (neu?.type === 'unit') {
+                    const dL = neu.denseLayer;
+                    predTensor = tf.tidy(() => {
+                        let x = xs;
+                        for (let li = 0; li <= dL; li++) {
+                            x = state.model.layers[li].apply(x);
+                        }
+                        return x.clone();
+                    });
+                    const out = predTensor.dataSync();
+                    const units = state.model.layers[dL].units;
+                    preds = new Float32Array(rows.length);
+                    for (let r = 0; r < rows.length; r++) {
+                        preds[r] = out[r * units + neu.unitIndex];
+                    }
+                } else {
+                    predTensor = tf.tidy(() => {
+                        let x = xs;
+                        for (const lyr of state.model.layers) {
+                            x = lyr.apply(x);
+                        }
+                        return x.clone();
+                    });
+                    preds = predTensor.dataSync();
+                }
+                if (predTensor) predTensor.dispose();
+                xs.dispose();
+            }
+
+            let q = 0;
+            for (let i = 0; i < w; i += res) {
+                for (let j = 0; j < h; j += res) {
+                    let val = preds[q++];
+                    if (discretize) val = val > 0 ? 1 : -1;
+                    const r = val > 0 ? 8 : 245;
+                    const g = val > 0 ? 119 : 124;
+                    const b = val > 0 ? 189 : 0;
+                    const alpha = Math.min(180, Math.abs(val) * 180);
+                    for (let dx = 0; dx < res && i + dx < w; dx++) {
+                        for (let dy = 0; dy < res && j + dy < h; dy++) {
+                            const idx = ((j + dy) * w + (i + dx)) * 4;
+                            imgData.data[idx] = r;
+                            imgData.data[idx + 1] = g;
+                            imgData.data[idx + 2] = b;
+                            imgData.data[idx + 3] = alpha;
+                        }
+                    }
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+
+            const dCanvas = document.getElementById('mainDataCanvas');
+            dCanvas.width = w; dCanvas.height = h;
+            const dCtx = dCanvas.getContext('2d');
+            const showTest = document.getElementById('showTestData').checked;
+            const renderSet = showTest ? [...state.trainData, ...state.testData] : state.trainData;
+
+            renderSet.forEach(p => {
+                const cx = (p.x + 6) * w / 12;
+                const cy = (p.y + 6) * h / 12;
+                dCtx.beginPath();
+                dCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+                dCtx.fillStyle = p.label > 0 ? '#0877bd' : '#f57c00';
+                dCtx.strokeStyle = 'white';
+                dCtx.lineWidth = 2;
+                dCtx.fill();
+                dCtx.stroke();
+            });
+
+            const pw = 34, ph = 34;
+            const gridT = featureGridTensor(pw, ph);
+            state.model.layers.forEach((_, lIdx) => {
+                const actT = tf.tidy(() => {
+                    let x = gridT;
+                    for (let i = 0; i <= lIdx; i++) {
+                        x = state.model.layers[i].apply(x);
+                    }
+                    return x.clone();
+                });
+                const units = state.model.layers[lIdx].units;
+                const raw = actT.dataSync();
+                actT.dispose();
+                for (let nIdx = 0; nIdx < units; nIdx++) {
+                    drawPreviewFromChannel(`canvas-l${lIdx + 1}-n${nIdx}`, raw, units, nIdx, pw, ph);
+                }
+            });
+            gridT.dispose();
+        }
+
+        function drawNetwork() {
+            const svg = document.getElementById('networkSvg');
+            if (!svg || !state.model) return;
+            svg.innerHTML = '';
+            const svgRect = svg.getBoundingClientRect();
+
+            state.model.layers.forEach((layer, denseIdx) => {
+                const W = layer.getWeights()[0];
+                const [inD, outD] = W.shape;
+                const wdat = W.dataSync();
+                /* getWeights()[0] is the live LayersVariable — do NOT dispose */
+                const l = denseIdx + 1;
+                for (let nIdx = 0; nIdx < outD; nIdx++) {
+                    const destId = `node-l${l}-n${nIdx}`;
+                    const destEl = document.getElementById(destId);
+                    if (!destEl) continue;
+                    const destRect = destEl.getBoundingClientRect();
+                    for (let sIdx = 0; sIdx < inD; sIdx++) {
+                        const linkWeight = wdat[sIdx * outD + nIdx];
+                        const srcId = l === 1 ? `feat-${state.features[sIdx]}` : `node-l${l - 1}-n${sIdx}`;
+                        const srcEl = document.getElementById(srcId);
+                        if (!srcEl) continue;
+                        const srcRect = srcEl.getBoundingClientRect();
+                        const x1 = srcRect.right - svgRect.left;
+                        const y1 = srcRect.top + srcRect.height / 2 - svgRect.top;
+                        const x2 = destRect.left - svgRect.left;
+                        const y2 = destRect.top + destRect.height / 2 - svgRect.top;
+                        const pathD = `M ${x1} ${y1} C ${x1 + (x2 - x1) / 2} ${y1}, ${x1 + (x2 - x1) / 2} ${y2}, ${x2} ${y2}`;
+                        const mode = classifyEdgeStroke(denseIdx, sIdx, nIdx);
+                        const baseW = Math.min(8, Math.abs(linkWeight) * 4);
+                        let opacity = 0.75;
+                        let strokeW = Math.max(baseW, 0.6);
+                        let strokeRgb = linkWeight > 0 ? [8, 119, 189] : [245, 124, 0];
+                        if (mode === 'dim') {
+                            opacity = 0.08;
+                            strokeW = Math.max(baseW * 0.55, 0.35);
+                        } else if (mode === 'incident') {
+                            opacity = 0.95;
+                            strokeW = Math.max(baseW * 1.3, 2.2);
+                            strokeRgb = linkWeight > 0 ? [5, 80, 130] : [180, 80, 0];
+                        }
+                        if (mode === 'selected') {
+                            opacity = 1;
+                            strokeW = Math.max(baseW + 4, 6);
+                            strokeRgb = [92, 15, 95];
+                        }
+
+                        const visPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        visPath.setAttribute('d', pathD);
+                        visPath.setAttribute('stroke', `rgba(${strokeRgb[0]},${strokeRgb[1]},${strokeRgb[2]},${opacity})`);
+                        visPath.setAttribute('stroke-width', String(strokeW));
+                        visPath.setAttribute('fill', 'none');
+                        visPath.classList.add('weight-path');
+                        visPath.style.pointerEvents = 'none';
+                        svg.appendChild(visPath);
+
+                        const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        hitPath.setAttribute('d', pathD);
+                        hitPath.setAttribute('stroke', 'transparent');
+                        hitPath.setAttribute('stroke-width', '18');
+                        hitPath.setAttribute('fill', 'none');
+                        hitPath.classList.add('edge-hit');
+                        hitPath.dataset.denseIdx = String(denseIdx);
+                        hitPath.dataset.sIdx = String(sIdx);
+                        hitPath.dataset.nIdx = String(nIdx);
+                        hitPath.dataset.weight = String(linkWeight);
+                        hitPath.style.pointerEvents = 'stroke';
+                        svg.appendChild(hitPath);
+                    }
+                }
+            });
+        }
+
+        let training = false;
+
+        async function loop() {
+            if (state.isPlaying && state.model && state.trainData.length && !training) {
+                training = true;
+                try {
+                    await trainStep();
+                } finally {
+                    training = false;
+                }
+            }
+            requestAnimationFrame(loop);
+        }
+
+        async function trainStep() {
+            if (!state.model || !state.trainData.length) return;
+            const n = state.trainData.length;
+            const tx = [];
+            const ty = [];
+            for (let i = 0; i < state.batchSize; i++) {
+                const p = state.trainData[Math.floor(Math.random() * n)];
+                tx.push(state.features.map(f => FEATURE_MAP[f](p.x, p.y)));
+                ty.push([p.label]);
+            }
+            const xs = tf.tensor2d(tx);
+            const ys = tf.tensor2d(ty);
+            const h = await state.model.fit(xs, ys, {
+                epochs: 1,
+                batchSize: state.batchSize,
+                shuffle: false,
+                verbose: 0
+            });
+            xs.dispose();
+            ys.dispose();
+            state.epoch++;
+            state.totalTrainLoss = h.history.loss[0];
+            updateStatus(state.totalTrainLoss);
+            if (state.epoch % 2 === 0) {
+                drawMainOutput();
+                drawNetwork();
+            }
+        }
+
+        function updateStatus(trainL) {
+            document.getElementById('epochDisplay').innerText = state.epoch.toString().padStart(6, '0').replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            const lossStr = trainL < 0.0005 ? trainL.toExponential(2) : trainL.toFixed(3);
+            document.getElementById('trainLoss').innerText = lossStr;
+
+            if (state.epoch % 5 === 0 && state.model && state.testData.length) {
+                tf.tidy(() => {
+                    const xt = tf.tensor2d(state.testData.map(p => state.features.map(f => FEATURE_MAP[f](p.x, p.y))));
+                    const yt = tf.tensor2d(state.testData.map(p => [p.label]));
+                    const pred = state.model.predict(xt);
+                    const tLoss = tf.mul(0.5, tf.mean(tf.square(tf.sub(pred, yt)))).dataSync()[0];
+                    const tStr = tLoss < 0.0005 ? tLoss.toExponential(2) : tLoss.toFixed(3);
+                    document.getElementById('testLoss').innerText = tStr;
+                });
+            }
+        }
+
+        document.getElementById('playBtn').onclick = () => {
+            state.isPlaying = !state.isPlaying;
+            const icon = document.getElementById('playIcon');
+            icon.setAttribute('data-lucide', state.isPlaying ? 'pause' : 'play');
+            refreshIcons();
+        };
+
+        document.getElementById('stepBtn').onclick = () => {
+            trainStep().then(() => { drawMainOutput(); drawNetwork(); });
+        };
+        document.getElementById('resetBtn').onclick = resetNetwork;
+        document.getElementById('regenBtn').onclick = () => { generateData(); resetNetwork(); drawMainOutput(); };
+        document.getElementById('lrSelect').onchange = (e) => {
+            state.lr = parseFloat(e.target.value);
+            recompileOptimizer();
+        };
+        document.getElementById('regSelect').onchange = (e) => {
+            state.reg = e.target.value;
+            resetNetwork();
+            renderUI();
+        };
+        document.getElementById('activationSelect').onchange = (e) => {
+            state.activation = e.target.value;
+            resetNetwork();
+            renderUI();
+        };
+        document.getElementById('noiseSlider').oninput = (e) => { state.noise = parseInt(e.target.value); document.getElementById('noiseLabel').innerText = e.target.value; generateData(); drawMainOutput(); };
+        document.getElementById('batchSlider').oninput = (e) => { state.batchSize = parseInt(e.target.value); document.getElementById('batchLabel').innerText = e.target.value; };
+
+        document.querySelectorAll('.dataset-thumbnail').forEach(el => {
+            el.onclick = () => {
+                document.querySelector('.dataset-thumbnail.active').classList.remove('active');
+                el.classList.add('active');
+                state.dataset = el.dataset.set;
+                generateData();
+                resetNetwork();
+                drawMainOutput();
+            };
+        });
+
+        window.toggleFeature = (key) => {
+            if (state.features.includes(key)) {
+                if (state.features.length > 1) state.features = state.features.filter(f => f !== key);
+            } else state.features.push(key);
+            resetNetwork();
+            renderUI();
+        };
+
+        window.changeNeuron = (lIdx, delta) => {
+            state.shape[lIdx] = Math.max(1, Math.min(8, state.shape[lIdx] + delta));
+            resetNetwork();
+            renderUI();
+        };
+
+        document.getElementById('addLayer').onclick = () => {
+            if (state.shape.length < 7) { state.shape.splice(state.shape.length - 1, 0, 2); resetNetwork(); renderUI(); }
+        };
+        document.getElementById('removeLayer').onclick = () => {
+            if (state.shape.length > 3) { state.shape.splice(state.shape.length - 2, 1); resetNetwork(); renderUI(); }
+        };
+
+        function refreshIcons() {
+            const L = typeof lucide !== 'undefined' ? lucide : window.lucide;
+            if (L && typeof L.createIcons === 'function') L.createIcons({ attrs: { 'stroke-width': 2 } });
+        }
+        window.onload = init;
+        window.onresize = () => { renderUI(); drawNetwork(); drawMainOutput(); };
+
+        document.getElementById('featureList').addEventListener('click', (e) => {
+            const box = e.target.closest('.node-box');
+            if (!box || !box.id.startsWith('feat-')) return;
+            e.stopPropagation();
+            const key = box.id.slice(5);
+            if (state.focusNeuron?.type === 'feature' && state.focusNeuron.featKey === key) {
+                state.focusNeuron = null;
+            } else {
+                state.focusNeuron = { type: 'feature', featKey: key };
+            }
+            state.focusEdge = null;
+            syncInspectPanels();
+            syncNodeFocusClass();
+            drawNetwork();
+            drawMainOutput();
+        });
+        document.getElementById('layerContainer').addEventListener('click', (e) => {
+            const box = e.target.closest('.node-box');
+            if (!box || !box.id.startsWith('node-l')) return;
+            e.stopPropagation();
+            const m = box.id.match(/^node-l(\d+)-n(\d+)$/);
+            if (!m) return;
+            const uiL = parseInt(m[1], 10);
+            const uiN = parseInt(m[2], 10);
+            const denseLayer = uiL - 1;
+            if (state.focusNeuron?.type === 'unit' &&
+                state.focusNeuron.denseLayer === denseLayer &&
+                state.focusNeuron.unitIndex === uiN) {
+                state.focusNeuron = null;
+            } else {
+                state.focusNeuron = { type: 'unit', denseLayer, unitIndex: uiN };
+            }
+            state.focusEdge = null;
+            syncInspectPanels();
+            syncNodeFocusClass();
+            drawNetwork();
+            drawMainOutput();
+        });
+        document.getElementById('networkSvg').addEventListener('click', (e) => {
+            const hit = e.target.closest('.edge-hit');
+            if (!hit) return;
+            e.stopPropagation();
+            const denseIdx = parseInt(hit.dataset.denseIdx, 10);
+            const sIdx = parseInt(hit.dataset.sIdx, 10);
+            const nIdx = parseInt(hit.dataset.nIdx, 10);
+            if (![denseIdx, sIdx, nIdx].every(Number.isFinite)) return;
+            if (state.focusEdge &&
+                state.focusEdge.denseIdx === denseIdx &&
+                state.focusEdge.sIdx === sIdx &&
+                state.focusEdge.nIdx === nIdx) {
+                state.focusEdge = null;
+            } else {
+                state.focusEdge = { denseIdx, sIdx, nIdx };
+            }
+            state.focusNeuron = null;
+            syncNodeFocusClass();
+            syncInspectPanels();
+            drawNetwork();
+            drawMainOutput();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') clearInspectFocus();
+        });
+    </script>
+</body>
+</html>
