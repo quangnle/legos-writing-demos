@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JEPA Pattern Lab — lưới hoán vị 3×3</title>
+    <title>JEPA Pattern Lab — 3×3 permutation grid</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         canvas {
@@ -33,7 +33,7 @@
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        #world-canvas {
+        #generated-canvas {
             cursor: pointer;
         }
     </style>
@@ -43,10 +43,10 @@
 
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-green-400 mb-2">JEPA Pattern Laboratory — lưới hoán vị</h1>
-            <p class="text-gray-400 text-sm max-w-2xl mx-auto">Mô phỏng <strong>tinh thần I-JEPA</strong> trong vài phút: mỗi hàng
-                là một hoán vị đầy đủ của 3 pattern; huấn luyện bằng cách che <strong>một ô</strong>, dự đoán không gian ẩn của ô bị che từ
-                các ô còn lại + vị trí (teacher là encoder EMA). Đây không phải scale ảnh thật của paper.</p>
+            <h1 class="text-3xl font-bold text-green-400 mb-2">JEPA Pattern Laboratory</h1>
+            <p class="text-gray-400 text-sm max-w-2xl mx-auto">Browser toy for the <strong>I-JEPA idea</strong> in minutes: each row is a permutation of three user-drawn
+                patches; mask <strong>one cell</strong>, then predict its representation from visible cells plus position cues (teacher = EMA of the encoder).
+                Not full-scale CV training.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -54,41 +54,43 @@
             <!-- 1. Three pattern editors -->
             <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
                 <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
-                    <span class="bg-green-600 text-xs px-2 py-1 rounded">1</span> Ba pattern (mỗi cái 4×4)
+                    <span class="bg-green-600 text-xs px-2 py-1 rounded">1</span> Pattern editors (4×4 each)
                 </h2>
-                <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Vẽ ba hình khác nhau một chút để học dễ hơn.
-                </p>
+                <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Draw three slightly different motifs so masked prediction has something to latch onto.</p>
                 <div id="pattern-editors" class="flex flex-col gap-4 mb-4">
                     <!-- JS: three 4×4 grids -->
                 </div>
+                <button id="generate-btn"
+                    class="w-full mb-3 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded font-bold transition shadow-lg">OK —
+                    Generate 3×3 grid</button>
                 <button id="reset-btn"
-                    class="w-full bg-red-900/50 hover:bg-red-600 border border-red-500 text-red-100 py-2 rounded font-bold transition">Reset
-                    cả ba pattern</button>
+                    class="w-full bg-red-900/50 hover:bg-red-600 border border-red-500 text-red-100 py-2 rounded font-bold transition">Clear
+                    all patterns</button>
             </div>
 
-            <!-- 2. World 3×3 + train -->
+            <!-- 2. Generated grid + train -->
             <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
                 <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
-                    <span class="bg-blue-600 text-xs px-2 py-1 rounded">2</span> Ma trận thế giới 3×3
+                    <span class="bg-blue-600 text-xs px-2 py-1 rounded">2</span> Generated pattern grid
                 </h2>
-                <p class="text-[10px] text-gray-500 mb-3 leading-relaxed">Mỗi hàng chứa đủ 1, 2, 3 theo một thứ tự ngẫu nhiên. Ô được
-                    che khi học được viền đỏ trong lúc xem snapshot.</p>
-                <canvas id="world-canvas" width="180" height="180"
+                <p class="text-[10px] text-gray-500 mb-3 leading-relaxed">Each row places patterns 1, 2, 3 exactly once (random permutation per row).
+                    After OK, click a cell to mark the slot you want to inspect (“?”). Training samples a <strong>random</strong> masked cell each step on this grid (plus mask coordinates in the predictor).</p>
+                <canvas id="generated-canvas" width="180" height="180"
                     class="mx-auto mb-4 bg-black rounded shadow-inner"></canvas>
                 <div class="space-y-4">
                     <div class="bg-gray-900 p-4 rounded-lg border border-gray-700">
-                        <label class="text-xs uppercase text-gray-500 font-bold block mb-2">Số bước huấn luyện
+                        <label class="text-xs uppercase text-gray-500 font-bold block mb-2">Training steps
                             (×1000)</label>
                         <div class="flex gap-2">
                             <input type="number" id="train-iters" value="5" min="1" max="50"
                                 class="w-20 bg-black border border-gray-600 rounded px-3 py-2 text-green-400 font-mono">
-                            <button id="train-btn"
-                                class="flex-1 bg-green-600 hover:bg-green-500 py-2 rounded font-bold transition shadow-lg">BẮT
-                                ĐẦU HỌC</button>
+                            <button id="train-btn" disabled title="Generate a grid, pick a mask, then train"
+                                class="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-600 py-2 rounded font-bold transition shadow-lg">Start
+                                training</button>
                         </div>
                         <div id="progress-container" class="mt-4 hidden">
                             <div class="flex justify-between text-[10px] mb-1">
-                                <span>Tiến độ:</span>
+                                <span>Progress:</span>
                                 <span id="progress-text">0%</span>
                             </div>
                             <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
@@ -97,18 +99,17 @@
                         </div>
                     </div>
                     <div class="flex justify-between items-center bg-gray-900 p-3 rounded">
-                        <span>Trạng thái:</span>
-                        <span id="status" class="text-yellow-400 font-mono text-sm">Sẵn sàng</span>
+                        <span>Status:</span>
+                        <span id="status" class="text-yellow-400 font-mono text-sm">Ready</span>
                     </div>
-                    <p class="text-[9px] text-gray-600 italic">Sau học xong có thể bấm một ô để xem máy ghép ô đó là “mask”.
-                    </p>
+                    <p id="generated-hint" class="text-[9px] text-gray-600 italic">Tap OK in panel 1 to build this grid.</p>
                 </div>
             </div>
 
             <!-- 3. Latent + prediction canvases -->
             <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
                 <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2 flex items-center gap-2">
-                    <span class="bg-purple-600 text-xs px-2 py-1 rounded">3</span> Không gian ẩn &amp; ô bị che
+                    <span class="bg-purple-600 text-xs px-2 py-1 rounded">3</span> Latent space &amp; masked cell
                 </h2>
                 <div class="relative">
                     <div class="h-40 w-full bg-black rounded-lg mb-2 relative overflow-hidden border border-gray-700"
@@ -117,9 +118,8 @@
                         <div id="latent-container" class="absolute inset-0 flex items-center justify-center"></div>
                     </div>
                     <p class="text-[10px] text-gray-400 mb-4 leading-relaxed">
-                        <span class="text-purple-400 font-bold">● Giải nghĩa:</span> các chấm là chiều của latent context (trung bình 8 ô
-                        nhìn thấy, chuẩn hóa L2 sau encoder).
-                        Hàng dưới: tái tạo pixel của ô mask từ latent dự đoán (decoder phụ — tiện nhìn, không phải lõi paper).
+                        <span class="text-purple-400 font-bold">● Readout:</span> dots visualize context latents (mean over 8 visible cells, L2 after encoder).
+                        Below: auxiliary decoder sketches the masked patch from predicted latent — for eyes only; core loss is latent MSE vs EMA teacher. The predictor receives normalized row/col for the masked cell so changing the masked slot inference updates the decoded patch.
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mb-4 text-xs font-mono">
@@ -130,25 +130,23 @@
                 </div>
                 <div class="pt-4 border-t border-gray-700">
                     <div class="flex justify-between items-center mb-2">
-                        <p class="text-[10px] uppercase text-gray-500 font-bold">Snapshot ô mask</p>
+                        <p class="text-[10px] uppercase text-gray-500 font-bold">Masked cell decode</p>
                         <span id="scout-status"
-                            class="text-[9px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30 hidden">Sẵn
-                            sàng</span>
+                            class="text-[9px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30 hidden">Ready</span>
                     </div>
                     <div class="flex flex-wrap items-start justify-center gap-4">
                         <div class="flex flex-col items-center gap-1">
-                            <span class="text-[9px] text-gray-500 uppercase">dự đoán</span>
+                            <span class="text-[9px] text-gray-500 uppercase">predicted</span>
                             <canvas id="pred-canvas" width="64" height="64"
                                 class="bg-black border border-green-500/30 rounded shadow-lg shadow-green-500/10"></canvas>
                         </div>
                         <div class="flex flex-col items-center gap-1">
-                            <span class="text-[9px] text-gray-500 uppercase">gốc ô mask</span>
+                            <span class="text-[9px] text-gray-500 uppercase">ground truth</span>
                             <canvas id="truth-canvas" width="64" height="64"
                                 class="bg-black border border-white/10 rounded shadow-inner"></canvas>
                         </div>
                     </div>
-                    <p id="scout-hint" class="text-[9px] text-gray-500 italic text-center mt-3">Huấn luyện xong để xem ô mask cuối cùng; bấm
-                        ô trên lưới để đổi mask xem inference.</p>
+                    <p id="scout-hint" class="text-[9px] text-gray-500 italic text-center mt-3">After OK: pick mask on the grid, train, then compare below. Tap another cell to re-run inference with a different mask.</p>
                 </div>
             </div>
         </div>
@@ -228,9 +226,15 @@
         const PATCH_LEN = PATTERN_SIZE * PATTERN_SIZE;
         const LATENT_DIM = 8;
         const CONTEXT_SLOTS = GRID * GRID - 1;
-        const PREDICTOR_IN = CONTEXT_SLOTS * (LATENT_DIM + 2);
+        /** Normalized mask cell row/col (same scale as visible cell coords) — tells predictor which slot to fill */
+        const MASK_COORD_DIM = 2;
+        const PREDICTOR_IN = CONTEXT_SLOTS * (LATENT_DIM + 2) + MASK_COORD_DIM;
 
-        /** Mọi hoán vị của [0,1,2] (hàng của ma trận nhãn) */
+        function maskCoordsNormalized(maskIdx) {
+            return [Math.floor(maskIdx / GRID) / 2, (maskIdx % GRID) / 2];
+        }
+
+        /** All permutations of [0,1,2] (each row of label grid) */
         const ROW_PERMUTATIONS = [
             [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
         ];
@@ -241,7 +245,7 @@
             Array(PATCH_LEN).fill(0)
         ];
 
-        /** Snapshot sau train / khi đổi mask bằng click */
+        /** Current generated grid + chosen mask (updated by OK / cell click) */
         let viewSnapshot = null;
 
         let isTraining = false;
@@ -253,7 +257,7 @@
             return labelGrid3[r][c];
         }
 
-        /** patch vector [-1,1] từ pattern id (0..2) và state patterns */
+        /** Patch vector [-1,1] from template id (0..2) and global patterns[][] */
         function patchForCell(labelGrid3, cellIdx) {
             const pid = patternIndexAtCell(labelGrid3, cellIdx);
             const p = [];
@@ -334,6 +338,7 @@
                     const col = idx % GRID;
                     predInput = predInput.concat(zn, row / 2, col / 2);
                 }
+                predInput = predInput.concat(maskCoordsNormalized(maskIdx));
 
                 const sy_hat = this.predictor.forward(predInput);
 
@@ -363,6 +368,7 @@
                 for (let slot = CONTEXT_SLOTS - 1; slot >= 0; slot--) {
                     const offset = slot * (LATENT_DIM + 2);
                     const d_zn = d_predIn.slice(offset, offset + LATENT_DIM);
+                    // Last MASK_COORD_DIM entries of d_predIn are w.r.t. constants; no encoder path
                     const zRaw = zRawList[slot];
                     const d_z_raw = l2NormalizeGrad(zRaw, d_zn);
                     this.online.forward(patchesVis[slot]);
@@ -393,11 +399,12 @@
                     const col = idx % GRID;
                     predInput = predInput.concat(zn, row / 2, col / 2);
                 }
+                predInput = predInput.concat(maskCoordsNormalized(maskIdx));
                 return this.decoder.forward(this.predictor.forward(predInput));
             }
         }
 
-        /** ninePatches có thể là mảng 9 patch (đã build) hoặc lấy từ label snapshot */
+        /** ninePatches is an array of 9 built patches (from label grid cells) */
         function decodePixelsFromLatentDecoded(decoded) {
             return decoded.map(v => (v > 0 ? 1 : 0));
         }
@@ -417,15 +424,15 @@
             }
         }
 
-        const worldCanvas = document.getElementById('world-canvas');
-        const ctx = worldCanvas.getContext('2d');
+        const generatedCanvas = document.getElementById('generated-canvas');
+        const ctx = generatedCanvas.getContext('2d');
         const pCanvas = document.getElementById('pred-canvas');
         const pCtx = pCanvas.getContext('2d');
         const tCanvas = document.getElementById('truth-canvas');
         const tCtx = tCanvas.getContext('2d');
 
-        function drawWorld(snapshot) {
-            const W = worldCanvas.width;
+        function drawGeneratedGrid(snapshot) {
+            const W = generatedCanvas.width;
             const cellPx = W / GRID;
             const pixelScale = cellPx / PATTERN_SIZE;
 
@@ -435,7 +442,7 @@
             if (!snapshot) {
                 ctx.fillStyle = '#444';
                 ctx.font = '12px monospace';
-                ctx.fillText('Vẽ pattern + học để hiển thị', W * 0.15, W * 0.5);
+                ctx.fillText('Panel 1: OK → build grid → pick mask', W * 0.08, W * 0.5);
                 return;
             }
 
@@ -450,7 +457,7 @@
                 ctx.strokeStyle = '#333';
                 ctx.strokeRect(ox, oy, cellPx, cellPx);
 
-                if (maskIdx !== undefined && cell === maskIdx) {
+                if (typeof maskIdx === 'number' && cell === maskIdx) {
                     ctx.fillStyle = '#1a1a1a';
                     ctx.fillRect(ox, oy, cellPx, cellPx);
                     ctx.fillStyle = '#666';
@@ -511,8 +518,18 @@
             });
         }
 
+        function clearPredTruthCanvases() {
+            pCtx.fillStyle = '#000';
+            pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+            tCtx.fillStyle = '#000';
+            tCtx.fillRect(0, 0, tCanvas.width, tCanvas.height);
+        }
+
         function visualizeSnapshot(snap) {
-            if (!snap) return;
+            if (!snap || typeof snap.maskIdx !== 'number') {
+                clearPredTruthCanvases();
+                return;
+            }
             const ninePatches = buildNinePatches(snap.labelGrid3);
             const maskIdx = snap.maskIdx;
             const maskedPatchReal = [...ninePatches[maskIdx]];
@@ -521,22 +538,34 @@
             drawMiniPatch(tCtx, maskedPatchReal.map(v => v > 0 ? 1 : 0), tCanvas.width);
         }
 
-        function worldCanvasClick(e) {
+        function gridCanvasClick(e) {
             if (!viewSnapshot || !viewSnapshot.labelGrid3) return;
-            const rect = worldCanvas.getBoundingClientRect();
-            const scaleX = worldCanvas.width / rect.width;
-            const scaleY = worldCanvas.height / rect.height;
+            const rect = generatedCanvas.getBoundingClientRect();
+            const scaleX = generatedCanvas.width / rect.width;
+            const scaleY = generatedCanvas.height / rect.height;
             const mx = (e.clientX - rect.left) * scaleX;
             const my = (e.clientY - rect.top) * scaleY;
-            const cellPx = worldCanvas.width / GRID;
+            const cellPx = generatedCanvas.width / GRID;
             const cc = Math.min(GRID - 1, Math.max(0, Math.floor(mx / cellPx)));
             const cr = Math.min(GRID - 1, Math.max(0, Math.floor(my / cellPx)));
             viewSnapshot.maskIdx = cr * GRID + cc;
-            drawWorld(viewSnapshot);
+            drawGeneratedGrid(viewSnapshot);
             visualizeSnapshot(viewSnapshot);
+            document.getElementById('generated-hint').innerText =
+                'Probe cell set — Start training (each step masks a random cell on this grid).';
+            updateTrainButtonEnabled();
         }
 
-        worldCanvas.onclick = worldCanvasClick;
+        generatedCanvas.onclick = gridCanvasClick;
+
+        function updateTrainButtonEnabled() {
+            const btn = document.getElementById('train-btn');
+            const hasPuzzle =
+                !!viewSnapshot &&
+                viewSnapshot.labelGrid3 &&
+                typeof viewSnapshot.maskIdx === 'number';
+            btn.disabled = isTraining || !hasPuzzle;
+        }
 
         const editorsRoot = document.getElementById('pattern-editors');
         patterns.forEach((pat, pi) => {
@@ -553,8 +582,8 @@
                 cell.onclick = () => {
                     pat[i] = pat[i] === 0 ? 1 : 0;
                     cell.classList.toggle('active');
-                    drawWorld(viewSnapshot);
-                    if (viewSnapshot) visualizeSnapshot(viewSnapshot);
+                    drawGeneratedGrid(viewSnapshot);
+                    if (viewSnapshot && typeof viewSnapshot.maskIdx === 'number') visualizeSnapshot(viewSnapshot);
                 };
                 gridEl.appendChild(cell);
             }
@@ -574,29 +603,40 @@
         syncEditorCellsActive();
 
         async function trainLoop() {
+            if (
+                !viewSnapshot ||
+                !viewSnapshot.labelGrid3 ||
+                typeof viewSnapshot.maskIdx !== 'number'
+            ) {
+                document.getElementById('status').innerText =
+                    'Need generated grid + mask';
+                document.getElementById('status').className = 'text-red-400 font-mono text-sm';
+                updateTrainButtonEnabled();
+                return;
+            }
+
             const iterations = parseInt(document.getElementById('train-iters').value, 10) * 1000;
             const batchSize = 50;
             isTraining = true;
-            document.getElementById('status').innerText = 'Đang học…';
+            updateTrainButtonEnabled();
+            document.getElementById('status').innerText = 'Training...';
             document.getElementById('status').className = 'text-yellow-400 font-mono text-sm';
 
             document.getElementById('progress-container').classList.remove('hidden');
+            document.getElementById('progress-bar').style.width = '0%';
+            document.getElementById('progress-text').innerText = '0%';
             document.getElementById('scout-status').classList.add('hidden');
-            document.getElementById('scout-hint').innerText = 'Đang huấn luyện...';
+            document.getElementById('scout-hint').innerText = 'Training in progress...';
 
-            let lastSnap = null;
+            const lg = viewSnapshot.labelGrid3;
 
             for (let step = 0; step < iterations; step++) {
                 if (!isTraining) break;
 
-                const lg = randomLabelGrid();
                 const nine = buildNinePatches(lg);
-                const maskIdx = Math.floor(Math.random() * GRID * GRID);
-
-                const res = model.trainStep(nine, maskIdx);
+                const maskIdxTrain = Math.floor(Math.random() * GRID * GRID);
+                const res = model.trainStep(nine, maskIdxTrain);
                 trainSteps++;
-
-                lastSnap = { labelGrid3: lg, maskIdx };
 
                 if (step % batchSize === 0) {
                     const progress = (step / iterations) * 100;
@@ -610,23 +650,33 @@
             }
 
             isTraining = false;
-            viewSnapshot = lastSnap || viewSnapshot;
+            updateTrainButtonEnabled();
 
-            document.getElementById('status').innerText = 'Đã học xong!';
+            document.getElementById('status').innerText = 'Done';
             document.getElementById('status').className = 'text-green-400 font-mono text-sm';
             document.getElementById('progress-bar').style.width = `100%`;
             document.getElementById('progress-text').innerText = `100%`;
             document.getElementById('scout-status').classList.remove('hidden');
             document.getElementById('scout-hint').innerText =
-                'Xem ô mask (viền đỏ): dự đoán vs gốc. Bấm một ô khác để giả là mask và xem inference.';
+                'Training used random mask positions on this grid. Red border: your chosen probe cell. Compare decoded vs ground truth below; click another cell to re-run inference.';
 
             document.getElementById('step-count').innerText = trainSteps;
 
-            if (viewSnapshot) {
-                drawWorld(viewSnapshot);
-                visualizeSnapshot(viewSnapshot);
-            } else drawWorld(null);
+            drawGeneratedGrid(viewSnapshot);
+            visualizeSnapshot(viewSnapshot);
         }
+
+        document.getElementById('generate-btn').onclick = () => {
+            if (isTraining) return;
+            viewSnapshot = { labelGrid3: randomLabelGrid(), maskIdx: undefined };
+            drawGeneratedGrid(viewSnapshot);
+            clearPredTruthCanvases();
+            document.getElementById('generated-hint').innerText =
+                'Click a cell here to choose the masked slot (?). Then Start training.';
+            document.getElementById('scout-hint').innerText =
+                'Pick mask on grid, run training, decode appears below.';
+            updateTrainButtonEnabled();
+        };
 
         document.getElementById('train-btn').onclick = () => {
             if (isTraining) return;
@@ -638,17 +688,18 @@
             document.querySelectorAll('#pattern-editors .grid-cell').forEach(c => c.classList.remove('active'));
             viewSnapshot = null;
             trainSteps = 0;
-            document.getElementById('status').innerText = 'Sẵn sàng';
+            document.getElementById('status').innerText = 'Ready';
             document.getElementById('status').className = 'text-yellow-400 font-mono text-sm';
             document.getElementById('step-count').innerText = '0';
-            drawWorld(null);
-            pCtx.fillStyle = '#000';
-            pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
-            tCtx.fillStyle = '#000';
-            tCtx.fillRect(0, 0, tCanvas.width, tCanvas.height);
+            document.getElementById('generated-hint').innerText = 'Tap OK in panel 1 to build this grid.';
+            drawGeneratedGrid(null);
+            clearPredTruthCanvases();
+            document.getElementById('scout-status').classList.add('hidden');
+            updateTrainButtonEnabled();
         };
 
-        drawWorld(null);
+        drawGeneratedGrid(null);
+        updateTrainButtonEnabled();
     </script>
 </body>
 
