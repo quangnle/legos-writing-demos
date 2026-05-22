@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A3C Simulator (Neural Network Version)</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>A3C Simulator</h1>
+            <p>Neural Network Implementation — Goal (G): +10 (Terminal) | Trap (X): -5 (Non-terminal) | Step: -1</p>
+        </header>
+
+        <div class="card section-card global-section">
+            <div class="section-header">
+                <h2>GLOBAL NETWORK (Master)</h2>
+                <div class="btn-group">
+                    <button class="btn-secondary btn-sm" onclick="openNetworkModal()">View Network</button>
+                    <button id="btn-global-run" onclick="globalAgent.toggleRun()">Run Simulation</button>
+                    <button class="btn-danger btn-sm" onclick="resetAll()">Reset All</button>
+                </div>
+            </div>
+
+            <div class="section-body">
+                <div class="canvas-wrap">
+                    <canvas id="canvas-global" width="280" height="210"></canvas>
+                    <p class="canvas-hint">*Click on a cell to select it for network view</p>
+                </div>
+                <div class="console-section">
+                    <h3>Global Logs & Parameters</h3>
+                    <div id="console-global" class="console-log global">Waiting for updates...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="workers-grid">
+            <div class="card worker-card">
+                <div class="section-header">
+                    <h2 class="worker-1">WORKER 1</h2>
+                    <div class="btn-group">
+                        <label>n-step:</label>
+                        <input type="number" id="n-step-1" value="3" min="1" max="10" class="input-sm">
+                        <button class="btn-worker-1 btn-sm" onclick="workers[0].runOnce()">Run Once</button>
+                    </div>
+                </div>
+                <div class="worker-body">
+                    <canvas id="canvas-worker-0" width="280" height="210"></canvas>
+                    <div id="console-worker-0" class="console-log">Worker ready.</div>
+                </div>
+            </div>
+
+            <div class="card worker-card worker-2">
+                <div class="section-header">
+                    <h2 class="worker-2">WORKER 2</h2>
+                    <div class="btn-group">
+                        <label>n-step:</label>
+                        <input type="number" id="n-step-2" value="3" min="1" max="10" class="input-sm">
+                        <button class="btn-worker-2 btn-sm" onclick="workers[1].runOnce()">Run Once</button>
+                    </div>
+                </div>
+                <div class="worker-body">
+                    <canvas id="canvas-worker-1" width="280" height="210"></canvas>
+                    <div id="console-worker-1" class="console-log worker-2">Worker ready.</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            &copy; 2026 Actor-Critic Demo — Legos Writing Demos
+        </footer>
+    </div>
+
+    <div id="network-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2>Network Visualization (Global)</h2>
+                    <p>Selected State: <span id="modal-state-coords" class="highlight">None</span> | Click on Input
+                        Neurons (Left) to view weights.</p>
+                </div>
+                <button class="modal-close" onclick="closeNetworkModal()">&times;</button>
+            </div>
+
+            <div class="modal-viz">
+                <div class="viz-panel">
+                    <h3 class="actor-title">Actor Network (Policy)</h3>
+                    <canvas id="viz-actor" width="400" height="500" class="network-canvas"></canvas>
+                </div>
+                <div class="viz-panel">
+                    <h3 class="critic-title">Critic Network (Value)</h3>
+                    <canvas id="viz-critic" width="400" height="500" class="network-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

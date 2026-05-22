@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TF.js Actor-Critic</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Actor-Critic: Deep GridWorld</h1>
+            <p>Phiên bản TensorFlow.js (NaN Safe) — Actor-Critic với mạng neural tuyến tính.</p>
+        </header>
+
+        <div class="demo-layout">
+            <div class="card canvas-panel">
+                <canvas id="gridCanvas" width="400" height="300"></canvas>
+
+                <div class="stat-box" id="statusText">Trạng thái: Đang khởi tạo TensorFlow...</div>
+
+                <div class="controls">
+                    <button id="btnStep" onclick="game.step()">Đi 1 Bước (Step)</button>
+                    <button id="btnAuto" onclick="toggleAuto()">Chạy Tự Động</button>
+                    <button class="btn-success" onclick="game.resetEpisode()">Tập Mới (Giữ Não)</button>
+                    <button class="btn-danger" onclick="game.resetAll()">Reset Toàn Bộ (Xóa Weights)</button>
+                </div>
+                <div class="formula-display">
+                    <p><strong>Kiến trúc Mạng (Linear):</strong><br>
+                    Input: One-Hot Vector (Size 12)<br>
+                    Actor: Linear → Softmax (4 outputs) | Critic: Linear (1 output)<br>
+                    <strong>Chú thích:</strong> S: Start | G: Goal (+10) | X: Trap (-5) | -: Đường (-1)</p>
+                </div>
+            </div>
+
+            <div class="card log-panel">
+                <h3>Chi tiết tính toán (TensorFlow.js)</h3>
+                <textarea id="logArea" readonly></textarea>
+                <button class="btn-danger" onclick="document.getElementById('logArea').value = ''">Clear</button>
+            </div>
+        </div>
+
+        <footer>
+            &copy; 2026 Actor-Critic Demo — Legos Writing Demos
+        </footer>
+    </div>
+
+<script>
+/**
+ * CẤU HÌNH MAP & THAM SỐ
+ */
+const ROWS = 3;
+const COLS = 4;
+const CELL_SIZE = 100;
+const STATE_SIZE = ROWS * COLS; // 12 input neurons
+
+// S - - -
+// - - X -
+// - X - G
+const GRID_LAYOUT = [
+    ['S', '-', '-', '-'],
+    ['-', '-', 'X', '-'],
+    ['-', 'X', '-', 'G']
+];
+
+const GAMMA = 0.9;
+// Hạ thấp Learning Rate để tránh văng số (NaN)
+const LR_ACTOR = 0.01; 
+const LR_CRITIC = 0.02;
+
+const ACTIONS = [
+    { name: 'Lên', dr: -1, dc: 0 },
+    { name: 'Xuống', dr: 1, dc: 0 },
+    { name: 'Trái', dr: 0, dc: -1 },
+    { name: 'Phải', dr: 0, dc: 1 }
+];
+
+/**
+ * AGENT SỬ DỤNG TENSORFLOW.JS
+ */
+class ActorCriticAgentTF {
+    constructor() {
+        this.buildModels();
+    }
+
+    buildModels() {
+        // --- ACTOR ---
+        this.actor = tf.sequential();
+        this.actor.add(tf.layers.dense({
+            units: 4,
+            inputShape: [STATE_SIZE],
+            activation: 'softmax',
+            useBias: false,
+            kernelInitializer: 'zeros' 
+        }));
+        this.actorOpt = tf.train.adam(LR_ACTOR);
+
+        // --- CRITIC ---
+        this.critic = tf.sequential();
+        this.critic.add(tf.layers.dense({
+            units: 1,
+            inputShape: [STATE_SIZE],
+            activation: 'linear',
+            useBias: false,
+            kernelInitializer: 'zeros'
+        }));
+        this.criticOpt = tf.train.adam(LR_CRITIC);
+    }
+
+    toOneHot(r, c) {
+        return tf.tidy(() => {
+            const index = r * COLS + c;
+            return tf.oneHot(tf.tensor1d([index], 'int32'), STATE_SIZE);
+        });
+    }
+
+    getPolicy(r, c) {
+        return tf.tidy(() => {
+            const stateTensor = this.toOneHot(r, c);
+            const probsTensor = this.actor.predict(stateTensor);
+            const data = probsTensor.dataSync();
+            
+            // Safety Check: Nếu mạng trả về NaN, trả về Uniform distribution
+            if (data.some(Number.isNaN)) {
+                return new Float32Array([0.25, 0.25, 0.25, 0.25]);
+            }
+            return data;
+        });
+    }
+
+    getValue(r, c) {
+        return tf.tidy(() => {
+            const stateTensor = this.toOneHot(r, c);
+            const valueTensor = this.critic.predict(stateTensor);
+            const val = valueTensor.dataSync()[0];
+            return Number.isNaN(val) ? 0 : val;
+        });
+    }
+
+    chooseAction(probs) {
+        // Kiểm tra an toàn nếu probs bị lỗi
+		// thì trả về đại 1 con số từ 0 - 3, 
+		// nghĩa là giả định xs đều = nhau và bằng 0.25
+        if (probs.some(Number.isNaN)) {
+			// trả về 1 con số ngẫu nhiên 0-3, đại diện 1 trong 4 hướng đi
+            return Math.floor(Math.random() * 4);
+        }
+		
+        const rand = Math.random();
+        let cumulative = 0;
+        for (let i = 0; i < probs.length; i++) {
+            cumulative += probs[i];
+            if (rand < cumulative) return i;
+        }
+        return probs.length - 1;
+    }
+
+    async update(state, actionIdx, reward, nextState, done) {
+        const [r, c] = state;
+        const [nr, nc] = nextState;
+
+        const stateTensor = this.toOneHot(r, c);
+        const nextStateTensor = this.toOneHot(nr, nc);
+
+        let stats = {};
+
+        // 1. Tính toán TD Target & Error
+        const { tdTarget, tdError, currentV, nextV } = tf.tidy(() => {
+            const currentV_Tensor = this.critic.predict(stateTensor);
+            const nextV_Tensor = this.critic.predict(nextStateTensor);
+            
+			// V(s) - Giá trị trung bình của trạng thái s (State Value - Do Critic dự đoán).
+            const vVal = currentV_Tensor.dataSync()[0];
+			// Tính giá trị V(s')
+            const nextVVal = done ? 0 : nextV_Tensor.dataSync()[0];
+
+            // Nếu mạng đã bị NaN từ trước, trả về 0 để không làm hỏng thêm weights trong quá trình tính toán
+            if (Number.isNaN(vVal) || Number.isNaN(nextVVal)) {
+                 return { tdTarget: 0, tdError: 0, currentV: 0, nextV: 0, isNaN: true };
+            }
+
+			// Bước này ta đi tính Q(s,a) bằng cách ước lượng thông qua trải nghiệm vì tính Q(s,a) chính xác không được
+			// vì thế ta coi Q(s,a) = TD Target
+			// TD Target = Phần thưởng thực tế + Viễn cảnh tương lai (của sample hiện tại)
+			// TD Target = r + \gamma * V(s')						
+            const target = reward + GAMMA * nextVVal;
+			// error thực chất là hàm Advantage
+			// Advantage (Error) = Target - V(s)
+			// A(s,a) \approx. (r + \gamma V(s')) - V(s)
+			// hay tạm gán luôn là:
+			// A(s,a) = Q(s,a) - V(s)				
+			// Đây chính là delta_t trong slide
+            const error = target - vVal;
+
+            return { 
+                tdTarget: target, 
+                tdError: error, 
+                currentV: vVal, 
+                nextV: nextVVal,
+                isNaN: false
+            };
+        });
+
+        stats = { currentV, nextV, tdTarget, tdError };
+
+        // Nếu phát hiện NaN, dừng update ngay lập tức để bảo vệ Weights
+        if (stats.isNaN || Number.isNaN(tdError)) {
+            stateTensor.dispose();
+            nextStateTensor.dispose();
+            return { ...stats, aborted: true };
+        }
+
+        // Clip TD Error: Ngăn chặn gradient quá lớn (gradient explode) 
+        // Dù lỗi lớn thế nào, ta cũng chỉ cho phép nó ảnh hưởng tối đa trong khoảng [-2, 2]
+		// Nếu không clipping thế này thì có thể đôi khi mạng nó tính ra NaN
+        const clippedError = Math.max(-2, Math.min(2, tdError));
+
+        // 2. Train CRITIC
+        this.criticOpt.minimize(() => {
+            // B1: Critic đưa ra phán đoán hiện tại
+			const pred = this.critic.predict(stateTensor); 
+			
+			// B2: Chuẩn bị đáp án đúng, tdTarget đã tính ở bước bên trên
+			// [1, 1] ==> cái này tensorflow nó bắt buộc phải lấy đúng kích thước scalar (1x1)
+			const targetTensor = tf.tensor2d([[tdTarget]], [1, 1]); 
+			
+			// B3: Tính độ sai lệch Loss = (Đáp án - Phán đoán)^2
+			// nói chung là quan trọng nhất phần áp dụng công thức này
+			return tf.losses.meanSquaredError(targetTensor, pred);
+        });
+
+        // 3. Train ACTOR
+		// Để ý là, công thức định lý Poicy Gradient:
+		// \gradient J \approx \gradient \ln \pi (a|s). A(s,a)
+		// ở đây A(s,a) chính là tdError như đã đề cập ở trên
+		// Chúng ta muốn tensorflow giúp ta tính gradient hàm mục tiêu J nhằm maximize theo công thức
+		// \theta <- \theta + \alpha.\gradient J
+		// tuy nhiên tf chỉ có mỗi method minimize nên ta đổi \gradient J thành - \gradient Loss để đi ngược lại
+		// và từ đó ta có là Loss = -log \pi(a|s). A(s,a)
+        this.actorOpt.minimize(() => {
+			// B1: Actor chạy lại suy nghĩ (trong đầu) để thiết lập đường dây đạo hàm
+            const probs = this.actor.predict(stateTensor);
+            
+			// B2: Lấy index hành động MÌNH ĐÃ CHỌN (actionIdx)
+            const actionIdxTensor = tf.tensor1d([actionIdx], 'int32');
+			// lấy ra giá trị probability, nghĩa là \pi(a|s)
+            const actionProb = probs.gather(actionIdxTensor, 1);
+            
+            // Clip giá trị prob trong khoảng [1e-8, 1.0] để không bị NaN
+            // Đảm bảo log không bao giờ nhận giá trị 0 hoặc âm vì log(0) là vô cùng
+            const safeProb = actionProb.clipByValue(1e-8, 1.0);
+            const logProb = safeProb.log();
+            
+			// B4: TÍNH LOSS 
+			// Loss = - log(\pi(a|s)) * A(s,a)
+            // Sử dụng clippedError thay vì tdError thô
+            const loss = logProb.mul(-clippedError);
+            return loss.asScalar();
+        });
+
+        stateTensor.dispose();
+        nextStateTensor.dispose();
+
+        return stats;
+    }
+
+    dispose() {
+        this.actor.dispose();
+        this.critic.dispose();
+    }
+}
+
+/**
+ * LOGIC GAME
+ */
+class GridWorldGame {
+    constructor() {
+        this.canvas = document.getElementById('gridCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.agent = new ActorCriticAgentTF();
+        this.resetEpisode();
+        this.autoInterval = null;
+        this.logArea = document.getElementById('logArea');
+        document.getElementById('statusText').innerText = "Trạng thái: TF.js Ready!";
+        this.draw();
+    }
+
+    async resetAll() {
+        this.agent.dispose();
+        this.agent = new ActorCriticAgentTF();
+        this.resetEpisode();
+        this.log("--- ĐÃ RESET TOÀN BỘ (NEW NETWORKS) ---");
+        this.draw();
+    }
+
+    resetEpisode() {
+        this.agentPos = { r: 0, c: 0 };
+        this.isGameOver = false;
+        this.steps = 0;
+        this.totalReward = 0;
+        document.getElementById('statusText').innerText = "Trạng thái: Tập mới bắt đầu";
+        this.draw();
+    }
+
+    log(msg) {
+        this.logArea.value += msg + "\n";
+        this.logArea.scrollTop = this.logArea.scrollHeight;
+    }
+
+    async step() {
+        if (this.isGameOver) {
+            this.log("Game over! Nhấn 'Tập Mới'.");
+            return;
+        }
+
+        const r = this.agentPos.r;
+        const c = this.agentPos.c;
+
+        // --- BƯỚC 1: ACTOR ---
+        const probs = this.agent.getPolicy(r, c);
+        const actionIdx = this.agent.chooseAction(probs);
+        const action = ACTIONS[actionIdx];
+
+        this.log(`\n--- BƯỚC ${this.steps + 1} ---`);
+        this.log(`[1. Actor Net Output] Tại (${r},${c})`);
+        
+        // CẬP NHẬT: Hiển thị 4 xác suất rõ ràng
+        this.log(`   Phân phối xác suất (Softmax):`);
+        ACTIONS.forEach((act, idx) => {
+            const p = probs[idx];
+            // Format cho đẹp: "   - Lên: 25.0%"
+            this.log(`     - ${act.name.padEnd(6)}: ${(p * 100).toFixed(1)}%`);
+        });
+
+        this.log(`   => Chọn hành động: ${action.name}`);
+
+        // --- BƯỚC 2: ENV ---
+        let nr = r + action.dr;
+        let nc = c + action.dc;
+        let reward = -1;
+        let done = false;
+
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) {
+            nr = r; nc = c;
+        }
+
+        const cellType = GRID_LAYOUT[nr][nc];
+        if (cellType === 'X') reward = -5;
+        else if (cellType === 'G') {
+            reward = 10;
+            done = true;
+        }
+
+        this.totalReward += reward;
+        this.log(`[2. Env] -> (${nr},${nc}). Reward: ${reward}`);
+
+        // --- BƯỚC 3: UPDATE ---
+        const stats = await this.agent.update([r,c], actionIdx, reward, [nr, nc], done);
+        
+        if (stats.aborted) {
+            this.log(`[3. Train Step] ĐÃ BỎ QUA do phát hiện NaN!`);
+        } else {
+            this.log(`[3. Train Step] TD Error: ${stats.tdError.toFixed(4)}`);
+            if (stats.tdError > 0) this.log(`   => Tốt! Tăng xác suất '${action.name}'.`);
+            else this.log(`   => Tệ! Giảm xác suất '${action.name}'.`);
+        }
+
+        this.agentPos = { r: nr, c: nc };
+        this.steps++;
+
+        if (done) {
+            this.isGameOver = true;
+            this.log(`*** ĐÍCH! Tổng điểm: ${this.totalReward} ***`);
+            document.getElementById('statusText').innerText = `KẾT THÚC! Điểm: ${this.totalReward}`;
+        }
+
+        this.draw();
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const x = c * CELL_SIZE;
+                const y = r * CELL_SIZE;
+
+                // Nền
+                this.ctx.strokeStyle = "#333";
+                this.ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                let color = "#fff";
+                const type = GRID_LAYOUT[r][c];
+                if (type === 'S') color = "#e3f2fd";
+                if (type === 'X') color = "#ffcdd2";
+                if (type === 'G') color = "#c8e6c9";
+                this.ctx.fillStyle = color;
+                this.ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+
+                // Text
+                this.ctx.fillStyle = "#000";
+                this.ctx.font = "bold 20px Arial";
+                this.ctx.textAlign = "center";
+                if (type !== '-') this.ctx.fillText(type, x + CELL_SIZE/2, y + 30);
+
+                // Value
+                const vVal = this.agent.getValue(r, c);
+                this.ctx.fillStyle = "#666";
+                this.ctx.font = "12px Arial";
+                const displayV = Number.isNaN(vVal) ? "Err" : vVal.toFixed(2);
+                this.ctx.fillText(`V: ${displayV}`, x + CELL_SIZE/2, y + CELL_SIZE - 10);
+
+                // Arrows
+                if (type !== 'G') {
+                    const probs = this.agent.getPolicy(r, c);
+                    if (!probs.some(Number.isNaN)) {
+                        this.drawArrows(x + CELL_SIZE/2, y + CELL_SIZE/2, probs);
+                    }
+                }
+            }
+        }
+
+        // Agent
+        const ax = this.agentPos.c * CELL_SIZE + CELL_SIZE/2;
+        const ay = this.agentPos.r * CELL_SIZE + CELL_SIZE/2;
+        this.ctx.beginPath();
+        this.ctx.arc(ax, ay, 15, 0, 2 * Math.PI);
+        this.ctx.fillStyle = "blue";
+        this.ctx.fill();
+    }
+
+    drawArrows(cx, cy, probs) {
+        const len = 25;
+        this.ctx.lineWidth = 2;
+        ACTIONS.forEach((act, idx) => {
+            const p = probs[idx];
+            if (p < 0.05) return;
+            this.ctx.strokeStyle = `rgba(0,0,0, ${p})`;
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx, cy);
+            this.ctx.lineTo(cx + act.dc * len * p * 2, cy + act.dr * len * p * 2);
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.arc(cx + act.dc * len * p * 2, cy + act.dr * len * p * 2, 2, 0, Math.PI*2);
+            this.ctx.fillStyle = `rgba(0,0,0, ${p})`;
+            this.ctx.fill();
+        });
+    }
+}
+
+const game = new GridWorldGame();
+let autoTimer = null;
+
+function toggleAuto() {
+    const btn = document.getElementById('btnAuto');
+    if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+        btn.innerText = "Chạy Tự Động";
+        btn.classList.remove('btn-running');
+    } else {
+        game.step();
+        autoTimer = setInterval(async () => {
+            if (game.isGameOver) {
+                setTimeout(() => game.resetEpisode(), 500);
+            } else {
+                await game.step();
+            }
+        }, 100);
+        btn.innerText = "Dừng Lại";
+        btn.classList.add('btn-running');
+    }
+}
+</script>
+</body>
+</html>

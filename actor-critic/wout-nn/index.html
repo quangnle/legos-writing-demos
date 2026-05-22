@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actor-Critic GridWorld Demo</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Actor-Critic: Grid World</h1>
+            <p>Phiên bản Tabular — Actor-Critic không dùng neural network.</p>
+        </header>
+
+        <div class="demo-layout">
+            <div class="card canvas-panel">
+                <canvas id="gridCanvas" width="400" height="300"></canvas>
+
+                <div class="stat-box" id="statusText">Trạng thái: Sẵn sàng</div>
+
+                <div class="controls">
+                    <button id="btnStep" onclick="game.step()">Đi 1 Bước (Step)</button>
+                    <button id="btnAuto" onclick="toggleAuto()">Chạy Tự Động</button>
+                    <button class="btn-success" onclick="game.resetEpisode()">Reset Episode (Giữ Não)</button>
+                    <button class="btn-danger" onclick="game.resetAll()">Reset Toàn Bộ</button>
+                </div>
+                <div class="formula-display">
+                    <p><strong>Chú thích bản đồ:</strong><br>
+                    S: Start | G: Goal (+10) | X: Trap (-5) | -: Đường (-1)<br>
+                    <strong>Số trong ô:</strong> Giá trị V(s) do Critic học.<br>
+                    <strong>Mũi tên:</strong> Xác suất Policy do Actor học.</p>
+                </div>
+            </div>
+
+            <div class="card log-panel">
+                <h3>Chi tiết tính toán (Actor & Critic)</h3>
+                <textarea id="logArea" readonly></textarea>
+                <button class="btn-danger" onclick="document.getElementById('logArea').value = ''">Clear</button>
+            </div>
+        </div>
+
+        <footer>
+            &copy; 2026 Actor-Critic Demo — Legos Writing Demos
+        </footer>
+    </div>
+
+<script>
+/**
+ * CẤU HÌNH MAP & THAM SỐ
+ * Map: 3 hàng, 4 cột
+ * 0: Empty (-1), 1: Trap (-5), 2: Goal (+10), 3: Start
+ */
+const ROWS = 3;
+const COLS = 4;
+const CELL_SIZE = 100;
+
+// S - - -
+// - - X -
+// - X - G
+const GRID_LAYOUT = [
+    ['S', '-', '-', '-'],
+    ['-', '-', 'X', '-'],
+    ['-', 'X', '-', 'G']
+];
+
+// Tham số học
+const GAMMA = 0.9;        // Discount factor
+const ALPHA_THETA = 0.1;  // Learning rate Actor
+const ALPHA_W = 0.1;      // Learning rate Critic
+
+// Định nghĩa hành động
+const ACTIONS = [
+    { name: 'Lên', dr: -1, dc: 0 },
+    { name: 'Xuống', dr: 1, dc: 0 },
+    { name: 'Trái', dr: 0, dc: -1 },
+    { name: 'Phải', dr: 0, dc: 1 }
+];
+
+class ActorCriticAgent {
+    constructor() {
+        this.resetBrain();
+    }
+
+    resetBrain() {
+        // Critic: Bảng V(s), khởi tạo = 0
+        this.V = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        
+        // Actor: Bảng Preferences (theta) cho mỗi action tại mỗi state, khởi tạo = 0
+        // preferences[row][col][action_index]
+        this.preferences = Array.from({ length: ROWS }, () => 
+            Array.from({ length: COLS }, () => Array(ACTIONS.length).fill(0))
+        );
+    }
+
+    // Hàm Softmax để chuyển đổi preferences thành xác suất
+	// a_i = \frac {e^{x_i}} {\sum_i^C e^{x_j}}, i=1,2,...,C
+    getPolicy(r, c) {
+		// B1: Lấy danh sách điểm ưu tiên của 4 hướng (Lên, Xuống, Trái, Phải) tại ô (r,c)
+		// Ví dụ: [1.5, 0.2, 3.0, -1.0] (Actor thích "Trái" nhất vì 3.0 cao nhất)
+        const prefs = this.preferences[r][c];
+		// B2: Tìm giá trị lớn nhất trong mảng này (Numerical Stability)
+        const maxPref = Math.max(...prefs); 
+		// B3: Tính lũy thừa e mũ (x - max), 
+		// lý do là vì nếu tính e^x với x lớn sẽ bị tràn số 
+		// nên ta tính e^{x-max} sẽ có gtrị trong (0,1]
+		// một loại normalize thôi
+        const exps = prefs.map(p => Math.exp(p - maxPref));
+		// B4: Tính tổng các giá trị vừa lũy thừa
+        const sumExps = exps.reduce((a, b) => a + b, 0);
+		// B5: Chuẩn hóa (Chia từng giá trị cho tổng) để ra xác suất
+        return exps.map(e => e / sumExps);
+    }
+
+    // Chọn hành động dựa trên xác suất, 
+	// thằng nào cao nhất thì đc ưu tiên
+    chooseAction(probs) {
+        const rand = Math.random();
+        let cumulative = 0;
+        for (let i = 0; i < probs.length; i++) {
+            cumulative += probs[i];
+            if (rand < cumulative) return i;
+        }
+        return probs.length - 1;
+    }
+
+    // Cập nhật trọng số (Core của thuật toán)
+    update(state, actionIdx, reward, nextState, done) {
+        const [r, c] = state;
+        const [nr, nc] = nextState;
+
+        // 1. Critic tính toán
+        const currentV = this.V[r][c]; // đây là giá trị mình ước lượng ban đầu V(s)
+        // Nếu nextState là terminal thì giá trị tương lai là 0
+        const nextV = done ? 0 : this.V[nr][nc]; // giá trị tương lai của ô mình bước tới V(s')
+        
+		// Bước này ta đi tính Q(s,a) bằng cách ước lượng thông qua trải nghiệm vì tính Q(s,a) chính xác không được
+		// vì thế ta coi Q(s,a) = TD Target
+		// TD Target = Phần thưởng thực tế + Viễn cảnh tương lai 
+        // TD Target = r + \gamma * V(s')
+        const tdTarget = reward + GAMMA * nextV;
+        
+		// Khi có Q(s,a), ta bắt đầu đi tính hàm Advantage A(s,a) với công thức:
+		// A(s,a) = Q(s,a) - V(s)
+		// Nếu TD Error > 0 thì TỐT, ngc lại thì XẤU
+		// Công thức:
+		// TD Error (Delta) = Thực tế - Kỳ vọng
+        // TD Error (Delta) = Target - V(s)
+        const tdError = tdTarget - currentV;
+
+        // 2. Cập nhật Critic - sau khi nhận ra sai lệch, Critic tự sửa lại bảng giá trị V để lần sau đoán ngon hơn
+		// V(s) mới = V(s) cũ + (Tốc độ học * Sai lệch)		
+        // V(s) <- V(s) + alpha * delta
+		// Nếu thực tế tốt hơn dự đoán (tdError dương), Critic tăng giá trị V(s) lên.
+		// Nếu thực tế tệ hơn, Critic giảm V(s) xuống.
+        this.V[r][c] += ALPHA_W * tdError;
+
+        // 3. Cập nhật Actor - Đây là bước quan trọng nhất để thay đổi hành vi
+		//	Actor nhận đánh giá khen / chê (tdErrror) của Critic để điều chỉnh hành vi (preferences)
+        // Theta(s,a) <- Theta(s,a) + alpha * delta
+        // Lưu ý: Đây là update đơn giản hóa cho tabular. 
+        // Công thức chính xác phải là: 
+		// \theta_{t+1} = \theta_t + \alpha.\delta_t.\gradient_{\theta} \ln \pi (a_t|s_t,\theta)
+		// tuy nhiên vì tính gradient của softmax hơi phiền vì phải chia ra làm 2 trg hợp được chọn và ko đc chọn 
+		// thường thì nếu dùng tensorflow thì ta không cần lo, nhưng đây là phiên bản không dùng tf 
+		// nên dùng tạm công thức đơn giản ở trên vì đối với tabular thì softmax gradient xấp xỉ tỉ lệ thuận với delta.        
+        this.preferences[r][c][actionIdx] += ALPHA_THETA * tdError;
+
+        return { currentV, nextV, tdTarget, tdError };
+    }
+}
+
+class GridWorldGame {
+    constructor() {
+        this.canvas = document.getElementById('gridCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.agent = new ActorCriticAgent();
+        this.resetEpisode();
+        this.autoInterval = null;
+        this.logArea = document.getElementById('logArea');
+        this.draw();
+    }
+
+    resetAll() {
+        this.agent.resetBrain();
+        this.resetEpisode();
+        this.log("--- ĐÃ RESET TOÀN BỘ (XÓA NÃO) ---");
+        this.draw();
+    }
+
+    resetEpisode() {
+        this.agentPos = { r: 0, c: 0 }; // Vị trí mặc định S tại (0,0)
+        this.isGameOver = false;
+        this.steps = 0;
+        this.totalReward = 0;
+        document.getElementById('statusText').innerText = "Trạng thái: Tập mới bắt đầu";
+        this.draw();
+    }
+
+    log(msg) {
+        this.logArea.value += msg + "\n";
+        this.logArea.scrollTop = this.logArea.scrollHeight;
+    }
+
+    // Thực hiện 1 bước
+    step() {
+        if (this.isGameOver) {
+            this.log("Game over! Vui lòng nhấn 'Tập Mới'.");
+            return;
+        }
+
+        const r = this.agentPos.r;
+        const c = this.agentPos.c;
+
+        // --- BƯỚC 1: ACTOR TÍNH TOÁN ---
+        const probs = this.agent.getPolicy(r, c);
+        const actionIdx = this.agent.chooseAction(probs);
+        const action = ACTIONS[actionIdx];
+
+        // Ghi log Actor
+        this.log(`\n--- BƯỚC ${this.steps + 1} ---`);
+        this.log(`[1. Actor] Tại (${r},${c})`);
+        this.log(`   Preferences: [${this.agent.preferences[r][c].map(n=>n.toFixed(2))}]`);
+        this.log(`   Softmax -> Probs: [${probs.map(n=>(n*100).toFixed(1)+'%')}]`);
+        this.log(`   Chọn hành động: ${action.name}`);
+
+        // --- BƯỚC 2: MÔI TRƯỜNG PHẢN HỒI ---
+        let nr = r + action.dr;
+        let nc = c + action.dc;
+        let reward = -1; // Mặc định đi vào ô trống
+        let done = false;
+
+        // Kiểm tra biên
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) {
+            nr = r; nc = c; // Đứng yên nếu đâm tường
+            // reward vẫn là -1 (hoặc phạt thêm tùy luật, ở đây giữ -1)
+        }
+
+        const cellType = GRID_LAYOUT[nr][nc];
+        if (cellType === 'X') {
+            reward = -5;
+            // Luật đề bài: "đi vào ô X bị trừ 5 điểm".
+            // vì X không phải terminal nên ta cho phép đi tiếp.
+        } else if (cellType === 'G') {
+            reward = 10;
+            done = true;
+        }
+
+        this.totalReward += reward;
+        this.log(`[2. Env] Di chuyển đến (${nr},${nc}). Reward: ${reward}.`);
+
+        // --- BƯỚC 3 & 4: CRITIC TÍNH & CẬP NHẬT ---
+        const stats = this.agent.update([r,c], actionIdx, reward, [nr, nc], done);
+        
+        this.log(`[3. Critic] Đánh giá & Update`);
+        this.log(`   V(s_cũ): ${stats.currentV.toFixed(3)} | V(s_mới): ${stats.nextV.toFixed(3)}`);
+        this.log(`   TD Target = r + gamma * V(s_mới)`);
+        this.log(`             = ${reward} + ${GAMMA} * ${stats.nextV.toFixed(3)} = ${stats.tdTarget.toFixed(3)}`);
+        this.log(`   TD Error  = Target - V(s_cũ)`);
+        this.log(`             = ${stats.tdTarget.toFixed(3)} - ${stats.currentV.toFixed(3)} = ${stats.tdError.toFixed(4)}`);
+        
+        if (stats.tdError > 0) this.log(`   => TỐT (Tăng prob hành động này, Tăng V)`);
+        else this.log(`   => XẤU (Giảm prob hành động này, Giảm V)`);
+
+        // Di chuyển agent
+        this.agentPos = { r: nr, c: nc };
+        this.steps++;
+
+        if (done) {
+            this.isGameOver = true;
+            this.log(`*** ĐÃ ĐẾN ĐÍCH G! Tổng điểm: ${this.totalReward} ***`);
+            document.getElementById('statusText').innerText = `KẾT THÚC! Điểm: ${this.totalReward}`;
+        }
+
+        this.draw();
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const x = c * CELL_SIZE;
+                const y = r * CELL_SIZE;
+
+                // 1. Vẽ ô nền
+                this.ctx.strokeStyle = "#333";
+                this.ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                
+                let color = "#fff";
+                const type = GRID_LAYOUT[r][c];
+                if (type === 'S') color = "#e3f2fd"; // Xanh nhạt
+                if (type === 'X') color = "#ffcdd2"; // Đỏ nhạt
+                if (type === 'G') color = "#c8e6c9"; // Xanh lá nhạt
+                this.ctx.fillStyle = color;
+                this.ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+
+                // 2. Vẽ loại ô (S, X, G)
+                this.ctx.fillStyle = "#000";
+                this.ctx.font = "bold 20px Arial";
+                this.ctx.textAlign = "center";
+                if (type !== '-') {
+                    this.ctx.fillText(type, x + CELL_SIZE/2, y + 30);
+                }
+
+                // 3. Hiển thị Giá trị V (Critic)
+                const vVal = this.agent.V[r][c];
+                this.ctx.fillStyle = "#666";
+                this.ctx.font = "12px Arial";
+                this.ctx.fillText(`V: ${vVal.toFixed(2)}`, x + CELL_SIZE/2, y + CELL_SIZE - 10);
+
+                // 4. Hiển thị Policy (Actor) - Vẽ mũi tên theo xác suất
+                if (type !== 'G') {
+                    const probs = this.agent.getPolicy(r, c);
+                    this.drawArrows(x + CELL_SIZE/2, y + CELL_SIZE/2, probs);
+                }
+            }
+        }
+
+        // 5. Vẽ Agent
+        const ax = this.agentPos.c * CELL_SIZE + CELL_SIZE/2;
+        const ay = this.agentPos.r * CELL_SIZE + CELL_SIZE/2;
+        this.ctx.beginPath();
+        this.ctx.arc(ax, ay, 15, 0, 2 * Math.PI);
+        this.ctx.fillStyle = "blue";
+        this.ctx.fill();
+        this.ctx.strokeStyle = "white";
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+    }
+
+    drawArrows(cx, cy, probs) {
+        // probs thứ tự: Lên, Xuống, Trái, Phải
+        const len = 25;
+        this.ctx.lineWidth = 2;
+        
+        // Vẽ 4 hướng, độ đậm/dài phụ thuộc xác suất
+        ACTIONS.forEach((act, idx) => {
+            const p = probs[idx];
+            if (p < 0.1) return; // Nhỏ quá không vẽ cho đỡ rối
+
+            this.ctx.strokeStyle = `rgba(0,0,0, ${p})`; // Độ trong suốt theo prob
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx, cy);
+            this.ctx.lineTo(cx + act.dc * len * p * 2, cy + act.dr * len * p * 2);
+            this.ctx.stroke();
+            
+            // Vẽ đầu mũi tên (đơn giản hóa bằng chấm tròn nhỏ)
+            this.ctx.beginPath();
+            this.ctx.arc(cx + act.dc * len * p * 2, cy + act.dr * len * p * 2, 2, 0, Math.PI*2);
+            this.ctx.fillStyle = `rgba(0,0,0, ${p})`;
+            this.ctx.fill();
+        });
+    }
+}
+
+// Khởi tạo game
+const game = new GridWorldGame();
+let autoTimer = null;
+
+function toggleAuto() {
+    const btn = document.getElementById('btnAuto');
+    if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+        btn.innerText = "Chạy Tự Động";
+        btn.classList.remove('btn-running');
+    } else {
+        game.step();
+        autoTimer = setInterval(() => {
+            if (game.isGameOver) {
+                setTimeout(() => game.resetEpisode(), 100);
+            } else {
+                game.step();
+            }
+        }, 300);
+        btn.innerText = "Dừng Lại";
+        btn.classList.add('btn-running');
+    }
+}
+
+</script>
+</body>
+</html>
