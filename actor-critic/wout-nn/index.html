@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,31 +11,31 @@
     <div class="container">
         <header>
             <h1>Actor-Critic: Grid World</h1>
-            <p>Phiên bản Tabular — Actor-Critic không dùng neural network.</p>
+            <p>Tabular version — Actor-Critic without a neural network.</p>
         </header>
 
         <div class="demo-layout">
             <div class="card canvas-panel">
                 <canvas id="gridCanvas" width="400" height="300"></canvas>
 
-                <div class="stat-box" id="statusText">Trạng thái: Sẵn sàng</div>
+                <div class="stat-box" id="statusText">Status: Ready</div>
 
                 <div class="controls">
-                    <button id="btnStep" onclick="game.step()">Đi 1 Bước (Step)</button>
-                    <button id="btnAuto" onclick="toggleAuto()">Chạy Tự Động</button>
-                    <button class="btn-success" onclick="game.resetEpisode()">Reset Episode (Giữ Não)</button>
-                    <button class="btn-danger" onclick="game.resetAll()">Reset Toàn Bộ</button>
+                    <button id="btnStep" onclick="game.step()">Step Once</button>
+                    <button id="btnAuto" onclick="toggleAuto()">Auto Run</button>
+                    <button class="btn-success" onclick="game.resetEpisode()">New Episode (Keep Weights)</button>
+                    <button class="btn-danger" onclick="game.resetAll()">Full Reset</button>
                 </div>
                 <div class="formula-display">
-                    <p><strong>Chú thích bản đồ:</strong><br>
-                    S: Start | G: Goal (+10) | X: Trap (-5) | -: Đường (-1)<br>
-                    <strong>Số trong ô:</strong> Giá trị V(s) do Critic học.<br>
-                    <strong>Mũi tên:</strong> Xác suất Policy do Actor học.</p>
+                    <p><strong>Map legend:</strong><br>
+                    S: Start | G: Goal (+10) | X: Trap (-5) | -: Path (-1)<br>
+                    <strong>Number in cell:</strong> V(s) value learned by the Critic.<br>
+                    <strong>Arrows:</strong> Policy probabilities learned by the Actor.</p>
                 </div>
             </div>
 
             <div class="card log-panel">
-                <h3>Chi tiết tính toán (Actor & Critic)</h3>
+                <h3>Computation Log (Actor & Critic)</h3>
                 <textarea id="logArea" readonly></textarea>
                 <button class="btn-danger" onclick="document.getElementById('logArea').value = ''">Clear</button>
             </div>
@@ -72,10 +72,10 @@ const ALPHA_W = 0.1;      // Learning rate Critic
 
 // Định nghĩa hành động
 const ACTIONS = [
-    { name: 'Lên', dr: -1, dc: 0 },
-    { name: 'Xuống', dr: 1, dc: 0 },
-    { name: 'Trái', dr: 0, dc: -1 },
-    { name: 'Phải', dr: 0, dc: 1 }
+    { name: 'Up', dr: -1, dc: 0 },
+    { name: 'Down', dr: 1, dc: 0 },
+    { name: 'Left', dr: 0, dc: -1 },
+    { name: 'Right', dr: 0, dc: 1 }
 ];
 
 class ActorCriticAgent {
@@ -185,7 +185,7 @@ class GridWorldGame {
     resetAll() {
         this.agent.resetBrain();
         this.resetEpisode();
-        this.log("--- ĐÃ RESET TOÀN BỘ (XÓA NÃO) ---");
+        this.log("--- FULL RESET (CLEARED WEIGHTS) ---");
         this.draw();
     }
 
@@ -194,7 +194,7 @@ class GridWorldGame {
         this.isGameOver = false;
         this.steps = 0;
         this.totalReward = 0;
-        document.getElementById('statusText').innerText = "Trạng thái: Tập mới bắt đầu";
+        document.getElementById('statusText').innerText = "Status: New episode started";
         this.draw();
     }
 
@@ -206,7 +206,7 @@ class GridWorldGame {
     // Thực hiện 1 bước
     step() {
         if (this.isGameOver) {
-            this.log("Game over! Vui lòng nhấn 'Tập Mới'.");
+            this.log("Game over! Click 'New Episode (Keep Weights)'.");
             return;
         }
 
@@ -219,11 +219,11 @@ class GridWorldGame {
         const action = ACTIONS[actionIdx];
 
         // Ghi log Actor
-        this.log(`\n--- BƯỚC ${this.steps + 1} ---`);
-        this.log(`[1. Actor] Tại (${r},${c})`);
+        this.log(`\n--- STEP ${this.steps + 1} ---`);
+        this.log(`[1. Actor] At (${r},${c})`);
         this.log(`   Preferences: [${this.agent.preferences[r][c].map(n=>n.toFixed(2))}]`);
         this.log(`   Softmax -> Probs: [${probs.map(n=>(n*100).toFixed(1)+'%')}]`);
-        this.log(`   Chọn hành động: ${action.name}`);
+        this.log(`   Selected action: ${action.name}`);
 
         // --- BƯỚC 2: MÔI TRƯỜNG PHẢN HỒI ---
         let nr = r + action.dr;
@@ -248,20 +248,20 @@ class GridWorldGame {
         }
 
         this.totalReward += reward;
-        this.log(`[2. Env] Di chuyển đến (${nr},${nc}). Reward: ${reward}.`);
+        this.log(`[2. Env] Moved to (${nr},${nc}). Reward: ${reward}.`);
 
         // --- BƯỚC 3 & 4: CRITIC TÍNH & CẬP NHẬT ---
         const stats = this.agent.update([r,c], actionIdx, reward, [nr, nc], done);
         
-        this.log(`[3. Critic] Đánh giá & Update`);
-        this.log(`   V(s_cũ): ${stats.currentV.toFixed(3)} | V(s_mới): ${stats.nextV.toFixed(3)}`);
-        this.log(`   TD Target = r + gamma * V(s_mới)`);
+        this.log(`[3. Critic] Evaluate & Update`);
+        this.log(`   V(s_old): ${stats.currentV.toFixed(3)} | V(s_new): ${stats.nextV.toFixed(3)}`);
+        this.log(`   TD Target = r + gamma * V(s_new)`);
         this.log(`             = ${reward} + ${GAMMA} * ${stats.nextV.toFixed(3)} = ${stats.tdTarget.toFixed(3)}`);
-        this.log(`   TD Error  = Target - V(s_cũ)`);
+        this.log(`   TD Error  = Target - V(s_old)`);
         this.log(`             = ${stats.tdTarget.toFixed(3)} - ${stats.currentV.toFixed(3)} = ${stats.tdError.toFixed(4)}`);
         
-        if (stats.tdError > 0) this.log(`   => TỐT (Tăng prob hành động này, Tăng V)`);
-        else this.log(`   => XẤU (Giảm prob hành động này, Giảm V)`);
+        if (stats.tdError > 0) this.log(`   => GOOD (Increase action prob, Increase V)`);
+        else this.log(`   => BAD (Decrease action prob, Decrease V)`);
 
         // Di chuyển agent
         this.agentPos = { r: nr, c: nc };
@@ -269,8 +269,8 @@ class GridWorldGame {
 
         if (done) {
             this.isGameOver = true;
-            this.log(`*** ĐÃ ĐẾN ĐÍCH G! Tổng điểm: ${this.totalReward} ***`);
-            document.getElementById('statusText').innerText = `KẾT THÚC! Điểm: ${this.totalReward}`;
+            this.log(`*** REACHED GOAL G! Total score: ${this.totalReward} ***`);
+            document.getElementById('statusText').innerText = `FINISHED! Score: ${this.totalReward}`;
         }
 
         this.draw();
@@ -364,7 +364,7 @@ function toggleAuto() {
     if (autoTimer) {
         clearInterval(autoTimer);
         autoTimer = null;
-        btn.innerText = "Chạy Tự Động";
+        btn.innerText = "Auto Run";
         btn.classList.remove('btn-running');
     } else {
         game.step();
@@ -375,7 +375,7 @@ function toggleAuto() {
                 game.step();
             }
         }, 300);
-        btn.innerText = "Dừng Lại";
+        btn.innerText = "Stop";
         btn.classList.add('btn-running');
     }
 }

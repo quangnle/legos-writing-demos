@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,32 +11,32 @@
 
     <div class="container">
         <header>
-            <h1>Actor-Critic: Deep GridWorld</h1>
-            <p>Phiên bản TensorFlow.js (NaN Safe) — Actor-Critic với mạng neural tuyến tính.</p>
+            <h1>Actor-Critic: GridWorld</h1>
+            <p>Actor-Critic with a linear neural network.</p>
         </header>
 
         <div class="demo-layout">
             <div class="card canvas-panel">
                 <canvas id="gridCanvas" width="400" height="300"></canvas>
 
-                <div class="stat-box" id="statusText">Trạng thái: Đang khởi tạo TensorFlow...</div>
+                <div class="stat-box" id="statusText">Status: Initializing TensorFlow...</div>
 
                 <div class="controls">
-                    <button id="btnStep" onclick="game.step()">Đi 1 Bước (Step)</button>
-                    <button id="btnAuto" onclick="toggleAuto()">Chạy Tự Động</button>
-                    <button class="btn-success" onclick="game.resetEpisode()">Tập Mới (Giữ Não)</button>
-                    <button class="btn-danger" onclick="game.resetAll()">Reset Toàn Bộ (Xóa Weights)</button>
+                    <button id="btnStep" onclick="game.step()">Step Once</button>
+                    <button id="btnAuto" onclick="toggleAuto()">Auto Run</button>
+                    <button class="btn-success" onclick="game.resetEpisode()">New Episode (Keep Weights)</button>
+                    <button class="btn-danger" onclick="game.resetAll()">Full Reset (Clear Weights)</button>
                 </div>
                 <div class="formula-display">
-                    <p><strong>Kiến trúc Mạng (Linear):</strong><br>
+                    <p><strong>Network Architecture (Linear):</strong><br>
                     Input: One-Hot Vector (Size 12)<br>
                     Actor: Linear → Softmax (4 outputs) | Critic: Linear (1 output)<br>
-                    <strong>Chú thích:</strong> S: Start | G: Goal (+10) | X: Trap (-5) | -: Đường (-1)</p>
+                    <strong>Legend:</strong> S: Start | G: Goal (+10) | X: Trap (-5) | -: Path (-1)</p>
                 </div>
             </div>
 
             <div class="card log-panel">
-                <h3>Chi tiết tính toán (TensorFlow.js)</h3>
+                <h3>Computation Log (TensorFlow.js)</h3>
                 <textarea id="logArea" readonly></textarea>
                 <button class="btn-danger" onclick="document.getElementById('logArea').value = ''">Clear</button>
             </div>
@@ -71,10 +71,10 @@ const LR_ACTOR = 0.01;
 const LR_CRITIC = 0.02;
 
 const ACTIONS = [
-    { name: 'Lên', dr: -1, dc: 0 },
-    { name: 'Xuống', dr: 1, dc: 0 },
-    { name: 'Trái', dr: 0, dc: -1 },
-    { name: 'Phải', dr: 0, dc: 1 }
+    { name: 'Up', dr: -1, dc: 0 },
+    { name: 'Down', dr: 1, dc: 0 },
+    { name: 'Left', dr: 0, dc: -1 },
+    { name: 'Right', dr: 0, dc: 1 }
 ];
 
 /**
@@ -283,7 +283,7 @@ class GridWorldGame {
         this.resetEpisode();
         this.autoInterval = null;
         this.logArea = document.getElementById('logArea');
-        document.getElementById('statusText').innerText = "Trạng thái: TF.js Ready!";
+        document.getElementById('statusText').innerText = "Status: TF.js Ready!";
         this.draw();
     }
 
@@ -291,7 +291,7 @@ class GridWorldGame {
         this.agent.dispose();
         this.agent = new ActorCriticAgentTF();
         this.resetEpisode();
-        this.log("--- ĐÃ RESET TOÀN BỘ (NEW NETWORKS) ---");
+        this.log("--- FULL RESET (NEW NETWORKS) ---");
         this.draw();
     }
 
@@ -300,7 +300,7 @@ class GridWorldGame {
         this.isGameOver = false;
         this.steps = 0;
         this.totalReward = 0;
-        document.getElementById('statusText').innerText = "Trạng thái: Tập mới bắt đầu";
+        document.getElementById('statusText').innerText = "Status: New episode started";
         this.draw();
     }
 
@@ -311,7 +311,7 @@ class GridWorldGame {
 
     async step() {
         if (this.isGameOver) {
-            this.log("Game over! Nhấn 'Tập Mới'.");
+            this.log("Game over! Click 'New Episode (Keep Weights)'.");
             return;
         }
 
@@ -323,18 +323,16 @@ class GridWorldGame {
         const actionIdx = this.agent.chooseAction(probs);
         const action = ACTIONS[actionIdx];
 
-        this.log(`\n--- BƯỚC ${this.steps + 1} ---`);
-        this.log(`[1. Actor Net Output] Tại (${r},${c})`);
+        this.log(`\n--- STEP ${this.steps + 1} ---`);
+        this.log(`[1. Actor Net Output] At (${r},${c})`);
         
-        // CẬP NHẬT: Hiển thị 4 xác suất rõ ràng
-        this.log(`   Phân phối xác suất (Softmax):`);
+        this.log(`   Probability distribution (Softmax):`);
         ACTIONS.forEach((act, idx) => {
             const p = probs[idx];
-            // Format cho đẹp: "   - Lên: 25.0%"
             this.log(`     - ${act.name.padEnd(6)}: ${(p * 100).toFixed(1)}%`);
         });
 
-        this.log(`   => Chọn hành động: ${action.name}`);
+        this.log(`   => Selected action: ${action.name}`);
 
         // --- BƯỚC 2: ENV ---
         let nr = r + action.dr;
@@ -360,11 +358,11 @@ class GridWorldGame {
         const stats = await this.agent.update([r,c], actionIdx, reward, [nr, nc], done);
         
         if (stats.aborted) {
-            this.log(`[3. Train Step] ĐÃ BỎ QUA do phát hiện NaN!`);
+            this.log(`[3. Train Step] SKIPPED due to NaN detection!`);
         } else {
             this.log(`[3. Train Step] TD Error: ${stats.tdError.toFixed(4)}`);
-            if (stats.tdError > 0) this.log(`   => Tốt! Tăng xác suất '${action.name}'.`);
-            else this.log(`   => Tệ! Giảm xác suất '${action.name}'.`);
+            if (stats.tdError > 0) this.log(`   => Good! Increase probability of '${action.name}'.`);
+            else this.log(`   => Bad! Decrease probability of '${action.name}'.`);
         }
 
         this.agentPos = { r: nr, c: nc };
@@ -372,8 +370,8 @@ class GridWorldGame {
 
         if (done) {
             this.isGameOver = true;
-            this.log(`*** ĐÍCH! Tổng điểm: ${this.totalReward} ***`);
-            document.getElementById('statusText').innerText = `KẾT THÚC! Điểm: ${this.totalReward}`;
+            this.log(`*** GOAL REACHED! Total score: ${this.totalReward} ***`);
+            document.getElementById('statusText').innerText = `FINISHED! Score: ${this.totalReward}`;
         }
 
         this.draw();
@@ -457,7 +455,7 @@ function toggleAuto() {
     if (autoTimer) {
         clearInterval(autoTimer);
         autoTimer = null;
-        btn.innerText = "Chạy Tự Động";
+        btn.innerText = "Auto Run";
         btn.classList.remove('btn-running');
     } else {
         game.step();
@@ -468,7 +466,7 @@ function toggleAuto() {
                 await game.step();
             }
         }, 100);
-        btn.innerText = "Dừng Lại";
+        btn.innerText = "Stop";
         btn.classList.add('btn-running');
     }
 }
